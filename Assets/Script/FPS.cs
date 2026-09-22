@@ -18,7 +18,7 @@ public class FPS : MonoBehaviour {
         float msec = deltaTime * 1000.0f;
         float fps = 1.0f / deltaTime;
         fps = Mathf.Round(fps);
-        SHOW.text = "FPS : " + fps.ToString();
+        SHOW.text = "FPS // " + fps.ToString();
     }
   
 

@@ -71,7 +71,7 @@ public class ManagerScore : MonoBehaviour
 
     void Update()
     {
-        KillScore.text = "SCORE: " + (CurDieEmnemy * 100).ToString();
+        KillScore.text = "SCORE // " + (CurDieEmnemy * 100).ToString();
     }
 
     public float test;

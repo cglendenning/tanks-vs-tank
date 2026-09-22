@@ -15,7 +15,7 @@ Changes made:
 
 Before a production release:
 
-1. Replace the placeholder/test app IDs and verify each production unit in the Tanks VS Tank AdMob account.
+1. Replace the placeholder/test app IDs and verify each production unit in the Tread Shred AdMob account.
 2. Keep test mode enabled on development devices; never click live ads during testing.
 3. Confirm the store privacy disclosures, consent message, age/audience settings, and ATT behavior match the final product.
 4. Review AdMob Policy Center for account-specific warnings before switching `useTestAds` off.

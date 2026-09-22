@@ -5,7 +5,7 @@ using UnityEngine;
 /// inject them in a release build; test ads remain the default until the app
 /// has been verified in AdMob Policy Center.
 /// </summary>
-[CreateAssetMenu(menuName = "Tanks VS Tank/Ad Configuration")]
+[CreateAssetMenu(menuName = "Tread Shred/Ad Configuration")]
 public sealed class TankAdConfiguration : ScriptableObject
 {
     public string iosAppId = "ca-app-pub-3940256099942544~1458002511";

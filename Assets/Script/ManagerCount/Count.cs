@@ -16,7 +16,7 @@ public class Count : MonoBehaviour {
 
             string level = Application.loadedLevelName;
             level = (int.Parse(level.Substring(2))).ToString();
-            Level.text = "LEVEL: " + level;
+            Level.text = "MISSION: " + level;
             Time.timeScale = 0;
         
        

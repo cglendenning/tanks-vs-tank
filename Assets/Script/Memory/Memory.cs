@@ -28,22 +28,22 @@ public class Memory : MonoBehaviour {
             ListButton.Add(item.gameObject);
         }
 
-        HightScoreTextButton.text = "HIGHT SCORE: " + (PlayerPrefs.GetFloat("Lvs" + 1.ToString())).ToString();
-        LevelTextButton.text = "LEVEL: " + 1.ToString();
+        HightScoreTextButton.text = "BEST SCORE // " + (PlayerPrefs.GetFloat("Lvs" + 1.ToString())).ToString();
+        LevelTextButton.text = "MISSION: " + 1.ToString();
         switch ((int)(PlayerPrefs.GetFloat("Lv" + 1.ToString())))
         {
 
             case 3:
-                RankingTextButton.text = "RANKING: GOLD";
+                RankingTextButton.text = "MEDAL: GOLD";
                 break;
             case 2:
-                RankingTextButton.text = "RANKING: SLIVER";
+                RankingTextButton.text = "MEDAL: SILVER";
                 break;
             case 1:
-                RankingTextButton.text = "RANKING: BRONZE";
+                RankingTextButton.text = "MEDAL: BRONZE";
                 break;
             case 0:
-                RankingTextButton.text = "RANKING: NONE";
+                RankingTextButton.text = "MEDAL: UNRANKED";
                 break;
             default:
                 break;
@@ -52,7 +52,7 @@ public class Memory : MonoBehaviour {
         for (int i = 0; i < ListButton.Count; i++)
         {
             // Gán thứ tự Level
-            ListButton[i].gameObject.transform.GetChild(2).gameObject.GetComponent<Text>().text = "LEVEL" + " " + (i + 1);
+            ListButton[i].gameObject.transform.GetChild(2).gameObject.GetComponent<Text>().text = "MISSION" + " " + (i + 1);
 
             //Tạo 2 list ảnh trắng đen của Button;
 
@@ -140,29 +140,29 @@ public class Memory : MonoBehaviour {
         }
         
 
-        string levelcurrent = (levelplay.text).Substring(6);
+        string levelcurrent = (levelplay.text).Substring(8);
         LevelChoosed = int.Parse(levelcurrent);
 
         if (!ListButton[LevelChoosed - 1 ].gameObject.transform.GetChild(3).gameObject.transform.GetChild(0).gameObject.activeInHierarchy)
         {
             indexsence = LevelChoosed;
-            HightScoreTextButton.text = "HIGHT SCORE: " + (PlayerPrefs.GetFloat("Lvs" + LevelChoosed.ToString())).ToString();
-            LevelTextButton.text = "LEVEL: " + LevelChoosed.ToString();
+            HightScoreTextButton.text = "BEST SCORE // " + (PlayerPrefs.GetFloat("Lvs" + LevelChoosed.ToString())).ToString();
+            LevelTextButton.text = "MISSION: " + LevelChoosed.ToString();
 
             switch ((int)(PlayerPrefs.GetFloat("Lv" + LevelChoosed.ToString())))
             {
 
                 case 3:
-                    RankingTextButton.text = "RANKING: GOLD";
+                    RankingTextButton.text = "MEDAL: GOLD";
                     break;
                 case 2:
-                    RankingTextButton.text = "RANKING: SLIVER";
+                    RankingTextButton.text = "MEDAL: SILVER";
                     break;
                 case 1:
-                    RankingTextButton.text = "RANKING: BRONZE";
+                    RankingTextButton.text = "MEDAL: BRONZE";
                     break;
                 case 0:
-                    RankingTextButton.text = "RANKING: NONE";
+                    RankingTextButton.text = "MEDAL: UNRANKED";
                     break;
                 default:
                     break;

@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../TanksVsTank" && pwd)"
 UNITY_BIN="${UNITY_BIN:-/Users/craig/Unity/Hub/Editor/6000.3.24f1-arm64/Unity.app/Contents/MacOS/Unity}"
 IOS_DIR="$ROOT_DIR/Builds/iOSDevice"
 ARCHIVE_DIR="$IOS_DIR/archive"
-ARCHIVE_PATH="$ARCHIVE_DIR/TanksVsTank.xcarchive"
+ARCHIVE_PATH="$ARCHIVE_DIR/TreadShred.xcarchive"
 EXPORT_DIR="$IOS_DIR/ota"
 EXPORT_OPTIONS="$IOS_DIR/ExportOptions-AdHoc.plist"
 
@@ -19,7 +19,7 @@ mkdir -p "$ARCHIVE_DIR" "$EXPORT_DIR"
   -logFile "$ROOT_DIR/tank-ios-release-unity.log"
 pod install --project-directory="$IOS_DIR"
 
-rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR"/TanksVsTank.app "$EXPORT_DIR"/TanksVsTank.ipa
+rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR"/TreadShred.app "$EXPORT_DIR"/TreadShred.ipa
 xcodebuild -workspace "$IOS_DIR/Unity-iPhone.xcworkspace" \
   -scheme Unity-iPhone -configuration Release -sdk iphoneos \
   -archivePath "$ARCHIVE_PATH" archive \
@@ -30,9 +30,9 @@ xcodebuild -workspace "$IOS_DIR/Unity-iPhone.xcworkspace" \
 
 cp "$ROOT_DIR/scripts/ExportOptions-AdHoc.plist" "$EXPORT_OPTIONS"
 /usr/libexec/PlistBuddy -c "Set :teamID $TANK_TEAM_ID" "$EXPORT_OPTIONS"
-/usr/libexec/PlistBuddy -c "Set :provisioningProfiles:com.tgts.tankkvstank $TANK_PROVISIONING_PROFILE_SPECIFIER" "$EXPORT_OPTIONS"
+/usr/libexec/PlistBuddy -c "Set :provisioningProfiles:com.cglendenning.tanksvstank $TANK_PROVISIONING_PROFILE_SPECIFIER" "$EXPORT_OPTIONS"
 xcodebuild -exportArchive -archivePath "$ARCHIVE_PATH" \
   -exportPath "$EXPORT_DIR" -exportOptionsPlist "$EXPORT_OPTIONS"
 
-mv "$EXPORT_DIR"/*.ipa "$EXPORT_DIR/TanksVsTank.ipa"
-echo "IPA=$EXPORT_DIR/TanksVsTank.ipa"
+mv "$EXPORT_DIR"/*.ipa "$EXPORT_DIR/TreadShred.ipa"
+echo "IPA=$EXPORT_DIR/TreadShred.ipa"

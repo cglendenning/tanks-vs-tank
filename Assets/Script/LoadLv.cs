@@ -202,24 +202,24 @@ public class LoadLv : MonoBehaviour {
             TotalHighScore += (int)PlayerPrefs.GetFloat("Lvs" + i);
         }
 
-        ScoreStatic.text = "SCORE: " + TotalHighScore.ToString();
-        KillStatic.text = "KILL: " + PlayerPrefs.GetFloat("CountKill").ToString();
+        ScoreStatic.text = "TOTAL SCORE // " + TotalHighScore.ToString();
+        KillStatic.text = "CONFIRMED KILLS // " + PlayerPrefs.GetFloat("CountKill").ToString();
 
         if (TotalHighScore > 10000 && TotalHighScore < 23000)
         {
-            RankStatic.text = "RANK: CORPORAL";
+            RankStatic.text = "RANK // CORPORAL";
         }
         else if (TotalHighScore >= 23000 && TotalHighScore < 47000)
         {
-            RankStatic.text = "RANK: SERGEANT";
+            RankStatic.text = "RANK // SERGEANT";
         }
         else if (TotalHighScore >= 47000)
         {
-            RankStatic.text = "RANK: STAFF SERGEANT";
+            RankStatic.text = "RANK // STAFF SERGEANT";
         }
         else
         {
-            RankStatic.text = "RANK: PRIVATE";
+            RankStatic.text = "RANK // PRIVATE";
         }
 	
 	

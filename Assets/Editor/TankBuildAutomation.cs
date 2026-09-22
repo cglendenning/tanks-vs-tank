@@ -10,18 +10,18 @@ using UnityEngine;
 
 public static class TankBuildAutomation
 {
-    private const string ProductName = "Tanks VS Tank";
+    private const string ProductName = "Tread Shred";
     // The legacy identifier is already claimed by another Apple team. Keep a
     // team-owned identifier so automatic Ad Hoc provisioning can work.
     private const string BundleIdentifier = "com.cglendenning.tanksvstank";
     private const string IosOutput = "Builds/iOSDevice";
-    private const string AndroidApkOutput = "Builds/Android/TanksVsTank.apk";
-    private const string AndroidBundleOutput = "Builds/Android/TanksVsTank.aab";
+    private const string AndroidApkOutput = "Builds/Android/TreadShred.apk";
+    private const string AndroidBundleOutput = "Builds/Android/TreadShred.aab";
 
-    [MenuItem("Tanks VS Tank/Build/iOS device project")]
+    [MenuItem("Tread Shred/Build/iOS device project")]
     public static void BuildIosDeviceProject() => BuildIos(false);
 
-    [MenuItem("Tanks VS Tank/Build/Android APK")]
+    [MenuItem("Tread Shred/Build/Android APK")]
     public static void BuildAndroidApk() => BuildAndroid(false);
 
     public static void BuildIosFromCommandLine() => BuildIos(false);
@@ -52,7 +52,7 @@ public static class TankBuildAutomation
         PatchIosInfoPlist(output);
         PatchIosEntitlements(output);
         PatchIosPodfile(output);
-        Debug.Log("Tanks VS Tank iOS export created at " + output);
+        Debug.Log("Tread Shred iOS export created at " + output);
     }
 
     private static void BuildAndroid(bool bundle)
@@ -70,7 +70,7 @@ public static class TankBuildAutomation
             options = BuildOptions.None
         });
         AssertBuildSucceeded(report, "Android");
-        Debug.Log("Tanks VS Tank Android build created at " + output);
+        Debug.Log("Tread Shred Android build created at " + output);
     }
 
     private static void PreparePlayerSettings()
@@ -161,7 +161,7 @@ public static class TankBuildAutomation
             return;
 
         var podfile = File.ReadAllText(podfilePath);
-        const string marker = "# TanksVsTank deployment target normalization";
+        const string marker = "# Tread Shred deployment target normalization";
         if (podfile.Contains(marker))
             return;
 

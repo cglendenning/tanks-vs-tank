@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 public sealed class FacebookShare : MonoBehaviour
 {
-    public static string GAME_NAME = "Tanks VS Tank";
+    public static string GAME_NAME = "Tread Shred";
     public static string APP_ID = string.Empty;
 
     private void Start()

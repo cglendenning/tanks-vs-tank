@@ -8,7 +8,7 @@
 	<string>ad-hoc</string>
 	<key>provisioningProfiles</key>
 	<dict>
-		<key>com.tgts.tankkvstank</key>
+		<key>com.cglendenning.tanksvstank</key>
 		<string>TANK_PROVISIONING_PROFILE_SPECIFIER</string>
 	</dict>
 	<key>signingStyle</key>

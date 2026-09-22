@@ -1,19 +1,19 @@
-# Tanks VS Tank
+# Tread Shred
 
-Modern Unity 6 rebuild of the original Tanks VS Tank project for iOS and Android from one source tree.
+Modern Unity 6 rebuild of the original tank game for iOS and Android from one source tree.
 
 ## Toolchain
 
 - Unity `6000.3.24f1`
 - iOS device target: iOS 15+, ARM64, IL2CPP
 - Android target: API 35, min API 25, ARM64, IL2CPP
-- Bundle/application ID: `com.tgts.tankkvstank`
+- Bundle/application ID: `com.cglendenning.tanksvstank` (retained for existing signing/provisioning)
 
 ## Ads and privacy
 
 The old Google Mobile Ads integration has been replaced with the current Unity plugin plus UMP consent handling. Ads are test-only by default. Interstitials are shown only at the existing win/loss break points, are preloaded, and are rate-limited. No banner is requested unless explicitly enabled.
 
-Before enabling production ads, verify the tank app ID and ad-unit IDs in `Assets/Resources/TankAdConfiguration.asset` against the AdMob account for this app. The old project contained only one legacy interstitial unit, so this repository does not assume the separate Superhero IDs belong to Tanks VS Tank.
+Before enabling production ads, verify the Tread Shred app ID and ad-unit IDs in `Assets/Resources/TankAdConfiguration.asset` against the AdMob account for this app. Test ads are enabled for release validation.
 
 ## Build validation
 
@@ -27,7 +27,7 @@ Unity -batchmode -quit -nographics -projectPath . \
   -executeMethod TankBuildAutomation.BuildIosFromCommandLine
 ```
 
-The Android APK is written to `Builds/Android/TanksVsTank.apk`. The iOS command exports `Builds/iOSDevice`, then CocoaPods must be installed before opening/building `Unity-iPhone.xcworkspace`.
+The Android APK is written to `Builds/Android/TreadShred.apk`. The iOS command exports `Builds/iOSDevice`, then CocoaPods must be installed before opening/building `Unity-iPhone.xcworkspace`.
 
 ## Signed iOS release and OTA
 
