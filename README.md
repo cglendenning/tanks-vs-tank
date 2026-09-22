@@ -17,6 +17,10 @@ Before enabling production ads, verify the Tread Shred app ID and ad-unit IDs in
 
 The in-game display type is Black Ops One, bundled under the SIL Open Font License; its license is included at `Assets/Art/BlackOpsOne-OFL.txt`.
 
+## Source-of-truth assets
+
+All runtime art ships with this Unity project and is tracked in Git. Tank and projectile surfaces live under `Assets/Art/`, tactical UI icons live under `Assets/Image/`, and ad/build configuration lives under `Assets/Resources/`. Every imported asset has its matching Unity `.meta` file. The `Builds/` directory is intentionally ignored because it contains generated iOS/Android products, not source assets.
+
 ## Build validation
 
 From the project root:
