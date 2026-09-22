@@ -8,15 +8,24 @@ public static class ApplyTreadShredVisualRefresh
 {
     private const string TankTexturePath = "Assets/Art/ArmoredTankAtlas.png";
     private const string MissileTexturePath = "Assets/Art/BattlefieldMissileAtlas.png";
+    private const string BaseIconPath = "Assets/Image/TreadShredBaseIcon.png";
+    private const string AdvanceIconPath = "Assets/Image/TreadShredAdvanceIcon.png";
+    private const string RedeployIconPath = "Assets/Image/TreadShredRedeployIcon.png";
     private const string CanvasPath = "Assets/Prefab/Canvas.prefab";
+    private const string PlayerTankMaterialPath = "Assets/Art/TreadShredPlayerTank.mat";
+    private const string EnemyTankMaterialPath = "Assets/Art/TreadShredEnemyTank.mat";
 
     public static void Run()
     {
         var tankTexture = LoadTexture(TankTexturePath);
         var missileTexture = LoadTexture(MissileTexturePath);
+        var baseIcon = LoadSprite(BaseIconPath);
+        var advanceIcon = LoadSprite(AdvanceIconPath);
+        var redeployIcon = LoadSprite(RedeployIconPath);
         ApplyTankMaterials(tankTexture);
         ApplyMissileMaterials(missileTexture);
-        ApplyNextMissionLayout();
+        ApplyTeamTankMaterials(tankTexture);
+        ApplyCombatUi(baseIcon, advanceIcon, redeployIcon);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[VISUAL REFRESH] Applied armored tank, missile, and next-mission presentation.");
@@ -38,6 +47,25 @@ public static class ApplyTreadShredVisualRefresh
         }
 
         return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+    }
+
+    private static Sprite LoadSprite(string path)
+    {
+        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+        var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.sRGBTexture = true;
+            importer.alphaSource = TextureImporterAlphaSource.FromInput;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.maxTextureSize = 1024;
+            importer.SaveAndReimport();
+        }
+
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
     }
 
     private static void ApplyTankMaterials(Texture2D texture)
@@ -77,6 +105,65 @@ public static class ApplyTreadShredVisualRefresh
         }
     }
 
+    private static void ApplyTeamTankMaterials(Texture2D tankTexture)
+    {
+        var playerMaterial = CreateOrLoadTeamMaterial(
+            PlayerTankMaterialPath, "Tread Shred Player Armor", tankTexture,
+            new Color(0.52f, 1f, 0.55f, 1f));
+        var enemyMaterial = CreateOrLoadTeamMaterial(
+            EnemyTankMaterialPath, "Tread Shred Enemy Armor", tankTexture,
+            new Color(0.78f, 0.54f, 1f, 1f));
+
+        ApplyTankMaterialToPrefab("Assets/Prefab/Player 1.prefab", playerMaterial);
+        foreach (var path in Directory.GetFiles("Assets/Prefab/Emnemy", "*.prefab", SearchOption.AllDirectories))
+            ApplyTankMaterialToPrefab(path.Replace('\\', '/'), enemyMaterial);
+    }
+
+    private static Material CreateOrLoadTeamMaterial(string path, string name, Texture2D texture, Color tint)
+    {
+        var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (material == null)
+        {
+            material = new Material(Shader.Find("Standard")) { name = name };
+            AssetDatabase.CreateAsset(material, path);
+        }
+
+        SetMaterialPresentation(material, texture, 0.74f, 0.44f);
+        if (material.HasProperty("_Color"))
+            material.SetColor("_Color", tint);
+        EditorUtility.SetDirty(material);
+        return material;
+    }
+
+    private static void ApplyTankMaterialToPrefab(string path, Material teamMaterial)
+    {
+        var root = PrefabUtility.LoadPrefabContents(path);
+        try
+        {
+            foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                var meshFilter = renderer.GetComponent<MeshFilter>();
+                if (meshFilter == null || meshFilter.sharedMesh == null)
+                    continue;
+                var meshPath = AssetDatabase.GetAssetPath(meshFilter.sharedMesh);
+                if (!meshPath.Contains("Assets/Art/Tank-enemy/"))
+                    continue;
+
+                var materials = renderer.sharedMaterials;
+                for (var i = 0; i < materials.Length; i++)
+                    materials[i] = teamMaterial;
+                renderer.sharedMaterials = materials;
+                EditorUtility.SetDirty(renderer);
+            }
+
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
     private static void SetMaterialPresentation(Material material, Texture2D texture, float metallic, float smoothness)
     {
         if (texture != null && material.HasProperty("_MainTex"))
@@ -92,44 +179,50 @@ public static class ApplyTreadShredVisualRefresh
         EditorUtility.SetDirty(material);
     }
 
-    private static void ApplyNextMissionLayout()
+    private static void ApplyCombatUi(Sprite baseIcon, Sprite advanceIcon, Sprite redeployIcon)
     {
         var canvas = PrefabUtility.LoadPrefabContents(CanvasPath);
         try
         {
-            var nextMission = FindByPath(canvas.transform, "PanelVictoryFailure/Victory/ButtonNext/Text");
-            if (nextMission == null)
-                return;
+            ConfigureIconButton(FindByPath(canvas.transform, "PanelVictoryFailure/Victory/ButtonNext"), advanceIcon, 112f);
+            ConfigureIconButton(FindByPath(canvas.transform, "PanelVictoryFailure/ButtonMenu"), baseIcon, 112f);
+            ConfigureIconButton(FindByPath(canvas.transform, "PanelVictoryFailure/ButtonRetry"), redeployIcon, 112f);
+            ConfigureIconButton(FindByPath(canvas.transform, "PanelPause/ButtonMenu (1)"), baseIcon, 96f);
+            ConfigureIconButton(FindByPath(canvas.transform, "PanelPause/ButtonRetry (1)"), redeployIcon, 96f);
 
-            var text = nextMission.GetComponent<Text>();
-            if (text == null)
-                return;
+            var nextMissionText = FindByPath(canvas.transform, "PanelVictoryFailure/Victory/ButtonNext/Text");
+            if (nextMissionText != null)
+                nextMissionText.gameObject.SetActive(false);
 
-            var rect = text.rectTransform;
-            rect.anchorMin = new Vector2(0.5f, 0.5f);
-            rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.pivot = new Vector2(1f, 0.5f);
-            rect.sizeDelta = new Vector2(230f, 56f);
-            rect.anchoredPosition = new Vector2(-102f, 0f);
-            rect.localRotation = Quaternion.identity;
-            rect.localScale = Vector3.one;
-
-            text.text = "NEXT MISSION";
-            text.fontSize = 30;
-            text.resizeTextForBestFit = true;
-            text.resizeTextMinSize = 18;
-            text.resizeTextMaxSize = 30;
-            text.alignment = TextAnchor.MiddleRight;
-            text.horizontalOverflow = HorizontalWrapMode.Wrap;
-            text.verticalOverflow = VerticalWrapMode.Truncate;
-            text.supportRichText = false;
-            EditorUtility.SetDirty(text);
-            PrefabUtility.RecordPrefabInstancePropertyModifications(text);
             PrefabUtility.SaveAsPrefabAsset(canvas, CanvasPath);
         }
         finally
         {
             PrefabUtility.UnloadPrefabContents(canvas);
+        }
+    }
+
+    private static void ConfigureIconButton(Transform button, Sprite sprite, float size)
+    {
+        if (button == null)
+            return;
+
+        var image = button.GetComponent<Image>();
+        if (image != null && sprite != null)
+        {
+            image.sprite = sprite;
+            image.preserveAspect = true;
+            image.type = Image.Type.Simple;
+            EditorUtility.SetDirty(image);
+        }
+
+        var rect = button.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            rect.sizeDelta = new Vector2(size, size);
+            rect.localRotation = Quaternion.identity;
+            rect.localScale = Vector3.one;
+            EditorUtility.SetDirty(rect);
         }
     }
 
