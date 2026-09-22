@@ -15,6 +15,8 @@ The old Google Mobile Ads integration has been replaced with the current Unity p
 
 Before enabling production ads, verify the Tread Shred app ID and ad-unit IDs in `Assets/Resources/TankAdConfiguration.asset` against the AdMob account for this app. Test ads are enabled for release validation.
 
+The in-game display type is Black Ops One, bundled under the SIL Open Font License; its license is included at `Assets/Art/BlackOpsOne-OFL.txt`.
+
 ## Build validation
 
 From the project root:

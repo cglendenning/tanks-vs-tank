@@ -10,7 +10,7 @@ using UnityEngine.UI;
 public static class ApplyTreadShredBranding
 {
     private const string ProductName = "Tread Shred";
-    private const string FontPath = "Assets/Art/UTM Bebas.ttf";
+    private const string FontPath = "Assets/Art/BlackOpsOne-Regular.ttf";
 
     public static void Run()
     {
@@ -66,7 +66,10 @@ public static class ApplyTreadShredBranding
         var replacement = Replacement(path, name, before);
 
         text.font = commandFont;
-        text.fontStyle = FontStyle.Bold;
+        text.fontStyle = FontStyle.Normal;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = Mathf.Max(10, Mathf.RoundToInt(text.fontSize * 0.62f));
+        text.resizeTextMaxSize = text.fontSize;
         text.supportRichText = false;
         if (replacement != null)
             text.text = replacement;
