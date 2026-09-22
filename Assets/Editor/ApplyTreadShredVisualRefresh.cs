@@ -109,10 +109,10 @@ public static class ApplyTreadShredVisualRefresh
     {
         var playerMaterial = CreateOrLoadTeamMaterial(
             PlayerTankMaterialPath, "Tread Shred Player Armor", tankTexture,
-            new Color(1.15f, 1.65f, 1.05f, 1f));
+            new Color(1.25f, 1.82f, 1.15f, 1f));
         var enemyMaterial = CreateOrLoadTeamMaterial(
             EnemyTankMaterialPath, "Tread Shred Enemy Armor", tankTexture,
-            new Color(1.55f, 1.05f, 1.75f, 1f));
+            new Color(1.72f, 1.16f, 1.95f, 1f));
 
         ApplyTankMaterialToPrefab("Assets/Prefab/Player 1.prefab", playerMaterial);
         foreach (var path in Directory.GetFiles("Assets/Prefab/Emnemy", "*.prefab", SearchOption.AllDirectories))
