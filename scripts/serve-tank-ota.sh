@@ -7,6 +7,7 @@ IPA_PATH="${1:-$OTA_DIR/TanksVsTank.ipa}"
 PORT="${PORT:-8765}"
 HTTP_LOG="$OTA_DIR/http.log"
 TUNNEL_LOG="$OTA_DIR/cloudflared.log"
+BUNDLE_ID="com.cglendenning.tanksvstank"
 
 if [[ ! -f "$IPA_PATH" ]]; then
   echo "Missing signed IPA: $IPA_PATH" >&2
@@ -50,13 +51,21 @@ cat > "$OTA_DIR/manifest.plist" <<EOF
 <dict><key>kind</key><string>software-package</string><key>url</key><string>${TUNNEL_URL}/TanksVsTank.ipa</string><key>size</key><real>$IPA_SIZE</real></dict>
 </array>
 <key>metadata</key><dict>
-<key>bundle-identifier</key><string>com.tgts.tankkvstank</string>
+<key>bundle-identifier</key><string>${BUNDLE_ID}</string>
 <key>bundle-version</key><string>1.2.0</string>
 <key>kind</key><string>software</string>
 <key>title</key><string>Tanks VS Tank</string>
 </dict></dict></array>
 </dict></plist>
 EOF
+
+for URL in "${TUNNEL_URL}/manifest.plist" "${TUNNEL_URL}/TanksVsTank.ipa"; do
+  for _ in $(seq 1 20); do
+    if curl -fsSI --max-time 5 "$URL" >/dev/null 2>&1; then break; fi
+    sleep 1
+  done
+  curl -fsSI --max-time 10 "$URL" >/dev/null
+done
 
 echo "OTA_URL=itms-services://?action=download-manifest&url=${TUNNEL_URL}/manifest.plist"
 echo "MANIFEST_URL=${TUNNEL_URL}/manifest.plist"

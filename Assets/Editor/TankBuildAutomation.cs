@@ -11,7 +11,9 @@ using UnityEngine;
 public static class TankBuildAutomation
 {
     private const string ProductName = "Tanks VS Tank";
-    private const string BundleIdentifier = "com.tgts.tankkvstank";
+    // The legacy identifier is already claimed by another Apple team. Keep a
+    // team-owned identifier so automatic Ad Hoc provisioning can work.
+    private const string BundleIdentifier = "com.cglendenning.tanksvstank";
     private const string IosOutput = "Builds/iOSDevice";
     private const string AndroidApkOutput = "Builds/Android/TanksVsTank.apk";
     private const string AndroidBundleOutput = "Builds/Android/TanksVsTank.aab";
@@ -48,6 +50,7 @@ public static class TankBuildAutomation
         });
         AssertBuildSucceeded(report, "iOS");
         PatchIosInfoPlist(output);
+        PatchIosEntitlements(output);
         PatchIosPodfile(output);
         Debug.Log("Tanks VS Tank iOS export created at " + output);
     }
@@ -171,6 +174,19 @@ public static class TankBuildAutomation
         podfile += "  end\n";
         podfile += "end\n";
         File.WriteAllText(podfilePath, podfile);
+    }
+
+    private static void PatchIosEntitlements(string buildPath)
+    {
+        // The legacy project enabled Game Center without an App ID capability.
+        // Remove that stale entitlement so Ad Hoc provisioning remains valid.
+        var path = Path.Combine(buildPath, "TanksVSTank.entitlements");
+        if (!File.Exists(path))
+            return;
+
+        File.WriteAllText(path, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+            "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
+            "<plist version=\"1.0\"><dict/></plist>\n");
     }
 
     private static void AssertBuildSucceeded(BuildReport report, string platform)
