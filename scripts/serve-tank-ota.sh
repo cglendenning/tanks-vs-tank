@@ -19,7 +19,9 @@ if ! command -v cloudflared >/dev/null 2>&1; then
 fi
 
 mkdir -p "$OTA_DIR"
-cp "$IPA_PATH" "$OTA_DIR/TanksVsTank.ipa"
+if [[ "$IPA_PATH" != "$OTA_DIR/TanksVsTank.ipa" ]]; then
+  cp "$IPA_PATH" "$OTA_DIR/TanksVsTank.ipa"
+fi
 python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$OTA_DIR" >"$HTTP_LOG" 2>&1 &
 HTTP_PID=$!
 cleanup() {
@@ -38,6 +40,20 @@ for _ in $(seq 1 60); do
 done
 if [[ -z "$TUNNEL_URL" ]]; then
   echo "Cloudflare tunnel did not provide a public URL. See $TUNNEL_LOG" >&2
+  exit 1
+fi
+TUNNEL_HOST="${TUNNEL_URL#https://}"
+TUNNEL_IP=""
+for _ in $(seq 1 60); do
+  TUNNEL_IP="$(dscacheutil -q host -a name "$TUNNEL_HOST" 2>/dev/null | awk '$1 == "ip_address:" && $2 ~ /^[0-9.]+$/ {print $2; exit}' || true)"
+  if [[ -z "$TUNNEL_IP" ]]; then
+    TUNNEL_IP="$(curl -k -fsS --max-time 5 -H 'accept: application/dns-json' "https://1.1.1.1/dns-query?name=${TUNNEL_HOST}&type=A" 2>/dev/null | rg -o '"data":"[0-9.]+"' | head -1 | sed 's/.*"data":"//;s/"//' || true)"
+  fi
+  [[ -n "$TUNNEL_IP" ]] && break
+  sleep 1
+done
+if [[ -z "$TUNNEL_IP" ]]; then
+  echo "Cloudflare tunnel hostname did not resolve publicly: $TUNNEL_HOST" >&2
   exit 1
 fi
 
@@ -61,10 +77,10 @@ EOF
 
 for URL in "${TUNNEL_URL}/manifest.plist" "${TUNNEL_URL}/TanksVsTank.ipa"; do
   for _ in $(seq 1 20); do
-    if curl -fsSI --max-time 5 "$URL" >/dev/null 2>&1; then break; fi
+    if curl --resolve "$TUNNEL_HOST:443:$TUNNEL_IP" --http1.1 -fsS --max-time 60 -o /dev/null "$URL" >/dev/null 2>&1; then break; fi
     sleep 1
   done
-  curl -fsSI --max-time 10 "$URL" >/dev/null
+  curl --resolve "$TUNNEL_HOST:443:$TUNNEL_IP" --http1.1 -fsS --max-time 60 -o /dev/null "$URL" >/dev/null
 done
 
 echo "OTA_URL=itms-services://?action=download-manifest&url=${TUNNEL_URL}/manifest.plist"
