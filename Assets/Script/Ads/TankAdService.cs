@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using GoogleMobileAds.Api;
 using GoogleMobileAds.Ump.Api;
 using UnityEngine;
@@ -24,9 +26,15 @@ public sealed class TankAdService : MonoBehaviour
     private BannerView banner;
     private bool consentFlowStarted;
     private bool bannerRequested;
+    private bool interstitialPresentationInProgress;
+    private bool audioWasPausedBeforeInterstitial;
+    private float audioVolumeBeforeInterstitial;
+    private Coroutine adAudioRoutine;
     private float lastInterstitialTime = -999f;
 
     private const float MinimumInterstitialIntervalSeconds = 90f;
+    private const float AdAudioFadeOutSeconds = 0.12f;
+    private const float AdAudioFadeInSeconds = 0.18f;
 
     public static TankAdService Ensure()
     {
@@ -71,7 +79,8 @@ public sealed class TankAdService : MonoBehaviour
 
     public bool TryShowInterstitial()
     {
-        if (!IsReady || !CanRequestAds || Time.unscaledTime - lastInterstitialTime < MinimumInterstitialIntervalSeconds)
+        if (interstitialPresentationInProgress || !IsReady || !CanRequestAds ||
+            Time.unscaledTime - lastInterstitialTime < MinimumInterstitialIntervalSeconds)
             return false;
 
         if (interstitial == null || !interstitial.CanShowAd())
@@ -80,9 +89,68 @@ public sealed class TankAdService : MonoBehaviour
             return false;
         }
 
+        interstitialPresentationInProgress = true;
         lastInterstitialTime = Time.unscaledTime;
-        interstitial.Show();
+        adAudioRoutine = StartCoroutine(FadeOutAudioThenShowInterstitial(interstitial));
         return true;
+    }
+
+    private IEnumerator FadeOutAudioThenShowInterstitial(InterstitialAd ad)
+    {
+        audioWasPausedBeforeInterstitial = AudioListener.pause;
+        audioVolumeBeforeInterstitial = AudioListener.volume;
+
+        yield return FadeAudioVolume(0f, AdAudioFadeOutSeconds);
+        AudioListener.pause = true;
+        adAudioRoutine = null;
+
+        try
+        {
+            ad.Show();
+        }
+        catch (Exception error)
+        {
+            Debug.LogException(error);
+            EndInterstitialAudioProtection();
+            interstitialPresentationInProgress = false;
+            LoadInterstitial();
+        }
+    }
+
+    private IEnumerator FadeAudioVolume(float targetVolume, float duration)
+    {
+        float startingVolume = AudioListener.volume;
+        if (duration <= 0f)
+        {
+            AudioListener.volume = targetVolume;
+            yield break;
+        }
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            AudioListener.volume = Mathf.Lerp(startingVolume, targetVolume, elapsed / duration);
+            yield return null;
+        }
+
+        AudioListener.volume = targetVolume;
+    }
+
+    private void EndInterstitialAudioProtection()
+    {
+        if (adAudioRoutine != null)
+            StopCoroutine(adAudioRoutine);
+
+        adAudioRoutine = StartCoroutine(RestoreAudioAfterInterstitial());
+    }
+
+    private IEnumerator RestoreAudioAfterInterstitial()
+    {
+        AudioListener.pause = audioWasPausedBeforeInterstitial;
+        yield return FadeAudioVolume(audioVolumeBeforeInterstitial, AdAudioFadeInSeconds);
+        adAudioRoutine = null;
+        interstitialPresentationInProgress = false;
     }
 
     public void ShowPrivacyOptionsForm()
@@ -165,11 +233,13 @@ public sealed class TankAdService : MonoBehaviour
             interstitial.OnAdFullScreenContentClosed += () =>
             {
                 interstitial = null;
+                EndInterstitialAudioProtection();
                 LoadInterstitial();
             };
             interstitial.OnAdFullScreenContentFailed += _ =>
             {
                 interstitial = null;
+                EndInterstitialAudioProtection();
                 LoadInterstitial();
             };
         });
