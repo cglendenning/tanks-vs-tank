@@ -236,6 +236,7 @@ public static class ApplyTreadShredVisualRefresh
             ConfigureIconButton(FindByPath(canvas.transform, "PanelPause/ButtonMenu (1)"), baseIcon, 96f);
             ConfigureIconButton(FindByPath(canvas.transform, "PanelPause/ButtonRetry (1)"), redeployIcon, 96f);
             ApplyLivesIndicators(canvas.transform, livesIcon);
+            HideLegacyMedalBackdrop(canvas.transform);
 
             PrefabUtility.SaveAsPrefabAsset(canvas, CanvasPath);
         }
@@ -266,6 +267,17 @@ public static class ApplyTreadShredVisualRefresh
                 EditorUtility.SetDirty(image);
             }
         }
+    }
+
+    private static void HideLegacyMedalBackdrop(Transform canvas)
+    {
+        var backdrop = FindByPath(canvas, "PanelVictoryFailure/Huanchuong/Image");
+        var image = backdrop == null ? null : backdrop.GetComponent<Image>();
+        if (image == null)
+            return;
+
+        image.enabled = false;
+        EditorUtility.SetDirty(image);
     }
 
     private static void ConfigureIconButton(Transform button, Sprite sprite, float size)
