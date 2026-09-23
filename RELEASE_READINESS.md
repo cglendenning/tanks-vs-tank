@@ -11,13 +11,14 @@ Release target: `1.8.0` / iOS build `3` / Android version code `3`.
 - iOS App Store build was uploaded successfully and processed as `VALID` in App Store Connect.
 - iPhone and iPad marketing screenshots are stored under `marketing/screenshots/` and the new iPhone 6.7-inch and iPad Pro 12.9-inch assets are uploaded to the editable version.
 - iOS age-rating fields, privacy URLs, version notes, and production metadata were updated where the App Store Connect API permits it.
+- Apple App Privacy was completed and published in App Store Connect for the AdMob/ATT data flow: Device ID, Product Interaction, Advertising Data, Crash Data, and Performance Data. The iOS 1.8.0 submission was added to review and is now `WAITING_FOR_REVIEW`.
 - Android targets API 36, uses ARM64/IL2CPP, and the release script fails closed instead of producing a debug-signed store bundle.
 
 ## Remaining store actions
 
 ### Apple App Store
 
-App Store Connect still requires the App Privacy questionnaire to be completed and published in the web UI. The binary requests ad tracking/consent through Google Mobile Ads, so this must be answered accurately for the data collected by the configured ad SDK and then published before the version can be submitted for review. Apple does not expose this questionnaire through the public App Store Connect API.
+The iOS 1.8.0 build is submitted to Apple review. Apple’s web UI reports that review can take up to 48 hours. Release is configured for automatic release after approval. Apple App Privacy is published and reflects the production Google Mobile Ads SDK and ATT behavior.
 
 ### Google Play
 
