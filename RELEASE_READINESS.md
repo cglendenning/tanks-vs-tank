@@ -21,6 +21,6 @@ App Store Connect still requires the App Privacy questionnaire to be completed a
 
 ### Google Play
 
-The existing Play listing is marked removed and expects upload-key SHA-1 `16:35:84:E5:0C:40:7A:EA:2C:B1:84:D6:9B:71:F8:81:BD:75:14:2A`. No local keystore matches that fingerprint. The rebuilt AAB is otherwise configured for the current Android requirements, but Play rejects it until the original upload keystore is restored or the Play Console upload key is explicitly reset. An appeal for the old removed listing has been submitted.
+The existing Play listing is marked removed and previously expected upload-key SHA-1 `16:35:84:E5:0C:40:7A:EA:2C:B1:84:D6:9B:71:F8:81:BD:75:14:2A`. A new upload keystore is retained outside the repository at `/Users/craig/keys/tread-shred-upload-v2.jks`, with password stored in the local Keychain; its SHA-1 is `79:8E:51:1A:55:BA:4E:89:AD:D3:F4:64:0F:16:61:A7:73:38:5E:A9`. The reset request is accepted but becomes valid on September 25, 2026 at 08:05:50 UTC. The rebuilt AAB is staged in the Play production draft and must be resubmitted after that time. An appeal for the old removed listing has been submitted.
 
 Do not reset the Play upload key without confirming the account-level security change. Once the original key or an approved replacement is available, run `scripts/build-tank-android-release.sh` with the four `TREAD_SHRED_ANDROID_*` signing variables and upload the resulting AAB.
