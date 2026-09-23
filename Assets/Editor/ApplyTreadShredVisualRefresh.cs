@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Linq;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -12,7 +13,11 @@ public static class ApplyTreadShredVisualRefresh
     private const string AdvanceIconPath = "Assets/Image/TreadShredAdvanceIcon.png";
     private const string RedeployIconPath = "Assets/Image/TreadShredRedeployIcon.png";
     private const string LivesIconPath = "Assets/Image/TreadShredLivesIcon.png";
+    private const string WallTexturePath = "Assets/Art/TreadShredFortificationWallTexture.png";
+    private const string WallTorchPath = "Assets/Art/TreadShredWallTorch.png";
+    private const string MissionBoardPath = "Assets/Image/TreadShredMissionBoard.png";
     private const string CanvasPath = "Assets/Prefab/Canvas.prefab";
+    private const string PanelMenuPath = "Assets/Prefab/PanelMenu.prefab";
     private const string PlayerTankMaterialPath = "Assets/Art/TreadShredPlayerTank.mat";
     private const string EnemyTankMaterialPath = "Assets/Art/TreadShredEnemyTank.mat";
     private const string CommandFontPath = "Assets/Art/BlackOpsOne-Regular.ttf";
@@ -25,17 +30,23 @@ public static class ApplyTreadShredVisualRefresh
         var advanceIcon = LoadSprite(AdvanceIconPath);
         var redeployIcon = LoadSprite(RedeployIconPath);
         var livesIcon = LoadSprite(LivesIconPath);
+        var wallTexture = LoadTexture(WallTexturePath);
+        var wallTorch = LoadSprite(WallTorchPath);
+        var missionBoard = LoadSprite(MissionBoardPath);
         var commandFont = AssetDatabase.LoadAssetAtPath<Font>(CommandFontPath);
         if (commandFont == null)
             throw new FileNotFoundException("Missing command font", CommandFontPath);
         ApplyTankMaterials(tankTexture);
         ApplyMissileMaterials(missileTexture);
         ApplyGroundMaterials();
+        ApplyWallMaterials(wallTexture);
         ApplyTeamTankMaterials(tankTexture);
+        ApplyArenaTorches(wallTorch);
+        ApplyMissionSelectUi(missionBoard, commandFont);
         ApplyCombatUi(baseIcon, advanceIcon, redeployIcon, livesIcon, commandFont);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[VISUAL REFRESH] Applied armored tank, missile, and next-mission presentation.");
+        Debug.Log("[VISUAL REFRESH] Applied armored tank, missile, mission board, fortified walls, and animated torches.");
     }
 
     private static Texture2D LoadTexture(string path)
@@ -127,6 +138,96 @@ public static class ApplyTreadShredVisualRefresh
             if (material.HasProperty("_Glossiness"))
                 material.SetFloat("_Glossiness", 0.24f);
             EditorUtility.SetDirty(material);
+        }
+    }
+
+    private static void ApplyWallMaterials(Texture2D texture)
+    {
+        foreach (var path in Directory.GetFiles("Assets/Art/Envi1/Materials", "Wall*.mat", SearchOption.AllDirectories))
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path.Replace('\\', '/'));
+            if (material == null)
+                continue;
+
+            SetMaterialPresentation(material, texture, 0.72f, 0.34f);
+            if (material.HasProperty("_Color"))
+                material.SetColor("_Color", new Color(0.78f, 0.86f, 0.90f, 1f));
+            if (material.HasProperty("_EmissionMap") && texture != null)
+                material.SetTexture("_EmissionMap", texture);
+            if (material.HasProperty("_EmissionColor"))
+            {
+                material.EnableKeyword("_EMISSION");
+                material.SetColor("_EmissionColor", new Color(0.02f, 0.09f, 0.12f, 1f));
+            }
+            EditorUtility.SetDirty(material);
+        }
+    }
+
+    private static void ApplyArenaTorches(Sprite torchSprite)
+    {
+        if (torchSprite == null)
+            return;
+
+        foreach (var path in Directory.GetFiles("Assets/Prefab/Art", "Enviroment*.prefab", SearchOption.TopDirectoryOnly))
+        {
+            var prefabPath = path.Replace('\\', '/');
+            var root = PrefabUtility.LoadPrefabContents(prefabPath);
+            try
+            {
+                var renderers = root.GetComponentsInChildren<Renderer>(true);
+                if (renderers.Length == 0)
+                    continue;
+
+                var bounds = renderers[0].bounds;
+                for (var i = 1; i < renderers.Length; i++)
+                    bounds.Encapsulate(renderers[i].bounds);
+
+                var torchWidth = Mathf.Clamp(Mathf.Min(bounds.size.x, bounds.size.z) * 0.07f, 1.4f, 2.8f);
+                var torchScale = torchWidth / 11.45f;
+                var marginX = Mathf.Max(bounds.extents.x * 0.16f, torchWidth * 0.75f);
+                var marginZ = Mathf.Max(bounds.extents.z * 0.16f, torchWidth * 0.75f);
+                var y = bounds.max.y + 0.12f;
+                var positions = new[]
+                {
+                    new Vector3(bounds.min.x + marginX, y, bounds.min.z + marginZ),
+                    new Vector3(bounds.max.x - marginX, y, bounds.min.z + marginZ),
+                    new Vector3(bounds.min.x + marginX, y, bounds.max.z - marginZ),
+                    new Vector3(bounds.max.x - marginX, y, bounds.max.z - marginZ)
+                };
+
+                for (var i = 0; i < positions.Length; i++)
+                {
+                    var childName = "TreadShredTorch_" + (i + 1);
+                    var existing = root.transform.Find(childName);
+                    var torch = existing == null ? new GameObject(childName) : existing.gameObject;
+                    if (existing == null)
+                        torch.transform.SetParent(root.transform, false);
+
+                    torch.transform.position = positions[i];
+                    torch.transform.localScale = Vector3.one * torchScale;
+                    torch.transform.localRotation = Quaternion.Euler(90f, 0f, i % 2 == 0 ? 0f : 180f);
+
+                    var spriteRenderer = torch.GetComponent<SpriteRenderer>();
+                    if (spriteRenderer == null)
+                        spriteRenderer = torch.AddComponent<SpriteRenderer>();
+                    spriteRenderer.sprite = torchSprite;
+                    spriteRenderer.color = Color.white;
+                    spriteRenderer.sortingOrder = 50;
+                    spriteRenderer.flipX = i % 2 == 1;
+                    var flicker = torch.GetComponent<TreadShredTorchFlicker>();
+                    if (flicker == null)
+                        flicker = torch.AddComponent<TreadShredTorchFlicker>();
+                    EditorUtility.SetDirty(torch);
+                    EditorUtility.SetDirty(spriteRenderer);
+                    EditorUtility.SetDirty(flicker);
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
     }
 
@@ -243,6 +344,271 @@ public static class ApplyTreadShredVisualRefresh
         finally
         {
             PrefabUtility.UnloadPrefabContents(canvas);
+        }
+    }
+
+    private static void ApplyMissionSelectUi(Sprite boardSprite, Font commandFont)
+    {
+        var canvas = PrefabUtility.LoadPrefabContents(CanvasPath);
+        try
+        {
+            var menu = canvas.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(transform => transform.name == "PanelMenu");
+            if (menu == null)
+                menu = canvas.transform;
+            if (menu == null)
+                return;
+
+            var board = EnsureImage(menu, "MissionBoardBackdrop");
+            var boardRect = board.GetComponent<RectTransform>();
+            SetStretchRect(boardRect, new Vector2(0.115f, 0.035f), new Vector2(0.965f, 0.975f));
+            board.transform.SetSiblingIndex(0);
+            var boardImage = board.GetComponent<Image>();
+            boardImage.sprite = boardSprite;
+            boardImage.type = Image.Type.Simple;
+            boardImage.preserveAspect = false;
+            boardImage.color = Color.white;
+            boardImage.raycastTarget = false;
+
+            var header = EnsureImage(menu, "MissionBoardHeader");
+            var headerRect = header.GetComponent<RectTransform>();
+            SetStretchRect(headerRect, new Vector2(0.155f, 0.825f), new Vector2(0.925f, 0.965f));
+            header.transform.SetSiblingIndex(1);
+            var headerImage = header.GetComponent<Image>();
+            headerImage.color = new Color(0.01f, 0.025f, 0.04f, 0.88f);
+            headerImage.raycastTarget = false;
+            var headerOutline = header.GetComponent<Outline>() ?? header.AddComponent<Outline>();
+            headerOutline.effectColor = new Color(0.20f, 0.75f, 0.82f, 0.62f);
+            headerOutline.effectDistance = new Vector2(2f, -2f);
+            headerOutline.useGraphicAlpha = true;
+            ConfigureStripAccent(header.transform, "CyanRule", new Vector2(0f, 0f), new Vector2(0.72f, 0.025f),
+                new Color(0.20f, 0.78f, 0.85f, 0.90f));
+            ConfigureStripAccent(header.transform, "OrangeRule", new Vector2(0.72f, 0f), new Vector2(1f, 0.025f),
+                new Color(0.96f, 0.43f, 0.10f, 0.90f));
+
+            ConfigureMissionHeaderText(menu, "TextTank (2)", "MISSION SELECT // OPERATIONS", commandFont,
+                new Vector2(0.175f, 0.85f), new Vector2(0.90f, 0.955f), 34, TextAnchor.MiddleLeft);
+            ConfigureMissionHeaderText(menu, "TextTank (3)", "SELECT AN OPERATION // 01—25", commandFont,
+                new Vector2(0.175f, 0.80f), new Vector2(0.90f, 0.855f), 15, TextAnchor.MiddleLeft);
+
+            var scroll = FindByPath(menu, "Scroll");
+            if (scroll != null)
+            {
+                var scrollRect = scroll.GetComponent<RectTransform>();
+                SetStretchRect(scrollRect, new Vector2(0.165f, 0.155f), new Vector2(0.915f, 0.805f));
+                var scrollImage = scroll.GetComponent<Image>();
+                if (scrollImage != null)
+                {
+                    scrollImage.color = new Color(0.01f, 0.025f, 0.04f, 0.32f);
+                    scrollImage.raycastTarget = false;
+                }
+            }
+
+            var content = FindByPath(menu, "Scroll/Panel");
+            if (content != null)
+            {
+                var contentRect = content.GetComponent<RectTransform>();
+                contentRect.anchorMin = new Vector2(0f, 1f);
+                contentRect.anchorMax = new Vector2(1f, 1f);
+                contentRect.pivot = new Vector2(0.5f, 1f);
+                contentRect.anchoredPosition = Vector2.zero;
+                contentRect.sizeDelta = new Vector2(0f, 13f * 58f + 16f);
+
+                var layoutGroups = content.GetComponents<LayoutGroup>();
+                foreach (var layout in layoutGroups)
+                    layout.enabled = false;
+
+                var missionIndex = 0;
+                foreach (Transform child in content)
+                {
+                    var button = child.GetComponent<Button>();
+                    var childRect = child.GetComponent<RectTransform>();
+                    if (button == null || childRect == null)
+                        continue;
+
+                    var column = missionIndex % 2;
+                    var row = missionIndex / 2;
+                    childRect.anchorMin = new Vector2(0.5f, 1f);
+                    childRect.anchorMax = new Vector2(0.5f, 1f);
+                    childRect.pivot = new Vector2(0.5f, 1f);
+                    childRect.sizeDelta = new Vector2(350f, 48f);
+                    childRect.anchoredPosition = new Vector2(column == 0 ? -190f : 190f, -8f - row * 58f);
+
+                    var buttonImage = child.GetComponent<Image>();
+                    if (buttonImage != null)
+                    {
+                        buttonImage.color = new Color(0.025f, 0.055f, 0.075f, 0.97f);
+                        buttonImage.raycastTarget = true;
+                        var outline = child.GetComponent<Outline>() ?? child.gameObject.AddComponent<Outline>();
+                        outline.effectColor = new Color(0.14f, 0.52f, 0.60f, 0.56f);
+                        outline.effectDistance = new Vector2(1.5f, -1.5f);
+                        outline.useGraphicAlpha = true;
+                    }
+
+                    if (child.childCount > 2)
+                    {
+                        var label = child.GetChild(2).GetComponent<Text>();
+                        if (label != null)
+                        {
+                            var labelRect = label.GetComponent<RectTransform>();
+                            labelRect.anchorMin = new Vector2(0.06f, 0f);
+                            labelRect.anchorMax = new Vector2(0.80f, 1f);
+                            labelRect.offsetMin = Vector2.zero;
+                            labelRect.offsetMax = Vector2.zero;
+                            label.alignment = TextAnchor.MiddleLeft;
+                            label.font = commandFont;
+                            label.fontSize = 22;
+                            label.resizeTextForBestFit = true;
+                            label.resizeTextMinSize = 14;
+                            label.resizeTextMaxSize = 22;
+                            label.color = Color.white;
+                            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+                            label.verticalOverflow = VerticalWrapMode.Truncate;
+                            var textOutline = label.GetComponent<Outline>() ?? label.gameObject.AddComponent<Outline>();
+                            textOutline.effectColor = new Color(0f, 0f, 0f, 0.95f);
+                            textOutline.effectDistance = new Vector2(1.5f, -1.5f);
+                            textOutline.useGraphicAlpha = true;
+                            EditorUtility.SetDirty(label);
+                        }
+                    }
+
+                    if (child.childCount > 3)
+                    {
+                        var statusRect = child.GetChild(3).GetComponent<RectTransform>();
+                        statusRect.anchorMin = new Vector2(0.80f, 0.12f);
+                        statusRect.anchorMax = new Vector2(0.96f, 0.88f);
+                        statusRect.offsetMin = Vector2.zero;
+                        statusRect.offsetMax = Vector2.zero;
+                        statusRect.localScale = Vector3.one * 0.72f;
+                        EditorUtility.SetDirty(statusRect);
+                    }
+
+                    EditorUtility.SetDirty(childRect);
+                    EditorUtility.SetDirty(button);
+                    missionIndex++;
+                }
+            }
+
+            ConfigureMissionDeployButton(FindByPath(menu, "Play"), commandFont);
+            ConfigureMissionInfoText(FindByPath(menu, "Level"), commandFont, "MISSION: 01", new Vector2(0.175f, 0.075f), new Vector2(0.40f, 0.13f));
+            ConfigureMissionInfoText(FindByPath(menu, "Hightscore"), commandFont, "BEST SCORE // 0", new Vector2(0.40f, 0.075f), new Vector2(0.67f, 0.13f));
+            ConfigureMissionInfoText(FindByPath(menu, "Rank"), commandFont, "MEDAL: UNRANKED", new Vector2(0.67f, 0.075f), new Vector2(0.88f, 0.13f));
+
+            foreach (var button in menu.GetComponentsInChildren<Button>(true))
+            {
+                if (!button.name.ToLowerInvariant().Contains("back"))
+                    continue;
+                var rect = button.GetComponent<RectTransform>();
+                if (rect == null)
+                    continue;
+                rect.anchorMin = rect.anchorMax = new Vector2(0.055f, 0.875f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = Vector2.zero;
+                rect.sizeDelta = new Vector2(72f, 72f);
+                EditorUtility.SetDirty(rect);
+            }
+
+            PrefabUtility.SaveAsPrefabAsset(canvas, PanelMenuPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(canvas);
+        }
+    }
+
+    private static void ConfigureMissionHeaderText(Transform menu, string path, string value, Font font, Vector2 anchorMin, Vector2 anchorMax, int fontSize, TextAnchor alignment)
+    {
+        var text = FindByPath(menu, path);
+        if (text == null)
+            return;
+        var label = text.GetComponent<Text>();
+        var rect = text.GetComponent<RectTransform>();
+        if (label == null || rect == null)
+            return;
+        SetStretchRect(rect, anchorMin, anchorMax);
+        label.text = value;
+        label.font = font;
+        label.fontSize = fontSize;
+        label.alignment = alignment;
+        label.resizeTextForBestFit = true;
+        label.resizeTextMinSize = Mathf.Max(10, fontSize - 10);
+        label.resizeTextMaxSize = fontSize;
+        label.color = Color.white;
+        label.horizontalOverflow = HorizontalWrapMode.Overflow;
+        label.verticalOverflow = VerticalWrapMode.Truncate;
+        label.raycastTarget = false;
+        var outline = label.GetComponent<Outline>() ?? label.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.92f);
+        outline.effectDistance = new Vector2(2f, -2f);
+        outline.useGraphicAlpha = true;
+        EditorUtility.SetDirty(label);
+    }
+
+    private static void ConfigureMissionInfoText(Transform textTransform, Font font, string value, Vector2 anchorMin, Vector2 anchorMax)
+    {
+        if (textTransform == null)
+            return;
+        var label = textTransform.GetComponent<Text>();
+        var rect = textTransform.GetComponent<RectTransform>();
+        if (label == null || rect == null)
+            return;
+        SetStretchRect(rect, anchorMin, anchorMax);
+        label.text = value;
+        label.font = font;
+        label.fontSize = 15;
+        label.alignment = TextAnchor.MiddleCenter;
+        label.resizeTextForBestFit = true;
+        label.resizeTextMinSize = 10;
+        label.resizeTextMaxSize = 15;
+        label.color = new Color(0.78f, 0.90f, 0.92f, 1f);
+        label.horizontalOverflow = HorizontalWrapMode.Overflow;
+        label.verticalOverflow = VerticalWrapMode.Truncate;
+        label.raycastTarget = false;
+        EditorUtility.SetDirty(label);
+    }
+
+    private static void ConfigureMissionDeployButton(Transform button, Font commandFont)
+    {
+        if (button == null)
+            return;
+        var rect = button.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            rect.anchorMin = rect.anchorMax = new Vector2(0.90f, 0.085f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(132f, 58f);
+            rect.localRotation = Quaternion.identity;
+            rect.localScale = Vector3.one;
+            EditorUtility.SetDirty(rect);
+        }
+        var image = button.GetComponent<Image>();
+        if (image != null)
+        {
+            image.color = new Color(0.92f, 0.30f, 0.08f, 1f);
+            image.raycastTarget = true;
+            var outline = button.GetComponent<Outline>() ?? button.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(1f, 0.62f, 0.18f, 0.72f);
+            outline.effectDistance = new Vector2(2f, -2f);
+            outline.useGraphicAlpha = true;
+        }
+        var legacyText = button.Find("Text");
+        if (legacyText != null)
+        {
+            var label = legacyText.GetComponent<Text>();
+            if (label != null)
+            {
+                label.text = "DEPLOY";
+                label.font = commandFont;
+                label.fontSize = 22;
+                label.alignment = TextAnchor.MiddleCenter;
+                label.color = Color.white;
+                label.resizeTextForBestFit = true;
+                label.resizeTextMinSize = 14;
+                label.resizeTextMaxSize = 22;
+                label.raycastTarget = false;
+                EditorUtility.SetDirty(label);
+            }
         }
     }
 
