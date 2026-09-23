@@ -42,6 +42,14 @@ public class PlayerMoverment : MonoBehaviour {
 	void Start () {
         instance = this;
         _playerRigidbody = GetComponent<Rigidbody>();
+        if (_playerRigidbody != null)
+        {
+            // Movement uses Rigidbody.MovePosition. Continuous detection plus a
+            // sweep in Move() prevents the tank from tunneling through the
+            // thin fortification colliders at high joystick input or corners.
+            _playerRigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            _playerRigidbody.interpolation = RigidbodyInterpolation.Interpolate;
+        }
         viewCamera = Camera.main;
         canbullet = true;
         if (PlayerPrefs.GetInt("TreadShredArmorCache", 0) > 0)
@@ -452,6 +460,24 @@ public class PlayerMoverment : MonoBehaviour {
     {
         _movment.Set(h, 0, v);
         _movment = _movment.normalized * Speed * Time.deltaTime;
+        if (_playerRigidbody == null || _movment.sqrMagnitude <= 0.000001f)
+            return;
+
+        var direction = _movment.normalized;
+        var distance = _movment.magnitude;
+        if (_playerRigidbody.SweepTest(direction, out RaycastHit wallHit, distance + Physics.defaultContactOffset,
+            QueryTriggerInteraction.Ignore))
+        {
+            // Stop just short of the wall and preserve the component of input
+            // that runs along it. This keeps the tank responsive without
+            // allowing a single frame to cross the arena boundary.
+            var skin = Mathf.Max(Physics.defaultContactOffset * 2f, 0.01f);
+            var travel = Mathf.Max(0f, wallHit.distance - skin);
+            var safeMovement = direction * Mathf.Min(distance, travel);
+            var remainingMovement = _movment - safeMovement;
+            _movment = safeMovement + Vector3.ProjectOnPlane(remainingMovement, wallHit.normal);
+        }
+
         _playerRigidbody.MovePosition(transform.position + _movment);
     }
 

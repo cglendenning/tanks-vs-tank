@@ -321,26 +321,29 @@ public class ManagerScore : MonoBehaviour
         rootRect.anchorMax = new Vector2(0.5f, 0.5f);
         rootRect.pivot = new Vector2(0.5f, 0.5f);
         rootRect.anchoredPosition = new Vector2(0f, -130f);
-        rootRect.sizeDelta = new Vector2(680f, 150f);
+        rootRect.sizeDelta = new Vector2(680f, 164f);
 
         var title = CreateRewardText(
-            "REWARD OPTIONS // CHOOSE ONE",
+            "ARMORED REDEPLOY // +1 HIT",
             rootRect,
             new Vector2(0f, 48f),
             new Vector2(680f, 34f),
             24);
         title.color = new Color(1f, 0.72f, 0.28f, 1f);
 
-        CreateRewardButton(
-            "REDEPLOY // WATCH AD",
+        var detail = CreateRewardText(
+            "REPLAY IS FREE // WATCH FOR AN EXTRA HIT",
             rootRect,
-            new Vector2(-175f, -24f),
-            RedeployAfterReward);
+            new Vector2(0f, 18f),
+            new Vector2(680f, 24f),
+            15);
+        detail.color = new Color(0.78f, 0.86f, 0.88f, 1f);
+
         CreateRewardButton(
-            "ARMOR CACHE // WATCH AD",
+            "WATCH AD // ARMORED REDEPLOY",
             rootRect,
-            new Vector2(175f, -24f),
-            ArmorCacheAfterReward);
+            new Vector2(0f, -28f),
+            ArmoredRedeployAfterReward);
     }
 
     private Text CreateRewardText(string value, RectTransform parent, Vector2 position, Vector2 size, int fontSize)
@@ -375,7 +378,7 @@ public class ManagerScore : MonoBehaviour
         rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.pivot = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = position;
-        rect.sizeDelta = new Vector2(300f, 72f);
+        rect.sizeDelta = new Vector2(480f, 72f);
 
         var image = buttonObject.GetComponent<Image>();
         image.color = new Color(0.08f, 0.14f, 0.16f, 0.98f);
@@ -397,16 +400,7 @@ public class ManagerScore : MonoBehaviour
         return button;
     }
 
-    private void RedeployAfterReward()
-    {
-        if (rewardUsedThisFailure)
-            return;
-
-        if (TankAdService.Ensure().TryShowRewarded(ReloadCurrentMission))
-            rewardUsedThisFailure = true;
-    }
-
-    private void ArmorCacheAfterReward()
+    private void ArmoredRedeployAfterReward()
     {
         if (rewardUsedThisFailure)
             return;
