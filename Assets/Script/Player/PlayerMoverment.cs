@@ -58,6 +58,12 @@ public class PlayerMoverment : MonoBehaviour {
             PlayerPrefs.DeleteKey("TreadShredArmorCache");
             PlayerPrefs.Save();
         }
+        if (PlayerPrefs.GetInt("TreadShredOverdrive", 0) > 0)
+        {
+            overdriveActive = true;
+            PlayerPrefs.DeleteKey("TreadShredOverdrive");
+            PlayerPrefs.Save();
+        }
        if (StyteBullet == null)
         {
             StyteBullet = GameObject.Find("Canvas");
@@ -108,6 +114,7 @@ public class PlayerMoverment : MonoBehaviour {
     //Hạn chế số lượng đạn là 3
   public int countbullet = 0;
     bool canbullet;
+    private bool overdriveActive;
     //Biến kiểm tra dùng trên điện thoại khi không có touch nào trên object
     bool isnotoverobject;
     void Update()
@@ -173,6 +180,7 @@ public class PlayerMoverment : MonoBehaviour {
                                                 ExP.transform.SetParent(transform);
                                                 MusicManager.instance.GunTank();
                                                 obj.GetComponent<Rigidbody>().velocity = dir.normalized * 15f;
+                                                FireOverdrive(point);
                                                 break;
                                             case PlayerType.banvong:
                                                 Vector3 point1 = ray.GetPoint(raydistane);
@@ -182,6 +190,7 @@ public class PlayerMoverment : MonoBehaviour {
                                                 ExP1.transform.SetParent(transform);
                                                 MusicManager.instance.GunTank();
                                                 gameObject.GetComponent<ThrowSimulation>().CallFromPlayer(point1);
+                                                FireOverdrive(point1);
                                                 break;
                                             case PlayerType.bandan3:
 
@@ -192,6 +201,7 @@ public class PlayerMoverment : MonoBehaviour {
                                                 ExP3.transform.SetParent(transform);
                                                 MusicManager.instance.GunTank();
                                                 GameObject obj3 = Instantiate(Bullet3, pointbullet.position, pointbullet.rotation) as GameObject;
+                                                FireOverdrive(point3);
 
                                                 break;
                                             case PlayerType.bandanduoi:
@@ -208,6 +218,7 @@ public class PlayerMoverment : MonoBehaviour {
                                                 ExP4.transform.SetParent(transform);
                                                 MusicManager.instance.GunTank();
                                                 obj4.GetComponent<Rigidbody>().velocity = dir4.normalized * 10f;
+                                                FireOverdrive(point4);
 
                                                 break;
                                             default:
@@ -365,6 +376,7 @@ public class PlayerMoverment : MonoBehaviour {
                                         ExP.transform.SetParent(transform);
                                         MusicManager.instance.GunTank();
                                         obj.GetComponent<Rigidbody>().velocity = dir.normalized * 15f;
+                                        FireOverdrive(point);
                                         break;
                                     case PlayerType.banvong:
                                         Vector3 point1 = ray.GetPoint(raydistane);
@@ -374,6 +386,7 @@ public class PlayerMoverment : MonoBehaviour {
                                         ExP1.transform.SetParent(transform);
                                         MusicManager.instance.GunTank();
                                         gameObject.GetComponent<ThrowSimulation>().CallFromPlayer(point1);
+                                        FireOverdrive(point1);
                                         break;
                                     case PlayerType.bandan3:
 
@@ -384,6 +397,7 @@ public class PlayerMoverment : MonoBehaviour {
                                         ExP3.transform.SetParent(transform);
                                         MusicManager.instance.GunTank();
                                         GameObject obj3 = Instantiate(Bullet3, pointbullet.position, pointbullet.rotation) as GameObject;
+                                        FireOverdrive(point3);
 
                                         break;
                                     case PlayerType.bandanduoi:
@@ -400,6 +414,7 @@ public class PlayerMoverment : MonoBehaviour {
                                         ExP4.transform.SetParent(transform);
                                         MusicManager.instance.GunTank();
                                         obj4.GetComponent<Rigidbody>().velocity = dir4.normalized * 10f;
+                                        FireOverdrive(point4);
 
                                         break;
                                     default:
@@ -479,6 +494,38 @@ public class PlayerMoverment : MonoBehaviour {
         }
 
         _playerRigidbody.MovePosition(transform.position + _movment);
+    }
+
+    private void FireOverdrive(Vector3 target)
+    {
+        if (!overdriveActive || pointbullet == null)
+            return;
+
+        var offset = transform.right * 0.42f;
+        var secondaryTarget = target + transform.right * 0.72f;
+        switch (typeplayer)
+        {
+            case PlayerType.banthang:
+            {
+                var projectile = Instantiate(Bullet, pointbullet.position + offset, pointbullet.rotation);
+                var direction = secondaryTarget - pointbullet.position;
+                projectile.GetComponent<Rigidbody>().velocity = direction.normalized * 15f;
+                break;
+            }
+            case PlayerType.banvong:
+                gameObject.GetComponent<ThrowSimulation>().CallFromPlayer(secondaryTarget);
+                break;
+            case PlayerType.bandan3:
+                Instantiate(Bullet3, pointbullet.position + offset, pointbullet.rotation);
+                break;
+            case PlayerType.bandanduoi:
+            {
+                var projectile = Instantiate(BulletFind, pointbullet.position + offset, pointbullet.rotation);
+                var direction = secondaryTarget - pointbullet.position;
+                projectile.GetComponent<Rigidbody>().velocity = direction.normalized * 10f;
+                break;
+            }
+        }
     }
 
    public int countdie = 3;

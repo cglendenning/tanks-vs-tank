@@ -11,6 +11,9 @@ public class MusicManager : MonoBehaviour {
     }
     void Start()
     {
+        ConfigureMusicLoop(2);
+        ConfigureMusicLoop(5);
+
         if (PlayerPrefs.GetFloat("Sound") == 0)
         {
             issound = false;
@@ -50,10 +53,13 @@ public class MusicManager : MonoBehaviour {
 
     public void InGameTank()
     {
-        if (ismusic == false)
-        {
-            transform.GetChild(2).gameObject.GetComponent<AudioSource>().Play();
-        }
+        if (ismusic)
+            return;
+
+        var source = transform.GetChild(2).gameObject.GetComponent<AudioSource>();
+        source.loop = true;
+        if (!source.isPlaying)
+            source.Play();
     }
 
     public void OutTank()
@@ -74,11 +80,14 @@ public class MusicManager : MonoBehaviour {
 
     public void Victory()
     {
-        if (issound == false)
-        {
-            transform.GetChild(2).gameObject.GetComponent<AudioSource>().Stop();
-            transform.GetChild(5).gameObject.GetComponent<AudioSource>().Play();
-        }
+        if (ismusic)
+            return;
+
+        transform.GetChild(2).gameObject.GetComponent<AudioSource>().Stop();
+        var source = transform.GetChild(5).gameObject.GetComponent<AudioSource>();
+        source.loop = true;
+        if (!source.isPlaying)
+            source.Play();
     }
 
     public void Three()
@@ -103,5 +112,15 @@ public class MusicManager : MonoBehaviour {
         {
             transform.GetChild(8).gameObject.GetComponent<AudioSource>().Play();
         }
+    }
+
+    private void ConfigureMusicLoop(int childIndex)
+    {
+        if (transform.childCount <= childIndex)
+            return;
+
+        var source = transform.GetChild(childIndex).GetComponent<AudioSource>();
+        if (source != null)
+            source.loop = true;
     }
 }

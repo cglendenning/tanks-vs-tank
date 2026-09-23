@@ -79,7 +79,7 @@ public class ManagerScore : MonoBehaviour
     int indexmedel;
     float hightscore;
     private GameObject rewardedActionPanel;
-    private bool rewardUsedThisFailure;
+    private bool rewardUsedThisScreen;
     private Font rewardFont;
 
 
@@ -256,6 +256,8 @@ public class ManagerScore : MonoBehaviour
         VictoryofFail.SetActive(true);
         if (FailureObj != null && FailureObj.activeSelf)
             BuildFailureRewardActions();
+        else
+            BuildVictoryRewardActions();
         //if (Showadsmob.instance.isadsmob)
         //{
         //      Showadsmob.instance.isadsmob = false;
@@ -304,7 +306,7 @@ public class ManagerScore : MonoBehaviour
         if (rewardedActionPanel != null || VictoryofFail == null)
             return;
 
-        rewardUsedThisFailure = false;
+        rewardUsedThisScreen = false;
         var existingTexts = VictoryofFail.GetComponentsInChildren<Text>(true);
         for (var i = 0; i < existingTexts.Length; i++)
         {
@@ -344,6 +346,54 @@ public class ManagerScore : MonoBehaviour
             rootRect,
             new Vector2(0f, -28f),
             ArmoredRedeployAfterReward);
+    }
+
+    private void BuildVictoryRewardActions()
+    {
+        if (rewardedActionPanel != null || VictoryofFail == null)
+            return;
+
+        rewardUsedThisScreen = false;
+        var existingTexts = VictoryofFail.GetComponentsInChildren<Text>(true);
+        for (var i = 0; i < existingTexts.Length; i++)
+        {
+            if (existingTexts[i].font != null)
+            {
+                rewardFont = existingTexts[i].font;
+                break;
+            }
+        }
+
+        rewardedActionPanel = new GameObject("TreadShredVictoryReward", typeof(RectTransform));
+        rewardedActionPanel.transform.SetParent(VictoryofFail.transform, false);
+        var rootRect = rewardedActionPanel.GetComponent<RectTransform>();
+        rootRect.anchorMin = new Vector2(0.5f, 0.5f);
+        rootRect.anchorMax = new Vector2(0.5f, 0.5f);
+        rootRect.pivot = new Vector2(0.5f, 0.5f);
+        rootRect.anchoredPosition = new Vector2(0f, -142f);
+        rootRect.sizeDelta = new Vector2(700f, 164f);
+
+        var title = CreateRewardText(
+            "OVERDRIVE LOADOUT // DOUBLE FIRE",
+            rootRect,
+            new Vector2(0f, 48f),
+            new Vector2(700f, 34f),
+            24);
+        title.color = new Color(1f, 0.72f, 0.28f, 1f);
+
+        var detail = CreateRewardText(
+            "NEXT MISSION // TWO ROUNDS PER TAP",
+            rootRect,
+            new Vector2(0f, 18f),
+            new Vector2(700f, 24f),
+            15);
+        detail.color = new Color(0.78f, 0.86f, 0.88f, 1f);
+
+        CreateRewardButton(
+            "WATCH AD // ARM THE OVERDRIVE",
+            rootRect,
+            new Vector2(0f, -28f),
+            OverdriveAfterReward);
     }
 
     private Text CreateRewardText(string value, RectTransform parent, Vector2 position, Vector2 size, int fontSize)
@@ -402,7 +452,7 @@ public class ManagerScore : MonoBehaviour
 
     private void ArmoredRedeployAfterReward()
     {
-        if (rewardUsedThisFailure)
+        if (rewardUsedThisScreen)
             return;
 
         if (TankAdService.Ensure().TryShowRewarded(() =>
@@ -411,7 +461,20 @@ public class ManagerScore : MonoBehaviour
             PlayerPrefs.Save();
             ReloadCurrentMission();
         }))
-            rewardUsedThisFailure = true;
+            rewardUsedThisScreen = true;
+    }
+
+    private void OverdriveAfterReward()
+    {
+        if (rewardUsedThisScreen)
+            return;
+
+        if (TankAdService.Ensure().TryShowRewarded(() =>
+        {
+            PlayerPrefs.SetInt("TreadShredOverdrive", 1);
+            PlayerPrefs.Save();
+        }))
+            rewardUsedThisScreen = true;
     }
 
     private void ReloadCurrentMission()
