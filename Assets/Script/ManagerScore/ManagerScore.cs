@@ -316,14 +316,15 @@ public class ManagerScore : MonoBehaviour
                 break;
             }
         }
-        rewardedActionPanel = new GameObject("TreadShredRewardActions", typeof(RectTransform));
+        rewardedActionPanel = new GameObject("TreadShredRewardActions", typeof(RectTransform), typeof(Image), typeof(Outline));
         rewardedActionPanel.transform.SetParent(VictoryofFail.transform, false);
         var rootRect = rewardedActionPanel.GetComponent<RectTransform>();
         rootRect.anchorMin = new Vector2(0.5f, 0.5f);
         rootRect.anchorMax = new Vector2(0.5f, 0.5f);
         rootRect.pivot = new Vector2(0.5f, 0.5f);
-        rootRect.anchoredPosition = new Vector2(0f, -130f);
-        rootRect.sizeDelta = new Vector2(680f, 164f);
+        rootRect.anchoredPosition = new Vector2(0f, -18f);
+        rootRect.sizeDelta = new Vector2(700f, 150f);
+        StyleRewardPanel(rewardedActionPanel);
 
         var title = CreateRewardText(
             "ARMORED REDEPLOY // +1 HIT",
@@ -364,14 +365,15 @@ public class ManagerScore : MonoBehaviour
             }
         }
 
-        rewardedActionPanel = new GameObject("TreadShredVictoryReward", typeof(RectTransform));
+        rewardedActionPanel = new GameObject("TreadShredVictoryReward", typeof(RectTransform), typeof(Image), typeof(Outline));
         rewardedActionPanel.transform.SetParent(VictoryofFail.transform, false);
         var rootRect = rewardedActionPanel.GetComponent<RectTransform>();
         rootRect.anchorMin = new Vector2(0.5f, 0.5f);
         rootRect.anchorMax = new Vector2(0.5f, 0.5f);
         rootRect.pivot = new Vector2(0.5f, 0.5f);
-        rootRect.anchoredPosition = new Vector2(0f, -142f);
-        rootRect.sizeDelta = new Vector2(700f, 164f);
+        rootRect.anchoredPosition = new Vector2(0f, -18f);
+        rootRect.sizeDelta = new Vector2(720f, 150f);
+        StyleRewardPanel(rewardedActionPanel);
 
         var title = CreateRewardText(
             "OVERDRIVE LOADOUT // DOUBLE FIRE",
@@ -417,6 +419,18 @@ public class ManagerScore : MonoBehaviour
         text.verticalOverflow = VerticalWrapMode.Overflow;
         text.raycastTarget = false;
         return text;
+    }
+
+    private void StyleRewardPanel(GameObject panel)
+    {
+        var image = panel.GetComponent<Image>();
+        image.color = new Color(0.015f, 0.035f, 0.045f, 0.94f);
+        image.raycastTarget = false;
+
+        var outline = panel.GetComponent<Outline>();
+        outline.effectColor = new Color(1f, 0.34f, 0.08f, 0.92f);
+        outline.effectDistance = new Vector2(3f, 3f);
+        outline.useGraphicAlpha = true;
     }
 
     private Button CreateRewardButton(string label, RectTransform parent, Vector2 position, UnityEngine.Events.UnityAction action)
