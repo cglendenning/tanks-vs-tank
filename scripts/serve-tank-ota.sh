@@ -7,7 +7,7 @@ IPA_PATH="${1:-$OTA_DIR/TreadShred.ipa}"
 PORT="${PORT:-8765}"
 HTTP_LOG="$OTA_DIR/http.log"
 TUNNEL_LOG="$OTA_DIR/cloudflared.log"
-BUNDLE_ID="com.cglendenning.tanksvstank"
+BUNDLE_ID="com.tgts.tanksvstank"
 IPA_INFO_DIR=""
 
 if [[ ! -f "$IPA_PATH" ]]; then

@@ -11,12 +11,19 @@ using UnityEngine;
 public static class TankBuildAutomation
 {
     private const string ProductName = "Tread Shred";
-    // The legacy identifier is already claimed by another Apple team. Keep a
-    // team-owned identifier so automatic Ad Hoc provisioning can work.
-    private const string BundleIdentifier = "com.cglendenning.tanksvstank";
+    // These are the identifiers already registered in the stores and AdMob.
+    private const string IosBundleIdentifier = "com.tgts.tanksvstank";
+    private const string AndroidBundleIdentifier = "com.tgts.tankkvstank";
     private const string IosOutput = "Builds/iOSDevice";
+    private const string IosSimulatorOutput = "Builds/iOSSimulator";
     private const string AndroidApkOutput = "Builds/Android/TreadShred.apk";
     private const string AndroidBundleOutput = "Builds/Android/TreadShred.aab";
+    private const string ProductionIosAppId = "ca-app-pub-4402198490627677~4284546322";
+    private const string ProductionAndroidAppId = "ca-app-pub-4402198490627677~8381484915";
+    private const string ProductionIosInterstitial = "ca-app-pub-4402198490627677/5342886245";
+    private const string ProductionAndroidInterstitial = "ca-app-pub-4402198490627677/3893066258";
+    private const string ProductionIosRewarded = "ca-app-pub-4402198490627677/3118275391";
+    private const string ProductionAndroidRewarded = "ca-app-pub-4402198490627677/6501143322";
 
     [MenuItem("Tread Shred/Build/iOS device project")]
     public static void BuildIosDeviceProject() => BuildIos(false);
@@ -25,6 +32,7 @@ public static class TankBuildAutomation
     public static void BuildAndroidApk() => BuildAndroid(false);
 
     public static void BuildIosFromCommandLine() => BuildIos(false);
+    public static void BuildIosSimulatorFromCommandLine() => BuildIos(true);
     public static void BuildAndroidFromCommandLine() => BuildAndroid(false);
 
     public static void BuildAndroidBundleFromCommandLine()
@@ -35,12 +43,14 @@ public static class TankBuildAutomation
     private static void BuildIos(bool simulator)
     {
         PreparePlayerSettings();
-        var output = Path.GetFullPath(IosOutput);
+        var output = Path.GetFullPath(simulator ? IosSimulatorOutput : IosOutput);
         if (Directory.Exists(output))
             FileUtil.DeleteFileOrDirectory(output);
         Directory.CreateDirectory(output);
 
         PlayerSettings.iOS.sdkVersion = simulator ? iOSSdkVersion.SimulatorSDK : iOSSdkVersion.DeviceSDK;
+        if (simulator)
+            PlayerSettings.iOS.simulatorSdkArchitecture = AppleMobileArchitectureSimulator.ARM64;
         var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
         {
             scenes = ScenePaths(),
@@ -81,19 +91,17 @@ public static class TankBuildAutomation
 
         PlayerSettings.companyName = "TGT Studios";
         PlayerSettings.productName = ProductName;
-        PlayerSettings.bundleVersion = "1.7.0";
-        PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS, BundleIdentifier);
-        PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, BundleIdentifier);
-        PlayerSettings.Android.bundleVersionCode = 2;
+        PlayerSettings.bundleVersion = "1.8.0";
+        PlayerSettings.iOS.buildNumber = "3";
+        PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS, IosBundleIdentifier);
+        PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, AndroidBundleIdentifier);
+        PlayerSettings.Android.bundleVersionCode = 3;
         // Unity 6 no longer supports API 23; keep the project aligned with the
         // current Android player minimum and avoid the legacy project's setting.
         PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
-        PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel35;
+        PlayerSettings.Android.targetSdkVersion = (AndroidSdkVersions)36;
         PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
-        // The checked-in project contained an obsolete keystore path from a
-        // different machine. Let Unity use its debug signing configuration for
-        // local validation; release signing is supplied by the release script.
-        PlayerSettings.Android.useCustomKeystore = false;
+        ConfigureAndroidSigning();
         PlayerSettings.iOS.targetOSVersionString = "15.0";
         PlayerSettings.iOS.requiresFullScreen = true;
         PlayerSettings.SetScriptingBackend(BuildTargetGroup.iOS, ScriptingImplementation.IL2CPP);
@@ -133,12 +141,62 @@ public static class TankBuildAutomation
         const string directory = "Assets/Resources";
         const string path = directory + "/TankAdConfiguration.asset";
         Directory.CreateDirectory(Path.Combine(Application.dataPath, "Resources"));
-        if (AssetDatabase.LoadAssetAtPath<TankAdConfiguration>(path) == null)
+        var configuration = AssetDatabase.LoadAssetAtPath<TankAdConfiguration>(path);
+        if (configuration == null)
         {
-            var configuration = ScriptableObject.CreateInstance<TankAdConfiguration>();
+            configuration = ScriptableObject.CreateInstance<TankAdConfiguration>();
             AssetDatabase.CreateAsset(configuration, path);
-            AssetDatabase.SaveAssets();
         }
+
+        // The checked-in binary asset predates the store migration, so do not
+        // rely on C# field initializers to update it. Test builds opt in via
+        // TREAD_SHRED_USE_TEST_ADS; production is the safe default.
+        configuration.iosAppId = ProductionIosAppId;
+        configuration.androidAppId = ProductionAndroidAppId;
+        configuration.iosInterstitialUnitId = ProductionIosInterstitial;
+        configuration.androidInterstitialUnitId = ProductionAndroidInterstitial;
+        configuration.iosRewardedUnitId = ProductionIosRewarded;
+        configuration.androidRewardedUnitId = ProductionAndroidRewarded;
+        configuration.useTestAds = string.Equals(
+            Environment.GetEnvironmentVariable("TREAD_SHRED_USE_TEST_ADS"),
+            "1",
+            StringComparison.Ordinal);
+        EditorUtility.SetDirty(configuration);
+        AssetDatabase.SaveAssets();
+    }
+
+    private static void ConfigureAndroidSigning()
+    {
+        var keystore = Environment.GetEnvironmentVariable("TREAD_SHRED_ANDROID_KEYSTORE");
+        var alias = Environment.GetEnvironmentVariable("TREAD_SHRED_ANDROID_KEY_ALIAS");
+        var keystorePassword = Environment.GetEnvironmentVariable("TREAD_SHRED_ANDROID_KEYSTORE_PASSWORD");
+        var aliasPassword = Environment.GetEnvironmentVariable("TREAD_SHRED_ANDROID_KEY_PASSWORD");
+        var productionBuild = string.Equals(
+            Environment.GetEnvironmentVariable("TREAD_SHRED_ANDROID_RELEASE"),
+            "1",
+            StringComparison.Ordinal);
+
+        if (string.IsNullOrWhiteSpace(keystore) || string.IsNullOrWhiteSpace(alias) ||
+            string.IsNullOrEmpty(keystorePassword) || string.IsNullOrEmpty(aliasPassword))
+        {
+            if (productionBuild)
+                throw new BuildFailedException(
+                    "Android release signing is required. Set TREAD_SHRED_ANDROID_KEYSTORE, " +
+                    "TREAD_SHRED_ANDROID_KEY_ALIAS, TREAD_SHRED_ANDROID_KEYSTORE_PASSWORD, " +
+                    "and TREAD_SHRED_ANDROID_KEY_PASSWORD.");
+
+            PlayerSettings.Android.useCustomKeystore = false;
+            return;
+        }
+
+        if (!File.Exists(keystore))
+            throw new BuildFailedException("Android release keystore not found: " + keystore);
+
+        PlayerSettings.Android.useCustomKeystore = true;
+        PlayerSettings.Android.keystoreName = keystore;
+        PlayerSettings.Android.keystorePass = keystorePassword;
+        PlayerSettings.Android.keyaliasName = alias;
+        PlayerSettings.Android.keyaliasPass = aliasPassword;
     }
 
     private static void PatchIosInfoPlist(string buildPath)
@@ -180,7 +238,7 @@ public static class TankBuildAutomation
     {
         // The legacy project enabled Game Center without an App ID capability.
         // Remove that stale entitlement so Ad Hoc provisioning remains valid.
-        var path = Path.Combine(buildPath, "TanksVSTank.entitlements");
+        var path = Path.Combine(buildPath, "TreadShred.entitlements");
         if (!File.Exists(path))
             return;
 

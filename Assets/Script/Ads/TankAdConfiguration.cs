@@ -1,21 +1,21 @@
 using UnityEngine;
 
 /// <summary>
-/// Store-safe ad configuration. Keep production identifiers in this asset or
-/// inject them in a release build; test ads remain the default until the app
-/// has been verified in AdMob Policy Center.
+/// Production ad configuration for the published Tread Shred apps.
+/// Test IDs remain hard-coded in TankAdService and are selected only by an
+/// explicit test configuration, never by this production asset.
 /// </summary>
 [CreateAssetMenu(menuName = "Tread Shred/Ad Configuration")]
 public sealed class TankAdConfiguration : ScriptableObject
 {
-    public string iosAppId = "ca-app-pub-3940256099942544~1458002511";
-    public string androidAppId = "ca-app-pub-3940256099942544~3347511713";
+    public string iosAppId = "ca-app-pub-4402198490627677~4284546322";
+    public string androidAppId = "ca-app-pub-4402198490627677~8381484915";
     public string iosInterstitialUnitId = "ca-app-pub-4402198490627677/5342886245";
-    public string androidInterstitialUnitId = "ca-app-pub-4402198490627677/5342886245";
-    public string iosRewardedUnitId = "";
-    public string androidRewardedUnitId = "";
+    public string androidInterstitialUnitId = "ca-app-pub-4402198490627677/3893066258";
+    public string iosRewardedUnitId = "ca-app-pub-4402198490627677/3118275391";
+    public string androidRewardedUnitId = "ca-app-pub-4402198490627677/6501143322";
     public string iosBannerUnitId = "";
     public string androidBannerUnitId = "";
-    public bool useTestAds = true;
+    public bool useTestAds = false;
     public bool allowPersonalizedAds = true;
 }

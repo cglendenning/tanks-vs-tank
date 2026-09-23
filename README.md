@@ -6,14 +6,15 @@ Modern Unity 6 rebuild of the original tank game for iOS and Android from one so
 
 - Unity `6000.3.24f1`
 - iOS device target: iOS 15+, ARM64, IL2CPP
-- Android target: API 35, min API 25, ARM64, IL2CPP
-- Bundle/application ID: `com.cglendenning.tanksvstank` (retained for existing signing/provisioning)
+- Android target: API 36, min API 25, ARM64, IL2CPP
+- iOS bundle ID: `com.tgts.tanksvstank`
+- Android application ID: `com.tgts.tankkvstank`
 
 ## Ads and privacy
 
-The old Google Mobile Ads integration has been replaced with the current Unity plugin plus UMP consent handling. Ads are test-only by default. Interstitials are shown only at the existing win/loss break points, are preloaded, and are rate-limited. No banner is requested unless explicitly enabled.
+The old Google Mobile Ads integration has been replaced with the current Unity plugin plus UMP consent handling. Production builds use the Tread Shred AdMob app and unit IDs stored in `Assets/Resources/TankAdConfiguration.asset`; test ads are selected only when `TREAD_SHRED_USE_TEST_ADS=1` is explicitly set for a validation build. Interstitials are shown only at the existing win/loss break points, are preloaded, and are rate-limited. No banner is requested unless explicitly enabled.
 
-Before enabling production ads, verify the Tread Shred app ID and ad-unit IDs in `Assets/Resources/TankAdConfiguration.asset` against the AdMob account for this app. Test ads are enabled for release validation.
+Before a store submission, verify the Tread Shred app and ad-unit IDs in `Assets/Resources/TankAdConfiguration.asset` against the AdMob account for this app. New AdMob units can take time to begin serving after creation; the app must remain compliant with consent and policy requirements while they ramp.
 
 The in-game display type is Black Ops One, bundled under the SIL Open Font License; its license is included at `Assets/Art/BlackOpsOne-OFL.txt`.
 
@@ -34,6 +35,18 @@ Unity -batchmode -quit -nographics -projectPath . \
 ```
 
 The Android APK is written to `Builds/Android/TreadShred.apk`. The iOS command exports `Builds/iOSDevice`, then CocoaPods must be installed before opening/building `Unity-iPhone.xcworkspace`.
+
+For a store AAB, never use the editor's debug signing. Set the upload keystore variables and run `scripts/build-tank-android-release.sh`:
+
+```sh
+export TREAD_SHRED_ANDROID_KEYSTORE="/secure/path/tread-shred-upload.jks"
+export TREAD_SHRED_ANDROID_KEY_ALIAS="..."
+export TREAD_SHRED_ANDROID_KEYSTORE_PASSWORD="..."
+export TREAD_SHRED_ANDROID_KEY_PASSWORD="..."
+scripts/build-tank-android-release.sh
+```
+
+The release build fails closed when those values are absent. The keystore and passwords are intentionally not stored in this repository.
 
 ## Signed iOS release and OTA
 

@@ -8,6 +8,7 @@ ARCHIVE_DIR="$IOS_DIR/archive"
 ARCHIVE_PATH="$ARCHIVE_DIR/TreadShred.xcarchive"
 EXPORT_DIR="$IOS_DIR/ota"
 EXPORT_OPTIONS="$IOS_DIR/ExportOptions-AdHoc.plist"
+IOS_BUNDLE_ID="com.tgts.tanksvstank"
 
 : "${TANK_TEAM_ID:?Set TANK_TEAM_ID to the Apple Developer Team ID}"
 : "${TANK_PROVISIONING_PROFILE_SPECIFIER:?Set TANK_PROVISIONING_PROFILE_SPECIFIER to the Ad Hoc profile name or UUID}"
@@ -30,7 +31,7 @@ xcodebuild -workspace "$IOS_DIR/Unity-iPhone.xcworkspace" \
 
 cp "$ROOT_DIR/scripts/ExportOptions-AdHoc.plist" "$EXPORT_OPTIONS"
 /usr/libexec/PlistBuddy -c "Set :teamID $TANK_TEAM_ID" "$EXPORT_OPTIONS"
-/usr/libexec/PlistBuddy -c "Set :provisioningProfiles:com.cglendenning.tanksvstank $TANK_PROVISIONING_PROFILE_SPECIFIER" "$EXPORT_OPTIONS"
+/usr/libexec/PlistBuddy -c "Set :provisioningProfiles:${IOS_BUNDLE_ID} $TANK_PROVISIONING_PROFILE_SPECIFIER" "$EXPORT_OPTIONS"
 xcodebuild -exportArchive -archivePath "$ARCHIVE_PATH" \
   -exportPath "$EXPORT_DIR" -exportOptionsPlist "$EXPORT_OPTIONS"
 
