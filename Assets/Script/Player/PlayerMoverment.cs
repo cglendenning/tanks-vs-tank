@@ -13,6 +13,11 @@ public class PlayerMoverment : MonoBehaviour {
 
     Rigidbody _playerRigidbody;
 
+    [SerializeField] private bool enforceArenaBounds = true;
+    [SerializeField] private float arenaBoundaryInset = 0.05f;
+    private bool arenaBoundsCached;
+    private Bounds arenaBounds;
+
     public Joystick joystick;
 
     Camera viewCamera;
@@ -50,6 +55,7 @@ public class PlayerMoverment : MonoBehaviour {
             _playerRigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             _playerRigidbody.interpolation = RigidbodyInterpolation.Interpolate;
         }
+        CacheArenaBounds();
         viewCamera = Camera.main;
         canbullet = true;
         if (PlayerPrefs.GetInt("TreadShredArmorCache", 0) > 0)
@@ -139,7 +145,7 @@ public class PlayerMoverment : MonoBehaviour {
             // Nếu touch lớn hơn 0
             if (nbTouches > 0)
             {
-                for (int i = 0; i < 2; i++)
+                for (int i = 0; i < Mathf.Min(2, nbTouches); i++)
                 {
                     Touch touch = Input.GetTouch(i);
 
@@ -493,7 +499,52 @@ public class PlayerMoverment : MonoBehaviour {
             _movment = safeMovement + Vector3.ProjectOnPlane(remainingMovement, wallHit.normal);
         }
 
-        _playerRigidbody.MovePosition(transform.position + _movment);
+        var nextPosition = transform.position + _movment;
+        if (arenaBoundsCached)
+        {
+            var playerCollider = GetComponent<Collider>();
+            var halfWidth = playerCollider != null ? playerCollider.bounds.extents.x : 0f;
+            var halfDepth = playerCollider != null ? playerCollider.bounds.extents.z : 0f;
+            var inset = Mathf.Max(0f, arenaBoundaryInset);
+            nextPosition.x = Mathf.Clamp(nextPosition.x,
+                arenaBounds.min.x + halfWidth + inset,
+                arenaBounds.max.x - halfWidth - inset);
+            nextPosition.z = Mathf.Clamp(nextPosition.z,
+                arenaBounds.min.z + halfDepth + inset,
+                arenaBounds.max.z - halfDepth - inset);
+        }
+
+        _playerRigidbody.MovePosition(nextPosition);
+    }
+
+    private void CacheArenaBounds()
+    {
+        if (!enforceArenaBounds)
+            return;
+
+        var wallObjects = GameObject.FindGameObjectsWithTag("thanh");
+        var foundCollider = false;
+        foreach (var wallObject in wallObjects)
+        {
+            var colliders = wallObject.GetComponentsInChildren<Collider>(true);
+            foreach (var wallCollider in colliders)
+            {
+                if (wallCollider == null || wallCollider.isTrigger)
+                    continue;
+
+                if (!foundCollider)
+                {
+                    arenaBounds = wallCollider.bounds;
+                    foundCollider = true;
+                }
+                else
+                {
+                    arenaBounds.Encapsulate(wallCollider.bounds);
+                }
+            }
+        }
+
+        arenaBoundsCached = foundCollider;
     }
 
     private void FireOverdrive(Vector3 target)

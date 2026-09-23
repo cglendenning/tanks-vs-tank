@@ -160,12 +160,15 @@ public class ThrowSimulation : MonoBehaviour
             yield return null;
         }
 
-        if (BulletDestroy != null || gameObject.GetComponent<BoxCollider>().enabled == false)
-        {
-            Destroy(BulletDestroy);
+        if (BulletDestroy == null)
+            yield break;
+
+        var explosionPosition = BulletDestroy.transform.position + new Vector3(0f, 2f, 0f);
+        Destroy(BulletDestroy);
+        if (MusicManager.instance != null)
             MusicManager.instance.ExplosionTank();
-            Instantiate(PrefabExplosionBullet, BulletDestroy.transform.position + new Vector3(0f, 2f, 0f), Quaternion.Euler(-90, 0, 0));          
-        }
+        if (PrefabExplosionBullet != null)
+            Instantiate(PrefabExplosionBullet, explosionPosition, Quaternion.Euler(-90, 0, 0));
        
     }
    

@@ -81,6 +81,88 @@ public static class ApplyTreadShredStartScreen
         Debug.Log("[START SCREEN] Added command-base hero and outdoor combat-range backdrop.");
     }
 
+    public static void ApplyControlLabels()
+    {
+        var commandFont = AssetDatabase.LoadAssetAtPath<Font>(FontPath);
+        if (commandFont == null)
+            throw new System.InvalidOperationException("Missing command font at " + FontPath);
+
+        var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        var panelStart = FindByName(scene.GetRootGameObjects(), "PanelStart");
+        if (panelStart == null)
+            throw new System.InvalidOperationException("Could not find PanelStart in " + ScenePath);
+
+        var option = panelStart.transform.Find("Control/Option");
+        var stats = panelStart.transform.Find("Control/Stats");
+        if (option == null || stats == null)
+            throw new System.InvalidOperationException("Could not find the start-screen gear and stats controls.");
+
+        // Keep the midpoint where it was, but separate the controls horizontally so
+        // neither icon nor its explanatory label can collide with the other.
+        option.GetComponent<RectTransform>().anchoredPosition = new Vector2(-800f, -300f);
+        stats.GetComponent<RectTransform>().anchoredPosition = new Vector2(-440f, -300f);
+
+        EnsureControlLabel(option, "TreadShredFieldOpsLabel", "FIELD OPS", "SETTINGS", 310f, commandFont);
+        EnsureControlLabel(stats, "TreadShredWarRecordLabel", "WAR RECORD", "TOTAL SCORE // CONFIRMED KILLS // RANK", 440f, commandFont);
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+        Debug.Log("[START SCREEN] Labeled and separated FIELD OPS and WAR RECORD controls.");
+    }
+
+    private static void EnsureControlLabel(Transform control, string name, string title, string detail, float width, Font font)
+    {
+        var label = control.Find(name);
+        if (label == null)
+        {
+            label = new GameObject(name, typeof(RectTransform), typeof(Image)).transform;
+            label.SetParent(control, false);
+        }
+
+        var labelRect = label.GetComponent<RectTransform>();
+        labelRect.anchorMin = new Vector2(0.5f, 0f);
+        labelRect.anchorMax = new Vector2(0.5f, 0f);
+        labelRect.pivot = new Vector2(0.5f, 1f);
+        labelRect.anchoredPosition = new Vector2(0f, -12f);
+        labelRect.sizeDelta = new Vector2(width, 68f);
+
+        var background = label.GetComponent<Image>();
+        background.color = new Color(0.01f, 0.015f, 0.02f, 0.88f);
+        background.raycastTarget = false;
+
+        var textTransform = label.Find("Text");
+        if (textTransform == null)
+        {
+            textTransform = new GameObject("Text", typeof(RectTransform), typeof(Text), typeof(Outline)).transform;
+            textTransform.SetParent(label, false);
+        }
+
+        var textRect = textTransform.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(8f, 4f);
+        textRect.offsetMax = new Vector2(-8f, -4f);
+
+        var text = textTransform.GetComponent<Text>();
+        text.text = title + "\n" + detail;
+        text.font = font;
+        text.fontSize = 19;
+        text.fontStyle = FontStyle.Normal;
+        text.alignment = TextAnchor.MiddleCenter;
+        text.color = Color.white;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 10;
+        text.resizeTextMaxSize = 19;
+        text.horizontalOverflow = HorizontalWrapMode.Overflow;
+        text.verticalOverflow = VerticalWrapMode.Overflow;
+        text.raycastTarget = false;
+
+        var outline = textTransform.GetComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.95f);
+        outline.effectDistance = new Vector2(2f, -2f);
+    }
+
     private static void ImportSprite(string path, int maxSize)
     {
         AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);

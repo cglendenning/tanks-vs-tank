@@ -40,8 +40,7 @@ public class Bullet3 : MonoBehaviour {
                 Instantiate(PrefabExplosionBullet, transform.position, Quaternion.Euler(-90, 0, 0));
                 Destroy(gameObject);
             }
-
-            if (other.gameObject.tag == "emnemyorange" || other.gameObject.tag == "emnemyblack" || other.gameObject.tag == "emnemyred")
+            else if (other.gameObject.tag == "emnemyorange" || other.gameObject.tag == "emnemyblack")
             {
                 Instantiate(PrefabExplosionBullet, transform.position, Quaternion.Euler(-90, 0, 0));
                 other.gameObject.GetComponent<EmnemyRed>().DeadPlayer(1);

@@ -18,6 +18,8 @@ public static class TankBuildAutomation
     private const string IosSimulatorOutput = "Builds/iOSSimulator";
     private const string AndroidApkOutput = "Builds/Android/TreadShred.apk";
     private const string AndroidBundleOutput = "Builds/Android/TreadShred.aab";
+    private const string ReleaseVersion = "1.8.0";
+    private const int ReleaseBuildNumber = 4;
     private const string ProductionIosAppId = "ca-app-pub-4402198490627677~4284546322";
     private const string ProductionAndroidAppId = "ca-app-pub-4402198490627677~8381484915";
     private const string ProductionIosInterstitial = "ca-app-pub-4402198490627677/5342886245";
@@ -61,6 +63,7 @@ public static class TankBuildAutomation
         AssertBuildSucceeded(report, "iOS");
         PatchIosInfoPlist(output);
         PatchIosEntitlements(output);
+        PatchIosSigning(output);
         PatchIosPodfile(output);
         Debug.Log("Tread Shred iOS export created at " + output);
     }
@@ -91,11 +94,12 @@ public static class TankBuildAutomation
 
         PlayerSettings.companyName = "TGT Studios";
         PlayerSettings.productName = ProductName;
-        PlayerSettings.bundleVersion = "1.8.0";
-        PlayerSettings.iOS.buildNumber = "3";
+        ConfigureApplicationIcons();
+        PlayerSettings.bundleVersion = ReleaseVersion;
+        PlayerSettings.iOS.buildNumber = ReleaseBuildNumber.ToString();
         PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS, IosBundleIdentifier);
         PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, AndroidBundleIdentifier);
-        PlayerSettings.Android.bundleVersionCode = 3;
+        PlayerSettings.Android.bundleVersionCode = ReleaseBuildNumber;
         // Unity 6 no longer supports API 23; keep the project aligned with the
         // current Android player minimum and avoid the legacy project's setting.
         PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
@@ -112,6 +116,29 @@ public static class TankBuildAutomation
         PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
         PlayerSettings.allowedAutorotateToLandscapeRight = true;
         PlayerSettings.allowedAutorotateToLandscapeLeft = true;
+    }
+
+    private static void ConfigureApplicationIcons()
+    {
+        const string iconPath = "Assets/Art/UI-Game/tanks-app-icon.png";
+        var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(iconPath);
+        if (icon == null)
+            throw new BuildFailedException("Tread Shred application icon not found: " + iconPath);
+
+        foreach (var platform in new[] { BuildTargetGroup.iOS, BuildTargetGroup.Android })
+        {
+            SetIconsForKind(platform, icon, IconKind.Application);
+        }
+
+        // iOS keeps its App Store artwork in a separate Store icon kind.
+        SetIconsForKind(BuildTargetGroup.iOS, icon, IconKind.Store);
+    }
+
+    private static void SetIconsForKind(BuildTargetGroup platform, Texture2D icon, IconKind kind)
+    {
+        var sizes = PlayerSettings.GetIconSizesForTargetGroup(platform, kind);
+        var icons = Enumerable.Repeat(icon, sizes.Length).ToArray();
+        PlayerSettings.SetIconsForTargetGroup(platform, icons, kind);
     }
 
     private static string[] ScenePaths()
@@ -210,6 +237,35 @@ public static class TankBuildAutomation
         plist.root.SetString("NSUserTrackingUsageDescription", "This identifier will be used to deliver personalized ads to you.");
         plist.root.SetBoolean("ITSAppUsesNonExemptEncryption", false);
         File.WriteAllText(plistPath, plist.WriteToString());
+    }
+
+    private static void PatchIosSigning(string buildPath)
+    {
+        var teamId = Environment.GetEnvironmentVariable("TANK_TEAM_ID");
+        var profile = Environment.GetEnvironmentVariable("TANK_PROVISIONING_PROFILE_SPECIFIER");
+        var identity = Environment.GetEnvironmentVariable("TANK_CODE_SIGN_IDENTITY");
+        if (string.IsNullOrWhiteSpace(teamId) || string.IsNullOrWhiteSpace(profile))
+            throw new BuildFailedException(
+                "iOS release signing requires TANK_TEAM_ID and TANK_PROVISIONING_PROFILE_SPECIFIER.");
+
+        var projectPath = PBXProject.GetPBXProjectPath(buildPath);
+        var project = new PBXProject();
+        project.ReadFromFile(projectPath);
+        var mainTarget = project.GetUnityMainTargetGuid();
+
+        // Sign only the application target. UnityFramework and CocoaPods are
+        // embedded code and must not inherit the app's provisioning profile.
+        project.SetBuildProperty(mainTarget, "CODE_SIGN_STYLE", "Manual");
+        project.SetBuildProperty(mainTarget, "DEVELOPMENT_TEAM", teamId);
+        if (string.IsNullOrWhiteSpace(identity))
+            identity = "Apple Distribution";
+        project.SetBuildProperty(mainTarget, "CODE_SIGN_IDENTITY", identity);
+        project.SetBuildProperty(mainTarget, "CODE_SIGN_IDENTITY[sdk=iphoneos*]", identity);
+        project.SetBuildProperty(mainTarget, "PROVISIONING_PROFILE_APP", profile);
+        project.SetBuildProperty(mainTarget, "PROVISIONING_PROFILE_SPECIFIER_APP", profile);
+        project.SetBuildProperty(mainTarget, "PROVISIONING_PROFILE", "$(PROVISIONING_PROFILE_APP)");
+        project.SetBuildProperty(mainTarget, "PROVISIONING_PROFILE_SPECIFIER", "$(PROVISIONING_PROFILE_SPECIFIER_APP)");
+        project.WriteToFile(projectPath);
     }
 
     private static void PatchIosPodfile(string buildPath)

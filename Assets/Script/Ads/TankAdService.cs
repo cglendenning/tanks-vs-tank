@@ -37,11 +37,14 @@ public sealed class TankAdService : MonoBehaviour
     private bool rewardedAdEarned;
     private Action rewardedCallback;
     private Coroutine adAudioRoutine;
+    private Coroutine consentRetryRoutine;
+    private int consentRetryCount;
     private float lastInterstitialTime = -999f;
 
     private const float MinimumInterstitialIntervalSeconds = 90f;
     private const float AdAudioFadeOutSeconds = 0.12f;
     private const float AdAudioFadeInSeconds = 0.18f;
+    private const int MaxConsentRetries = 3;
 
     public static TankAdService Ensure()
     {
@@ -258,22 +261,34 @@ public sealed class TankAdService : MonoBehaviour
 
     private void OnConsentInformationUpdated(FormError error)
     {
+        var consentUpdateFailed = error != null;
         if (error != null)
             Debug.LogWarning("[Ads] Consent information update failed: " + error.Message);
 
         ConsentForm.LoadAndShowConsentFormIfRequired(formError =>
         {
             if (formError != null)
+            {
                 Debug.LogWarning("[Ads] Consent form failed: " + formError.Message);
+                ScheduleConsentRetry();
+            }
 
             CanRequestAds = ConsentInformation.CanRequestAds();
-            InitializeMobileAds();
+            if (CanRequestAds)
+            {
+                consentRetryCount = 0;
+                InitializeMobileAds();
+            }
+            else if (consentUpdateFailed)
+            {
+                ScheduleConsentRetry();
+            }
         });
     }
 
     private void InitializeMobileAds()
     {
-        if (IsReady)
+        if (IsReady || !CanRequestAds)
             return;
 
         MobileAds.Initialize(_ =>
@@ -284,6 +299,28 @@ public sealed class TankAdService : MonoBehaviour
             if (bannerRequested)
                 LoadBanner();
         });
+    }
+
+    private void ScheduleConsentRetry()
+    {
+        if (IsReady || consentRetryRoutine != null || consentRetryCount >= MaxConsentRetries)
+            return;
+
+        consentRetryRoutine = StartCoroutine(RetryConsentFlow());
+    }
+
+    private IEnumerator RetryConsentFlow()
+    {
+        var retryNumber = consentRetryCount++;
+        var delaySeconds = Mathf.Min(30f, Mathf.Pow(2f, retryNumber));
+        yield return new WaitForSecondsRealtime(delaySeconds);
+
+        consentRetryRoutine = null;
+        if (!IsReady)
+        {
+            consentFlowStarted = false;
+            BeginConsentFlow();
+        }
     }
 
     private void LoadInterstitial()
