@@ -6,29 +6,36 @@ using UnityEngine;
 
 /// <summary>
 /// One consent-gated AdMob integration shared by iOS and Android.
-/// Interstitials are only exposed to gameplay at a level boundary; banners
-/// are opt-in because the legacy game did not have a safe, non-overlapping
-/// banner layout.
+/// Interstitials are only exposed to gameplay at a level boundary; rewarded
+/// ads are only exposed behind an explicit player action; banners are opt-in
+/// because the legacy game did not have a safe, non-overlapping banner layout.
 /// </summary>
 public sealed class TankAdService : MonoBehaviour
 {
     private const string TestIosInterstitialId = "ca-app-pub-3940256099942544/4411468910";
     private const string TestAndroidInterstitialId = "ca-app-pub-3940256099942544/1033173712";
+    private const string TestIosRewardedId = "ca-app-pub-3940256099942544/1712485313";
+    private const string TestAndroidRewardedId = "ca-app-pub-3940256099942544/5224354917";
     private const string TestIosBannerId = "ca-app-pub-3940256099942544/2934735716";
     private const string TestAndroidBannerId = "ca-app-pub-3940256099942544/6300978111";
 
     public static TankAdService Instance { get; private set; }
     public bool IsReady { get; private set; }
     public bool CanRequestAds { get; private set; }
+    public bool CanShowRewarded => IsReady && CanRequestAds && rewarded != null && rewarded.CanShowAd();
 
     [SerializeField] private TankAdConfiguration configuration;
     private InterstitialAd interstitial;
+    private RewardedAd rewarded;
     private BannerView banner;
     private bool consentFlowStarted;
     private bool bannerRequested;
     private bool interstitialPresentationInProgress;
+    private bool rewardedPresentationInProgress;
     private bool audioWasPausedBeforeInterstitial;
     private float audioVolumeBeforeInterstitial;
+    private bool rewardedAdEarned;
+    private Action rewardedCallback;
     private Coroutine adAudioRoutine;
     private float lastInterstitialTime = -999f;
 
@@ -95,6 +102,29 @@ public sealed class TankAdService : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Shows a user-initiated rewarded ad. The callback is invoked only after
+    /// the user earns the reward and the full-screen ad has closed.
+    /// </summary>
+    public bool TryShowRewarded(Action onRewardEarned)
+    {
+        if (rewardedPresentationInProgress || onRewardEarned == null ||
+            !IsReady || !CanRequestAds)
+            return false;
+
+        if (rewarded == null || !rewarded.CanShowAd())
+        {
+            LoadRewarded();
+            return false;
+        }
+
+        rewardedPresentationInProgress = true;
+        rewardedAdEarned = false;
+        rewardedCallback = onRewardEarned;
+        adAudioRoutine = StartCoroutine(FadeOutAudioThenShowRewarded(rewarded));
+        return true;
+    }
+
     private IEnumerator FadeOutAudioThenShowInterstitial(InterstitialAd ad)
     {
         audioWasPausedBeforeInterstitial = AudioListener.pause;
@@ -114,6 +144,31 @@ public sealed class TankAdService : MonoBehaviour
             EndInterstitialAudioProtection();
             interstitialPresentationInProgress = false;
             LoadInterstitial();
+        }
+    }
+
+    private IEnumerator FadeOutAudioThenShowRewarded(RewardedAd ad)
+    {
+        audioWasPausedBeforeInterstitial = AudioListener.pause;
+        audioVolumeBeforeInterstitial = AudioListener.volume;
+
+        yield return FadeAudioVolume(0f, AdAudioFadeOutSeconds);
+        AudioListener.pause = true;
+        adAudioRoutine = null;
+
+        try
+        {
+            ad.Show(_ => rewardedAdEarned = true);
+        }
+        catch (Exception error)
+        {
+            Debug.LogException(error);
+            rewarded = null;
+            rewardedCallback = null;
+            rewardedAdEarned = false;
+            EndRewardedAudioProtection();
+            rewardedPresentationInProgress = false;
+            LoadRewarded();
         }
     }
 
@@ -151,6 +206,28 @@ public sealed class TankAdService : MonoBehaviour
         yield return FadeAudioVolume(audioVolumeBeforeInterstitial, AdAudioFadeInSeconds);
         adAudioRoutine = null;
         interstitialPresentationInProgress = false;
+    }
+
+    private void EndRewardedAudioProtection()
+    {
+        if (adAudioRoutine != null)
+            StopCoroutine(adAudioRoutine);
+
+        adAudioRoutine = StartCoroutine(RestoreAudioAfterRewarded());
+    }
+
+    private IEnumerator RestoreAudioAfterRewarded()
+    {
+        var callback = rewardedCallback;
+        var earned = rewardedAdEarned;
+        AudioListener.pause = audioWasPausedBeforeInterstitial;
+        yield return FadeAudioVolume(audioVolumeBeforeInterstitial, AdAudioFadeInSeconds);
+        rewardedCallback = null;
+        rewardedAdEarned = false;
+        rewardedPresentationInProgress = false;
+        adAudioRoutine = null;
+        if (earned)
+            callback?.Invoke();
     }
 
     public void ShowPrivacyOptionsForm()
@@ -203,6 +280,7 @@ public sealed class TankAdService : MonoBehaviour
         {
             IsReady = true;
             LoadInterstitial();
+            LoadRewarded();
             if (bannerRequested)
                 LoadBanner();
         });
@@ -259,6 +337,46 @@ public sealed class TankAdService : MonoBehaviour
         banner.LoadAd(new AdRequest());
     }
 
+    private void LoadRewarded()
+    {
+        if (!IsReady || !CanRequestAds)
+            return;
+
+        var adUnitId = CurrentRewardedId();
+        if (string.IsNullOrWhiteSpace(adUnitId))
+        {
+            Debug.LogWarning("[Ads] Rewarded unit ID is not configured.");
+            return;
+        }
+
+        rewarded?.Destroy();
+        RewardedAd.Load(adUnitId, new AdRequest(), (ad, error) =>
+        {
+            if (error != null || ad == null)
+            {
+                Debug.LogWarning("[Ads] Rewarded load failed: " + error);
+                return;
+            }
+
+            rewarded = ad;
+            rewarded.OnAdFullScreenContentClosed += () =>
+            {
+                rewarded = null;
+                EndRewardedAudioProtection();
+                LoadRewarded();
+            };
+            rewarded.OnAdFullScreenContentFailed += _ =>
+            {
+                rewarded = null;
+                rewardedCallback = null;
+                rewardedAdEarned = false;
+                EndRewardedAudioProtection();
+                rewardedPresentationInProgress = false;
+                LoadRewarded();
+            };
+        });
+    }
+
     private string CurrentInterstitialId()
     {
         if (configuration.useTestAds)
@@ -298,6 +416,28 @@ public sealed class TankAdService : MonoBehaviour
         return configuration.iosBannerUnitId;
 #elif UNITY_ANDROID
         return configuration.androidBannerUnitId;
+#else
+        return string.Empty;
+#endif
+    }
+
+    private string CurrentRewardedId()
+    {
+        if (configuration.useTestAds)
+        {
+#if UNITY_IOS
+            return TestIosRewardedId;
+#elif UNITY_ANDROID
+            return TestAndroidRewardedId;
+#else
+            return string.Empty;
+#endif
+        }
+
+#if UNITY_IOS
+        return configuration.iosRewardedUnitId;
+#elif UNITY_ANDROID
+        return configuration.androidRewardedUnitId;
 #else
         return string.Empty;
 #endif

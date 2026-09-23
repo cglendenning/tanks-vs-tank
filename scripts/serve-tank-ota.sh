@@ -8,6 +8,7 @@ PORT="${PORT:-8765}"
 HTTP_LOG="$OTA_DIR/http.log"
 TUNNEL_LOG="$OTA_DIR/cloudflared.log"
 BUNDLE_ID="com.cglendenning.tanksvstank"
+IPA_INFO_DIR=""
 
 if [[ ! -f "$IPA_PATH" ]]; then
   echo "Missing signed IPA: $IPA_PATH" >&2
@@ -27,8 +28,23 @@ HTTP_PID=$!
 cleanup() {
   kill "$HTTP_PID" 2>/dev/null || true
   if [[ -n "${TUNNEL_PID:-}" ]]; then kill "$TUNNEL_PID" 2>/dev/null || true; fi
+  if [[ -n "$IPA_INFO_DIR" && -d "$IPA_INFO_DIR" ]]; then rm -rf "$IPA_INFO_DIR"; fi
 }
 trap cleanup EXIT INT TERM
+
+IPA_INFO_DIR="$(mktemp -d)"
+unzip -q -o "$OTA_DIR/TreadShred.ipa" -d "$IPA_INFO_DIR"
+APP_INFO_PLIST="$(find "$IPA_INFO_DIR/Payload" -maxdepth 2 -name Info.plist -print -quit)"
+if [[ -z "$APP_INFO_PLIST" ]]; then
+  echo "Unable to find Info.plist inside the signed IPA" >&2
+  exit 1
+fi
+EXPORTED_BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_INFO_PLIST")"
+BUNDLE_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_INFO_PLIST")"
+if [[ "$EXPORTED_BUNDLE_ID" != "$BUNDLE_ID" ]]; then
+  echo "Bundle ID mismatch: expected $BUNDLE_ID, got $EXPORTED_BUNDLE_ID" >&2
+  exit 1
+fi
 
 cloudflared tunnel --url "http://127.0.0.1:${PORT}" --no-autoupdate >"$TUNNEL_LOG" 2>&1 &
 TUNNEL_PID=$!
@@ -68,7 +84,7 @@ cat > "$OTA_DIR/manifest.plist" <<EOF
 </array>
 <key>metadata</key><dict>
 <key>bundle-identifier</key><string>${BUNDLE_ID}</string>
-<key>bundle-version</key><string>1.2.0</string>
+<key>bundle-version</key><string>${BUNDLE_VERSION}</string>
 <key>kind</key><string>software</string>
 <key>title</key><string>Tread Shred</string>
 </dict></dict></array>

@@ -44,7 +44,13 @@ public class PlayerMoverment : MonoBehaviour {
         _playerRigidbody = GetComponent<Rigidbody>();
         viewCamera = Camera.main;
         canbullet = true;
-        if (StyteBullet == null)
+        if (PlayerPrefs.GetInt("TreadShredArmorCache", 0) > 0)
+        {
+            countdie = 4;
+            PlayerPrefs.DeleteKey("TreadShredArmorCache");
+            PlayerPrefs.Save();
+        }
+       if (StyteBullet == null)
         {
             StyteBullet = GameObject.Find("Canvas");
         }

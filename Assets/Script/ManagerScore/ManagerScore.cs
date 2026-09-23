@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class ManagerScore : MonoBehaviour
@@ -77,6 +78,9 @@ public class ManagerScore : MonoBehaviour
     public float test;
     int indexmedel;
     float hightscore;
+    private GameObject rewardedActionPanel;
+    private bool rewardUsedThisFailure;
+    private Font rewardFont;
 
 
     public void CaculaterScore()
@@ -250,6 +254,8 @@ public class ManagerScore : MonoBehaviour
         MusicManager.instance.Victory();
         CaculaterScore();
         VictoryofFail.SetActive(true);
+        if (FailureObj != null && FailureObj.activeSelf)
+            BuildFailureRewardActions();
         //if (Showadsmob.instance.isadsmob)
         //{
         //      Showadsmob.instance.isadsmob = false;
@@ -292,6 +298,133 @@ public class ManagerScore : MonoBehaviour
         }
     }
 
+
+    private void BuildFailureRewardActions()
+    {
+        if (rewardedActionPanel != null || VictoryofFail == null)
+            return;
+
+        rewardUsedThisFailure = false;
+        var existingTexts = VictoryofFail.GetComponentsInChildren<Text>(true);
+        for (var i = 0; i < existingTexts.Length; i++)
+        {
+            if (existingTexts[i].font != null)
+            {
+                rewardFont = existingTexts[i].font;
+                break;
+            }
+        }
+        rewardedActionPanel = new GameObject("TreadShredRewardActions", typeof(RectTransform));
+        rewardedActionPanel.transform.SetParent(VictoryofFail.transform, false);
+        var rootRect = rewardedActionPanel.GetComponent<RectTransform>();
+        rootRect.anchorMin = new Vector2(0.5f, 0.5f);
+        rootRect.anchorMax = new Vector2(0.5f, 0.5f);
+        rootRect.pivot = new Vector2(0.5f, 0.5f);
+        rootRect.anchoredPosition = new Vector2(0f, -130f);
+        rootRect.sizeDelta = new Vector2(680f, 150f);
+
+        var title = CreateRewardText(
+            "REWARD OPTIONS // CHOOSE ONE",
+            rootRect,
+            new Vector2(0f, 48f),
+            new Vector2(680f, 34f),
+            24);
+        title.color = new Color(1f, 0.72f, 0.28f, 1f);
+
+        CreateRewardButton(
+            "REDEPLOY // WATCH AD",
+            rootRect,
+            new Vector2(-175f, -24f),
+            RedeployAfterReward);
+        CreateRewardButton(
+            "ARMOR CACHE // WATCH AD",
+            rootRect,
+            new Vector2(175f, -24f),
+            ArmorCacheAfterReward);
+    }
+
+    private Text CreateRewardText(string value, RectTransform parent, Vector2 position, Vector2 size, int fontSize)
+    {
+        var textObject = new GameObject("RewardLabel", typeof(RectTransform));
+        textObject.transform.SetParent(parent, false);
+        var rect = textObject.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+
+        var text = textObject.AddComponent<Text>();
+        text.text = value;
+        text.font = rewardFont != null ? rewardFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
+        text.fontSize = fontSize;
+        text.fontStyle = FontStyle.Bold;
+        text.alignment = TextAnchor.MiddleCenter;
+        text.horizontalOverflow = HorizontalWrapMode.Overflow;
+        text.verticalOverflow = VerticalWrapMode.Overflow;
+        text.raycastTarget = false;
+        return text;
+    }
+
+    private Button CreateRewardButton(string label, RectTransform parent, Vector2 position, UnityEngine.Events.UnityAction action)
+    {
+        var buttonObject = new GameObject(label, typeof(RectTransform), typeof(Image), typeof(Button), typeof(Outline));
+        buttonObject.transform.SetParent(parent, false);
+        var rect = buttonObject.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = new Vector2(300f, 72f);
+
+        var image = buttonObject.GetComponent<Image>();
+        image.color = new Color(0.08f, 0.14f, 0.16f, 0.98f);
+        var outline = buttonObject.GetComponent<Outline>();
+        outline.effectColor = new Color(1f, 0.36f, 0.08f, 1f);
+        outline.effectDistance = new Vector2(3f, 3f);
+
+        var button = buttonObject.GetComponent<Button>();
+        button.targetGraphic = image;
+        var colors = button.colors;
+        colors.normalColor = new Color(0.08f, 0.14f, 0.16f, 0.98f);
+        colors.highlightedColor = new Color(0.18f, 0.32f, 0.35f, 1f);
+        colors.pressedColor = new Color(0.4f, 0.16f, 0.06f, 1f);
+        button.colors = colors;
+        button.onClick.AddListener(action);
+
+        var text = CreateRewardText(label, rect, Vector2.zero, rect.sizeDelta - new Vector2(18f, 10f), 22);
+        text.color = Color.white;
+        return button;
+    }
+
+    private void RedeployAfterReward()
+    {
+        if (rewardUsedThisFailure)
+            return;
+
+        if (TankAdService.Ensure().TryShowRewarded(ReloadCurrentMission))
+            rewardUsedThisFailure = true;
+    }
+
+    private void ArmorCacheAfterReward()
+    {
+        if (rewardUsedThisFailure)
+            return;
+
+        if (TankAdService.Ensure().TryShowRewarded(() =>
+        {
+            PlayerPrefs.SetInt("TreadShredArmorCache", 1);
+            PlayerPrefs.Save();
+            ReloadCurrentMission();
+        }))
+            rewardUsedThisFailure = true;
+    }
+
+    private void ReloadCurrentMission()
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
 
     public bool isrung;
 

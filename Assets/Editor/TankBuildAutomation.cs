@@ -81,7 +81,7 @@ public static class TankBuildAutomation
 
         PlayerSettings.companyName = "TGT Studios";
         PlayerSettings.productName = ProductName;
-        PlayerSettings.bundleVersion = "1.2.0";
+        PlayerSettings.bundleVersion = "1.3.0";
         PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS, BundleIdentifier);
         PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, BundleIdentifier);
         PlayerSettings.Android.bundleVersionCode = 2;

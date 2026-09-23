@@ -12,6 +12,8 @@ public sealed class TankAdConfiguration : ScriptableObject
     public string androidAppId = "ca-app-pub-3940256099942544~3347511713";
     public string iosInterstitialUnitId = "ca-app-pub-4402198490627677/5342886245";
     public string androidInterstitialUnitId = "ca-app-pub-4402198490627677/5342886245";
+    public string iosRewardedUnitId = "";
+    public string androidRewardedUnitId = "";
     public string iosBannerUnitId = "";
     public string androidBannerUnitId = "";
     public bool useTestAds = true;
