@@ -1,6 +1,14 @@
 # Tread Shred production-readiness review
 
-Release target: `1.8.0` / iOS build `3` / Android version code `3`.
+Release target: `1.8.0` / iOS build `4` / Android version code `4`.
+
+## Last verified September 23, 2026
+
+- The production iOS build 4 is signed, uploaded, processed as `VALID`, and attached to the editable App Store Connect version. Apple currently shows `Prepare for Submission`; App Review contact phone and email still need to be filled before `Add for Review` becomes available.
+- The Apple upload emitted warning 90076 because the team identifier changed from the legacy build. It is non-blocking for this game, which does not use Keychain storage.
+- The Google Play listing copy is now `Tread Shred`; the existing icon, feature graphic, and six phone screenshots are present.
+- Google Play financial-features and health-app declarations are complete. Content rating and Data safety are actioned and ready to go with the next review submission.
+- Google Play still reports the package as `Removed by Google`; the appeal remains submitted. A production Android release cannot be published until Google reinstates the listing and the upload-key reset is active.
 
 ## Completed
 
@@ -18,7 +26,7 @@ Release target: `1.8.0` / iOS build `3` / Android version code `3`.
 
 ### Apple App Store
 
-The iOS 1.8.0 build is submitted to Apple review. Apple’s web UI reports that review can take up to 48 hours. Release is configured for automatic release after approval. Apple App Privacy is published and reflects the production Google Mobile Ads SDK and ATT behavior.
+The iOS 1.8.0 build 4 is attached and ready for review. Release is configured for automatic release after approval. Apple App Privacy is published and reflects the production Google Mobile Ads SDK and ATT behavior. Fill the two App Review contact fields, click `Add for Review`, then confirm the submission in the review queue.
 
 ### Google Play
 
