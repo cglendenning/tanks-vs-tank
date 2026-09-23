@@ -11,6 +11,7 @@ public static class ApplyTreadShredVisualRefresh
     private const string BaseIconPath = "Assets/Image/TreadShredBaseIcon.png";
     private const string AdvanceIconPath = "Assets/Image/TreadShredAdvanceIcon.png";
     private const string RedeployIconPath = "Assets/Image/TreadShredRedeployIcon.png";
+    private const string LivesIconPath = "Assets/Image/TreadShredLivesIcon.png";
     private const string CanvasPath = "Assets/Prefab/Canvas.prefab";
     private const string PlayerTankMaterialPath = "Assets/Art/TreadShredPlayerTank.mat";
     private const string EnemyTankMaterialPath = "Assets/Art/TreadShredEnemyTank.mat";
@@ -23,6 +24,7 @@ public static class ApplyTreadShredVisualRefresh
         var baseIcon = LoadSprite(BaseIconPath);
         var advanceIcon = LoadSprite(AdvanceIconPath);
         var redeployIcon = LoadSprite(RedeployIconPath);
+        var livesIcon = LoadSprite(LivesIconPath);
         var commandFont = AssetDatabase.LoadAssetAtPath<Font>(CommandFontPath);
         if (commandFont == null)
             throw new FileNotFoundException("Missing command font", CommandFontPath);
@@ -30,7 +32,7 @@ public static class ApplyTreadShredVisualRefresh
         ApplyMissileMaterials(missileTexture);
         ApplyGroundMaterials();
         ApplyTeamTankMaterials(tankTexture);
-        ApplyCombatUi(baseIcon, advanceIcon, redeployIcon, commandFont);
+        ApplyCombatUi(baseIcon, advanceIcon, redeployIcon, livesIcon, commandFont);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[VISUAL REFRESH] Applied armored tank, missile, and next-mission presentation.");
@@ -132,10 +134,10 @@ public static class ApplyTreadShredVisualRefresh
     {
         var playerMaterial = CreateOrLoadTeamMaterial(
             PlayerTankMaterialPath, "Tread Shred Player Armor", tankTexture,
-            new Color(1.36f, 1.96f, 1.26f, 1f));
+            new Color(1.55f, 2.18f, 1.35f, 1f));
         var enemyMaterial = CreateOrLoadTeamMaterial(
             EnemyTankMaterialPath, "Tread Shred Enemy Armor", tankTexture,
-            new Color(1.86f, 1.27f, 2.10f, 1f));
+            new Color(2.05f, 1.34f, 2.30f, 1f));
 
         ApplyTankMaterialToPrefab("Assets/Prefab/Player 1.prefab", playerMaterial);
         foreach (var path in Directory.GetFiles("Assets/Prefab/Emnemy", "*.prefab", SearchOption.AllDirectories))
@@ -151,9 +153,19 @@ public static class ApplyTreadShredVisualRefresh
             AssetDatabase.CreateAsset(material, path);
         }
 
-        SetMaterialPresentation(material, texture, 0.48f, 0.36f);
+        SetMaterialPresentation(material, texture, 0.32f, 0.30f);
         if (material.HasProperty("_Color"))
             material.SetColor("_Color", tint);
+        if (material.HasProperty("_EmissionMap") && texture != null)
+            material.SetTexture("_EmissionMap", texture);
+        if (material.HasProperty("_EmissionColor"))
+        {
+            material.EnableKeyword("_EMISSION");
+            var emission = tint.r > tint.b
+                ? new Color(0.10f, 0.20f, 0.06f, 1f)
+                : new Color(0.18f, 0.06f, 0.22f, 1f);
+            material.SetColor("_EmissionColor", emission);
+        }
         EditorUtility.SetDirty(material);
         return material;
     }
@@ -202,12 +214,14 @@ public static class ApplyTreadShredVisualRefresh
         EditorUtility.SetDirty(material);
     }
 
-    private static void ApplyCombatUi(Sprite baseIcon, Sprite advanceIcon, Sprite redeployIcon, Font commandFont)
+    private static void ApplyCombatUi(Sprite baseIcon, Sprite advanceIcon, Sprite redeployIcon, Sprite livesIcon, Font commandFont)
     {
         var canvas = PrefabUtility.LoadPrefabContents(CanvasPath);
         try
         {
             var victoryRoot = FindByPath(canvas.transform, "PanelVictoryFailure/Victory");
+            if (victoryRoot != null)
+                SetStretchRect(victoryRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one);
             ConfigureCommandStrip(victoryRoot);
 
             ConfigureCommandButton(
@@ -221,12 +235,36 @@ public static class ApplyTreadShredVisualRefresh
                 advanceIcon, "NEXT MISSION", new Vector2(0.78f, 0.20f), 152f, commandFont);
             ConfigureIconButton(FindByPath(canvas.transform, "PanelPause/ButtonMenu (1)"), baseIcon, 96f);
             ConfigureIconButton(FindByPath(canvas.transform, "PanelPause/ButtonRetry (1)"), redeployIcon, 96f);
+            ApplyLivesIndicators(canvas.transform, livesIcon);
 
             PrefabUtility.SaveAsPrefabAsset(canvas, CanvasPath);
         }
         finally
         {
             PrefabUtility.UnloadPrefabContents(canvas);
+        }
+    }
+
+    private static void ApplyLivesIndicators(Transform canvas, Sprite livesIcon)
+    {
+        foreach (var transform in canvas.GetComponentsInChildren<Transform>(true))
+        {
+            if (transform.name != "Heart")
+                continue;
+
+            var images = transform.GetComponentsInChildren<Image>(true);
+            foreach (var image in images)
+            {
+                if (livesIcon == null)
+                    continue;
+
+                image.sprite = livesIcon;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = true;
+                image.color = Color.white;
+                image.raycastTarget = false;
+                EditorUtility.SetDirty(image);
+            }
         }
     }
 
