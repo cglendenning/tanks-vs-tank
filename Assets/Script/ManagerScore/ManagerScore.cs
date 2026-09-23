@@ -42,7 +42,12 @@ public class ManagerScore : MonoBehaviour
 
         instance = this;
         SumEmnemy = CountEmnemy;
-        campaignScore = Mathf.Max(0, PlayerPrefs.GetInt("TreadShredCampaignScore", 0));
+        if (!activeRunStarted)
+        {
+            activeRunStarted = true;
+            activeRunScore = 0;
+        }
+        campaignScore = activeRunScore;
         if (CanvasGame == null)
         {
             CanvasGame = GameObject.Find("Canvas");
@@ -76,6 +81,7 @@ public class ManagerScore : MonoBehaviour
         if (KillScore == null)
             return;
 
+        campaignScore = activeRunScore;
         var liveMissionScore = scoreCommitted ? 0 : CurDieEmnemy * 100;
         KillScore.text = "SCORE // " + (campaignScore + liveMissionScore).ToString();
     }
@@ -86,8 +92,26 @@ public class ManagerScore : MonoBehaviour
     private GameObject rewardedActionPanel;
     private bool rewardUsedThisScreen;
     private Font rewardFont;
+    private static int activeRunScore;
+    private static bool activeRunStarted;
     private int campaignScore;
     private bool scoreCommitted;
+
+    public static void BeginNewRun()
+    {
+        activeRunStarted = true;
+        activeRunScore = 0;
+        PlayerPrefs.DeleteKey("TreadShredCampaignScore");
+        PlayerPrefs.Save();
+    }
+
+    public static void EndRun()
+    {
+        activeRunStarted = false;
+        activeRunScore = 0;
+        PlayerPrefs.DeleteKey("TreadShredCampaignScore");
+        PlayerPrefs.Save();
+    }
 
 
     public void CaculaterScore()
@@ -101,11 +125,11 @@ public class ManagerScore : MonoBehaviour
 
         int LevelS = (int)(CurDieEmnemy * 100);
 
-        if (!scoreCommitted)
+        var missionWon = FailureObj == null || !FailureObj.activeSelf;
+        if (!scoreCommitted && missionWon)
         {
-            campaignScore += LevelS;
-            PlayerPrefs.SetInt("TreadShredCampaignScore", campaignScore);
-            PlayerPrefs.Save();
+            activeRunScore += LevelS;
+            campaignScore = activeRunScore;
             scoreCommitted = true;
         }
 
@@ -308,6 +332,8 @@ public class ManagerScore : MonoBehaviour
         if (wf == false)
         {
             wf = true;
+            BeginNewRun();
+            campaignScore = 0;
             FailureObj.SetActive(true);
             StartCoroutine(DelayVictotory());
             StartCoroutine(DelayShowAD(true));
@@ -508,6 +534,7 @@ public class ManagerScore : MonoBehaviour
 
     private void ReloadCurrentMission()
     {
+        BeginNewRun();
         Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }

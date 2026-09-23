@@ -191,6 +191,7 @@ public class Memory : MonoBehaviour {
     public GameObject FadeIg;
     public void PlayLevel()
     {
+        ManagerScore.BeginNewRun();
         LoadLv.instance.StopMS();
         FadeIg.SetActive(true);
         StartCoroutine(DelayPlayLevel());

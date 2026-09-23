@@ -27,11 +27,13 @@ public class ManagerButton : MonoBehaviour {
     public void Retry()
     {
         string level = Application.loadedLevelName;
+        ManagerScore.BeginNewRun();
         Application.LoadLevel(level);
     }
 
     public void LoadMenu()
     {
+        ManagerScore.EndRun();
         Time.timeScale = 1;
         Application.LoadLevel("Start");
     }
