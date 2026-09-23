@@ -212,13 +212,13 @@ public static class ApplyTreadShredVisualRefresh
 
             ConfigureCommandButton(
                 FindByPath(canvas.transform, "PanelVictoryFailure/ButtonRetry"),
-                redeployIcon, "REPLAY", new Vector2(0.22f, 0.17f), 152f, commandFont);
+                redeployIcon, "REPLAY", new Vector2(0.22f, 0.20f), 152f, commandFont);
             ConfigureCommandButton(
                 FindByPath(canvas.transform, "PanelVictoryFailure/ButtonMenu"),
-                baseIcon, "BASE", new Vector2(0.50f, 0.17f), 152f, commandFont);
+                baseIcon, "BASE", new Vector2(0.50f, 0.20f), 152f, commandFont);
             ConfigureCommandButton(
                 FindByPath(canvas.transform, "PanelVictoryFailure/Victory/ButtonNext"),
-                advanceIcon, "NEXT MISSION", new Vector2(0.78f, 0.17f), 152f, commandFont);
+                advanceIcon, "NEXT MISSION", new Vector2(0.78f, 0.20f), 152f, commandFont);
             ConfigureIconButton(FindByPath(canvas.transform, "PanelPause/ButtonMenu (1)"), baseIcon, 96f);
             ConfigureIconButton(FindByPath(canvas.transform, "PanelPause/ButtonRetry (1)"), redeployIcon, 96f);
 
@@ -261,7 +261,7 @@ public static class ApplyTreadShredVisualRefresh
 
         var strip = EnsureImage(victoryRoot, "CommandStrip");
         var stripRect = strip.GetComponent<RectTransform>();
-        SetStretchRect(stripRect, new Vector2(0.055f, 0.025f), new Vector2(0.945f, 0.31f));
+        SetStretchRect(stripRect, new Vector2(0.055f, 0.025f), new Vector2(0.945f, 0.35f));
         strip.transform.SetSiblingIndex(0);
         var stripImage = strip.GetComponent<Image>();
         stripImage.color = new Color(0.015f, 0.035f, 0.055f, 0.94f);
@@ -309,7 +309,8 @@ public static class ApplyTreadShredVisualRefresh
         plateRect.anchorMax = new Vector2(1f, 0f);
         plateRect.pivot = new Vector2(0.5f, 1f);
         plateRect.anchoredPosition = new Vector2(0f, -4f);
-        plateRect.sizeDelta = new Vector2(-10f, 38f);
+        var isNextMission = label == "NEXT MISSION";
+        plateRect.sizeDelta = new Vector2(isNextMission ? 54f : -10f, 38f);
         plate.GetComponent<Image>().color = new Color(0.01f, 0.02f, 0.03f, 0.88f);
         plate.GetComponent<Image>().raycastTarget = false;
         var plateOutline = plate.GetComponent<Outline>() ?? plate.AddComponent<Outline>();
@@ -324,10 +325,10 @@ public static class ApplyTreadShredVisualRefresh
         textRect.anchorMax = new Vector2(1f, 0f);
         textRect.pivot = new Vector2(0.5f, 1f);
         textRect.anchoredPosition = new Vector2(0f, -4f);
-        textRect.sizeDelta = new Vector2(-14f, 38f);
+        textRect.sizeDelta = new Vector2(isNextMission ? 46f : -14f, 38f);
         text.text = label;
         text.font = commandFont;
-        text.fontSize = label == "NEXT MISSION" ? 20 : 24;
+        text.fontSize = isNextMission ? 20 : 24;
         text.fontStyle = FontStyle.Normal;
         text.alignment = TextAnchor.MiddleCenter;
         text.horizontalOverflow = HorizontalWrapMode.Overflow;
