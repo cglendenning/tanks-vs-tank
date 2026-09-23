@@ -42,6 +42,7 @@ public class ManagerScore : MonoBehaviour
 
         instance = this;
         SumEmnemy = CountEmnemy;
+        campaignScore = Mathf.Max(0, PlayerPrefs.GetInt("TreadShredCampaignScore", 0));
         if (CanvasGame == null)
         {
             CanvasGame = GameObject.Find("Canvas");
@@ -72,7 +73,11 @@ public class ManagerScore : MonoBehaviour
 
     void Update()
     {
-        KillScore.text = "SCORE // " + (CurDieEmnemy * 100).ToString();
+        if (KillScore == null)
+            return;
+
+        var liveMissionScore = scoreCommitted ? 0 : CurDieEmnemy * 100;
+        KillScore.text = "SCORE // " + (campaignScore + liveMissionScore).ToString();
     }
 
     public float test;
@@ -81,6 +86,8 @@ public class ManagerScore : MonoBehaviour
     private GameObject rewardedActionPanel;
     private bool rewardUsedThisScreen;
     private Font rewardFont;
+    private int campaignScore;
+    private bool scoreCommitted;
 
 
     public void CaculaterScore()
@@ -93,6 +100,14 @@ public class ManagerScore : MonoBehaviour
         int T2 = (SumEmnemy * 100) + 1300 + (SumEmnemy * 100);
 
         int LevelS = (int)(CurDieEmnemy * 100);
+
+        if (!scoreCommitted)
+        {
+            campaignScore += LevelS;
+            PlayerPrefs.SetInt("TreadShredCampaignScore", campaignScore);
+            PlayerPrefs.Save();
+            scoreCommitted = true;
+        }
 
         int AccurasyR = (CurCountbullet > 0) ? (int)(((float)CurDieEmnemy / (float)CurCountbullet) * 300) : 0;
 

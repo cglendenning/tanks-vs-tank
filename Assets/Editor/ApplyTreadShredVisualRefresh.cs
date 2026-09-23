@@ -49,6 +49,15 @@ public static class ApplyTreadShredVisualRefresh
         Debug.Log("[VISUAL REFRESH] Applied armored tank, missile, mission board, fortified walls, and animated torches.");
     }
 
+    public static void ApplyTorchesOnly()
+    {
+        var wallTorch = LoadSprite(WallTorchPath);
+        ApplyArenaTorches(wallTorch);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[VISUAL REFRESH] Re-attached animated torches to the arena corner posts.");
+    }
+
     private static Texture2D LoadTexture(string path)
     {
         AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
@@ -174,7 +183,9 @@ public static class ApplyTreadShredVisualRefresh
             var root = PrefabUtility.LoadPrefabContents(prefabPath);
             try
             {
-                var renderers = root.GetComponentsInChildren<Renderer>(true);
+                var renderers = root.GetComponentsInChildren<Renderer>(true)
+                    .Where(renderer => renderer.GetComponent<TreadShredTorchFlicker>() == null)
+                    .ToArray();
                 if (renderers.Length == 0)
                     continue;
 
@@ -182,30 +193,39 @@ public static class ApplyTreadShredVisualRefresh
                 for (var i = 1; i < renderers.Length; i++)
                     bounds.Encapsulate(renderers[i].bounds);
 
-                var torchWidth = Mathf.Clamp(Mathf.Min(bounds.size.x, bounds.size.z) * 0.07f, 1.4f, 2.8f);
-                var torchScale = torchWidth / 11.45f;
-                var marginX = Mathf.Max(bounds.extents.x * 0.16f, torchWidth * 0.75f);
-                var marginZ = Mathf.Max(bounds.extents.z * 0.16f, torchWidth * 0.75f);
-                var y = bounds.max.y + 0.12f;
-                var positions = new[]
-                {
-                    new Vector3(bounds.min.x + marginX, y, bounds.min.z + marginZ),
-                    new Vector3(bounds.max.x - marginX, y, bounds.min.z + marginZ),
-                    new Vector3(bounds.min.x + marginX, y, bounds.max.z - marginZ),
-                    new Vector3(bounds.max.x - marginX, y, bounds.max.z - marginZ)
-                };
+                var cornerPosts = renderers
+                    .Where(renderer => renderer.name == "Cot" || renderer.name.StartsWith("Cot ("))
+                    .OrderBy(renderer => renderer.bounds.center.x)
+                    .ThenBy(renderer => renderer.bounds.center.z)
+                    .Take(4)
+                    .ToArray();
+                if (cornerPosts.Length < 4)
+                    continue;
 
-                for (var i = 0; i < positions.Length; i++)
+                var torchWidth = Mathf.Clamp(Mathf.Min(bounds.size.x, bounds.size.z) * 0.06f, 1.8f, 2.45f);
+                var torchScale = torchWidth / 11.45f;
+
+                for (var i = 0; i < cornerPosts.Length; i++)
                 {
                     var childName = "TreadShredTorch_" + (i + 1);
-                    var existing = root.transform.Find(childName);
+                    var existing = root.GetComponentsInChildren<Transform>(true)
+                        .FirstOrDefault(transform => transform.name == childName);
                     var torch = existing == null ? new GameObject(childName) : existing.gameObject;
                     if (existing == null)
                         torch.transform.SetParent(root.transform, false);
 
-                    torch.transform.position = positions[i];
+                    var post = cornerPosts[i];
+                    var postCenter = post.bounds.center;
+                    var inward = new Vector3(
+                        postCenter.x < bounds.center.x ? 0.45f : -0.45f,
+                        0f,
+                        postCenter.z < bounds.center.z ? 0.45f : -0.45f);
+                    var attachPoint = postCenter + inward;
+                    attachPoint.y = post.bounds.max.y + 0.16f;
+                    torch.transform.SetParent(post.transform, true);
+                    torch.transform.position = attachPoint;
                     torch.transform.localScale = Vector3.one * torchScale;
-                    torch.transform.localRotation = Quaternion.Euler(90f, 0f, i % 2 == 0 ? 0f : 180f);
+                    torch.transform.rotation = Quaternion.Euler(90f, 0f, postCenter.x < bounds.center.x ? 0f : 180f);
 
                     var spriteRenderer = torch.GetComponent<SpriteRenderer>();
                     if (spriteRenderer == null)
@@ -213,13 +233,22 @@ public static class ApplyTreadShredVisualRefresh
                     spriteRenderer.sprite = torchSprite;
                     spriteRenderer.color = Color.white;
                     spriteRenderer.sortingOrder = 50;
-                    spriteRenderer.flipX = i % 2 == 1;
+                    spriteRenderer.flipX = postCenter.x >= bounds.center.x;
                     var flicker = torch.GetComponent<TreadShredTorchFlicker>();
                     if (flicker == null)
                         flicker = torch.AddComponent<TreadShredTorchFlicker>();
+                    var torchLight = torch.GetComponent<Light>();
+                    if (torchLight == null)
+                        torchLight = torch.AddComponent<Light>();
+                    torchLight.type = LightType.Point;
+                    torchLight.color = new Color(1f, 0.30f, 0.06f, 1f);
+                    torchLight.range = 4.5f;
+                    torchLight.intensity = 0.72f;
+                    torchLight.shadows = LightShadows.None;
                     EditorUtility.SetDirty(torch);
                     EditorUtility.SetDirty(spriteRenderer);
                     EditorUtility.SetDirty(flicker);
+                    EditorUtility.SetDirty(torchLight);
                 }
 
                 PrefabUtility.SaveAsPrefabAsset(root, prefabPath);

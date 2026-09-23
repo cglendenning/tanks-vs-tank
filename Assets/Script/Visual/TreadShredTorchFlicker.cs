@@ -15,6 +15,7 @@ public sealed class TreadShredTorchFlicker : MonoBehaviour
     private Quaternion baseRotation;
     private Color baseColor;
     private float phase;
+    private Light torchLight;
 
     private void Awake()
     {
@@ -22,6 +23,7 @@ public sealed class TreadShredTorchFlicker : MonoBehaviour
         baseScale = transform.localScale;
         baseRotation = transform.localRotation;
         baseColor = spriteRenderer == null ? Color.white : spriteRenderer.color;
+        torchLight = GetComponent<Light>();
         phase = Mathf.Abs(Mathf.Sin(transform.position.x * 0.73f + transform.position.z * 1.17f)) * 6.28f;
     }
 
@@ -40,5 +42,8 @@ public sealed class TreadShredTorchFlicker : MonoBehaviour
             color.a = Mathf.Clamp01(baseColor.a * glow);
             spriteRenderer.color = color;
         }
+
+        if (torchLight != null)
+            torchLight.intensity = 0.72f + Mathf.Sin(time * 1.83f) * 0.12f + Mathf.Sin(time * 3.11f) * 0.06f;
     }
 }
