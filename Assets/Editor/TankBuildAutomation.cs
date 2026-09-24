@@ -19,7 +19,7 @@ public static class TankBuildAutomation
     private const string AndroidApkOutput = "Builds/Android/TreadShred.apk";
     private const string AndroidBundleOutput = "Builds/Android/TreadShred.aab";
     private const string ReleaseVersion = "1.8.0";
-    private const int ReleaseBuildNumber = 4;
+    private const int ReleaseBuildNumber = 5;
     private const string ProductionIosAppId = "ca-app-pub-4402198490627677~4284546322";
     private const string ProductionAndroidAppId = "ca-app-pub-4402198490627677~8381484915";
     private const string ProductionIosInterstitial = "ca-app-pub-4402198490627677/5342886245";

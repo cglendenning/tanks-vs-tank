@@ -38,6 +38,7 @@ public sealed class TankAdService : MonoBehaviour
     private Action rewardedCallback;
     private Coroutine adAudioRoutine;
     private Coroutine consentRetryRoutine;
+    private Coroutine startupConsentRoutine;
     private int consentRetryCount;
     private float lastInterstitialTime = -999f;
 
@@ -71,7 +72,28 @@ public sealed class TankAdService : MonoBehaviour
         if (configuration == null)
             configuration = CreateFallbackConfiguration();
 
-        BeginConsentFlow();
+        // Do not enter native consent/WebView code during the first frame.
+        // A device can safely launch the game even when the ad SDK, consent
+        // service, or its network is unavailable.
+        startupConsentRoutine = StartCoroutine(BeginConsentFlowAfterStartup());
+    }
+
+    private IEnumerator BeginConsentFlowAfterStartup()
+    {
+        yield return null;
+        yield return new WaitForSecondsRealtime(1f);
+        startupConsentRoutine = null;
+
+        try
+        {
+            BeginConsentFlow();
+        }
+        catch (Exception error)
+        {
+            Debug.LogWarning("[Ads] Startup initialization skipped: " + error.Message);
+            CanRequestAds = false;
+            ScheduleConsentRetry();
+        }
     }
 
     public void RequestBanner()
@@ -93,7 +115,18 @@ public sealed class TankAdService : MonoBehaviour
             Time.unscaledTime - lastInterstitialTime < MinimumInterstitialIntervalSeconds)
             return false;
 
-        if (interstitial == null || !interstitial.CanShowAd())
+        bool canShowInterstitial;
+        try
+        {
+            canShowInterstitial = interstitial != null && interstitial.CanShowAd();
+        }
+        catch (Exception error)
+        {
+            Debug.LogWarning("[Ads] Interstitial availability check failed: " + error.Message);
+            canShowInterstitial = false;
+        }
+
+        if (!canShowInterstitial)
         {
             LoadInterstitial();
             return false;
@@ -115,7 +148,18 @@ public sealed class TankAdService : MonoBehaviour
             !IsReady || !CanRequestAds)
             return false;
 
-        if (rewarded == null || !rewarded.CanShowAd())
+        bool canShowRewarded;
+        try
+        {
+            canShowRewarded = rewarded != null && rewarded.CanShowAd();
+        }
+        catch (Exception error)
+        {
+            Debug.LogWarning("[Ads] Rewarded availability check failed: " + error.Message);
+            canShowRewarded = false;
+        }
+
+        if (!canShowRewarded)
         {
             LoadRewarded();
             return false;
@@ -238,11 +282,18 @@ public sealed class TankAdService : MonoBehaviour
         if (!IsReady)
             return;
 
-        ConsentForm.ShowPrivacyOptionsForm(error =>
+        try
         {
-            if (error != null)
-                Debug.LogWarning("[Ads] Privacy options form failed: " + error.Message);
-        });
+            ConsentForm.ShowPrivacyOptionsForm(error =>
+            {
+                if (error != null)
+                    Debug.LogWarning("[Ads] Privacy options form failed: " + error.Message);
+            });
+        }
+        catch (Exception error)
+        {
+            Debug.LogWarning("[Ads] Privacy options form unavailable: " + error.Message);
+        }
     }
 
     private void BeginConsentFlow()
@@ -265,25 +316,43 @@ public sealed class TankAdService : MonoBehaviour
         if (error != null)
             Debug.LogWarning("[Ads] Consent information update failed: " + error.Message);
 
-        ConsentForm.LoadAndShowConsentFormIfRequired(formError =>
+        try
         {
-            if (formError != null)
+            ConsentForm.LoadAndShowConsentFormIfRequired(formError =>
             {
-                Debug.LogWarning("[Ads] Consent form failed: " + formError.Message);
-                ScheduleConsentRetry();
-            }
+                try
+                {
+                    if (formError != null)
+                    {
+                        Debug.LogWarning("[Ads] Consent form failed: " + formError.Message);
+                        ScheduleConsentRetry();
+                    }
 
-            CanRequestAds = ConsentInformation.CanRequestAds();
-            if (CanRequestAds)
-            {
-                consentRetryCount = 0;
-                InitializeMobileAds();
-            }
-            else if (consentUpdateFailed)
-            {
-                ScheduleConsentRetry();
-            }
-        });
+                    CanRequestAds = ConsentInformation.CanRequestAds();
+                    if (CanRequestAds)
+                    {
+                        consentRetryCount = 0;
+                        InitializeMobileAds();
+                    }
+                    else if (consentUpdateFailed)
+                    {
+                        ScheduleConsentRetry();
+                    }
+                }
+                catch (Exception callbackError)
+                {
+                    Debug.LogWarning("[Ads] Consent callback failed: " + callbackError.Message);
+                    CanRequestAds = false;
+                    ScheduleConsentRetry();
+                }
+            });
+        }
+        catch (Exception formError)
+        {
+            Debug.LogWarning("[Ads] Consent form unavailable: " + formError.Message);
+            CanRequestAds = false;
+            ScheduleConsentRetry();
+        }
     }
 
     private void InitializeMobileAds()
@@ -291,14 +360,32 @@ public sealed class TankAdService : MonoBehaviour
         if (IsReady || !CanRequestAds)
             return;
 
-        MobileAds.Initialize(_ =>
+        try
         {
-            IsReady = true;
-            LoadInterstitial();
-            LoadRewarded();
-            if (bannerRequested)
-                LoadBanner();
-        });
+            MobileAds.Initialize(_ =>
+            {
+                try
+                {
+                    IsReady = true;
+                    LoadInterstitial();
+                    LoadRewarded();
+                    if (bannerRequested)
+                        LoadBanner();
+                }
+                catch (Exception callbackError)
+                {
+                    IsReady = false;
+                    Debug.LogWarning("[Ads] Mobile Ads callback failed: " + callbackError.Message);
+                    ScheduleConsentRetry();
+                }
+            });
+        }
+        catch (Exception error)
+        {
+            IsReady = false;
+            Debug.LogWarning("[Ads] Mobile Ads initialization skipped: " + error.Message);
+            ScheduleConsentRetry();
+        }
     }
 
     private void ScheduleConsentRetry()
@@ -319,7 +406,16 @@ public sealed class TankAdService : MonoBehaviour
         if (!IsReady)
         {
             consentFlowStarted = false;
-            BeginConsentFlow();
+            try
+            {
+                BeginConsentFlow();
+            }
+            catch (Exception error)
+            {
+                Debug.LogWarning("[Ads] Consent retry skipped: " + error.Message);
+                CanRequestAds = false;
+                ScheduleConsentRetry();
+            }
         }
     }
 
@@ -335,29 +431,44 @@ public sealed class TankAdService : MonoBehaviour
             return;
         }
 
-        interstitial?.Destroy();
-        InterstitialAd.Load(adUnitId, new AdRequest(), (ad, error) =>
+        try
         {
-            if (error != null || ad == null)
+            interstitial?.Destroy();
+            interstitial = null;
+            InterstitialAd.Load(adUnitId, new AdRequest(), (ad, error) =>
             {
-                Debug.LogWarning("[Ads] Interstitial load failed: " + error);
-                return;
-            }
+                try
+                {
+                    if (error != null || ad == null)
+                    {
+                        Debug.LogWarning("[Ads] Interstitial load failed: " + error);
+                        return;
+                    }
 
-            interstitial = ad;
-            interstitial.OnAdFullScreenContentClosed += () =>
-            {
-                interstitial = null;
-                EndInterstitialAudioProtection();
-                LoadInterstitial();
-            };
-            interstitial.OnAdFullScreenContentFailed += _ =>
-            {
-                interstitial = null;
-                EndInterstitialAudioProtection();
-                LoadInterstitial();
-            };
-        });
+                    interstitial = ad;
+                    interstitial.OnAdFullScreenContentClosed += () =>
+                    {
+                        interstitial = null;
+                        EndInterstitialAudioProtection();
+                        LoadInterstitial();
+                    };
+                    interstitial.OnAdFullScreenContentFailed += _ =>
+                    {
+                        interstitial = null;
+                        EndInterstitialAudioProtection();
+                        LoadInterstitial();
+                    };
+                }
+                catch (Exception callbackError)
+                {
+                    Debug.LogWarning("[Ads] Interstitial callback failed: " + callbackError.Message);
+                }
+            });
+        }
+        catch (Exception loadError)
+        {
+            Debug.LogWarning("[Ads] Interstitial request skipped: " + loadError.Message);
+        }
     }
 
     private void LoadBanner()
@@ -369,9 +480,16 @@ public sealed class TankAdService : MonoBehaviour
         if (string.IsNullOrWhiteSpace(adUnitId))
             return;
 
-        banner?.Destroy();
-        banner = new BannerView(adUnitId, AdSize.Banner, AdPosition.Bottom);
-        banner.LoadAd(new AdRequest());
+        try
+        {
+            banner?.Destroy();
+            banner = new BannerView(adUnitId, AdSize.Banner, AdPosition.Bottom);
+            banner.LoadAd(new AdRequest());
+        }
+        catch (Exception error)
+        {
+            Debug.LogWarning("[Ads] Banner request skipped: " + error.Message);
+        }
     }
 
     private void LoadRewarded()
@@ -386,32 +504,46 @@ public sealed class TankAdService : MonoBehaviour
             return;
         }
 
-        rewarded?.Destroy();
-        RewardedAd.Load(adUnitId, new AdRequest(), (ad, error) =>
+        try
         {
-            if (error != null || ad == null)
+            rewarded?.Destroy();
+            RewardedAd.Load(adUnitId, new AdRequest(), (ad, error) =>
             {
-                Debug.LogWarning("[Ads] Rewarded load failed: " + error);
-                return;
-            }
+                try
+                {
+                    if (error != null || ad == null)
+                    {
+                        Debug.LogWarning("[Ads] Rewarded load failed: " + error);
+                        return;
+                    }
 
-            rewarded = ad;
-            rewarded.OnAdFullScreenContentClosed += () =>
-            {
-                rewarded = null;
-                EndRewardedAudioProtection();
-                LoadRewarded();
-            };
-            rewarded.OnAdFullScreenContentFailed += _ =>
-            {
-                rewarded = null;
-                rewardedCallback = null;
-                rewardedAdEarned = false;
-                EndRewardedAudioProtection();
-                rewardedPresentationInProgress = false;
-                LoadRewarded();
-            };
-        });
+                    rewarded = ad;
+                    rewarded.OnAdFullScreenContentClosed += () =>
+                    {
+                        rewarded = null;
+                        EndRewardedAudioProtection();
+                        LoadRewarded();
+                    };
+                    rewarded.OnAdFullScreenContentFailed += _ =>
+                    {
+                        rewarded = null;
+                        rewardedCallback = null;
+                        rewardedAdEarned = false;
+                        EndRewardedAudioProtection();
+                        rewardedPresentationInProgress = false;
+                        LoadRewarded();
+                    };
+                }
+                catch (Exception callbackError)
+                {
+                    Debug.LogWarning("[Ads] Rewarded callback failed: " + callbackError.Message);
+                }
+            });
+        }
+        catch (Exception loadError)
+        {
+            Debug.LogWarning("[Ads] Rewarded request skipped: " + loadError.Message);
+        }
     }
 
     private string CurrentInterstitialId()
