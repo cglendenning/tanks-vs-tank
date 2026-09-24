@@ -47,3 +47,34 @@
   other credentials in logs or user-facing output. If the release cannot be
   signed after the reference workflow is attempted, report the exact failed
   check and ask only for the missing credential/profile input.
+
+## Tread Shred release isolation
+
+- Keep this game's release work completely separate from every other app on
+  the Mac. The preferred isolated staging root is
+  `/private/tmp/tread-shred-release`; if a clean run is needed, create a
+  uniquely named child such as `/private/tmp/tread-shred-release.XXXXXX` and
+  keep it alive until the OTA install is complete.
+- Build artifacts, exported IPAs, manifests, HTTP logs, and Cloudflare logs
+  must stay under that Tread Shred staging copy's
+  `Builds/iOSDevice/ota` directory. Never use Green Pyramid, Superhero, or
+  another project's `Builds`/OTA directory, and never overwrite their
+  artifacts or servers.
+- If the live Unity editor locks the checkout, use an isolated project copy
+  for the release build (excluding `Library`, `Temp`, `Logs`, `Obj`, `Builds`,
+  and `.git`) instead of interrupting the editor or downloading another
+  Unity editor. The installed editor path and this repository's build scripts
+  are the only required project tooling.
+- Allocate a local OTA port per run. Prefer `8877` only when it is free;
+  otherwise choose another unused port and record it in the release output.
+  Never kill or reuse a server owned by another app. Keep the Tread Shred
+  server and tunnel process running until the user has installed the build.
+- The repeatable sequence is: prepare the isolated copy, run
+  `scripts/build-tank-release.sh` with the Tread Shred signing/profile and
+  `TREAD_SHRED_USE_TEST_ADS=1`, validate the IPA, run
+  `PORT=<unique-port> scripts/serve-tank-ota.sh`, verify public HTTP 200 for
+  both manifest and IPA, then return the OTA URL, direct IPA URL, version, and
+  SHA-256. Do not report completion before all of those checks pass.
+- Clean up only old Tread Shred staging directories after the active OTA
+  session ends. Do not recursively delete broad workspace paths or anything
+  belonging to another app.
