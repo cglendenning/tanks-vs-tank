@@ -11,6 +11,8 @@ public static class ApplyTreadShredStartScreen
     private const string ScenePath = "Assets/Scence/Start.unity";
     private const string BackdropPath = "Assets/Image/TreadShredCommandBaseBackdrop.png";
     private const string BasePath = "Assets/Image/TreadShredBaseIcon.png";
+    private const string AdvancePath = "Assets/Image/TreadShredAdvanceIcon.png";
+    private const string SettingsPath = "Assets/Image/TreadShredSettingsIcon.png";
     private const string FontPath = "Assets/Art/BlackOpsOne-Regular.ttf";
 
     public static void Run()
@@ -87,6 +89,9 @@ public static class ApplyTreadShredStartScreen
         if (commandFont == null)
             throw new System.InvalidOperationException("Missing command font at " + FontPath);
 
+        ImportSprite(AdvancePath, 2048);
+        ImportSprite(SettingsPath, 2048);
+
         var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         var panelStart = FindByName(scene.GetRootGameObjects(), "PanelStart");
         if (panelStart == null)
@@ -94,21 +99,57 @@ public static class ApplyTreadShredStartScreen
 
         var option = panelStart.transform.Find("Control/Option");
         var stats = panelStart.transform.Find("Control/Stats");
-        if (option == null || stats == null)
-            throw new System.InvalidOperationException("Could not find the start-screen gear and stats controls.");
+        var play = panelStart.transform.Find("Control/Play");
+        if (option == null || stats == null || play == null)
+            throw new System.InvalidOperationException("Could not find the start-screen command controls.");
 
-        // Keep the midpoint where it was, but separate the controls horizontally so
-        // neither icon nor its explanatory label can collide with the other.
-        option.GetComponent<RectTransform>().anchoredPosition = new Vector2(-800f, -300f);
-        stats.GetComponent<RectTransform>().anchoredPosition = new Vector2(-440f, -300f);
+        var advanceIcon = AssetDatabase.LoadAssetAtPath<Sprite>(AdvancePath);
+        var settingsIcon = AssetDatabase.LoadAssetAtPath<Sprite>(SettingsPath);
+        ConfigureStartControl(option, settingsIcon, new Vector2(0.20f, 0.16f), 146f);
+        ConfigureStartControl(stats, null, new Vector2(0.50f, 0.10f), 108f);
+        ConfigureStartControl(play, advanceIcon, new Vector2(0.80f, 0.16f), 146f);
+        HideLegacyControlText(play);
 
-        EnsureControlLabel(option, "TreadShredFieldOpsLabel", "FIELD OPS", "SETTINGS", 310f, commandFont);
+        EnsureControlLabel(option, "TreadShredFieldOpsLabel", "SETTINGS", string.Empty, 280f, commandFont);
         EnsureControlLabel(stats, "TreadShredWarRecordLabel", "WAR RECORD", "TOTAL SCORE // CONFIRMED KILLS // RANK", 440f, commandFont);
+        EnsureControlLabel(play, "TreadShredDeployLabel", "START MISSION", string.Empty, 310f, commandFont);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         AssetDatabase.SaveAssets();
-        Debug.Log("[START SCREEN] Labeled and separated FIELD OPS and WAR RECORD controls.");
+        Debug.Log("[START SCREEN] Rebuilt SETTINGS, WAR RECORD, and START MISSION controls.");
+    }
+
+    private static void ConfigureStartControl(Transform control, Sprite sprite, Vector2 anchor, float size)
+    {
+        var rect = control.GetComponent<RectTransform>();
+        rect.anchorMin = anchor;
+        rect.anchorMax = anchor;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = new Vector2(size, size);
+        rect.localRotation = Quaternion.identity;
+        rect.localScale = Vector3.one;
+
+        var image = control.GetComponent<Image>();
+        if (image != null && sprite != null)
+        {
+            image.sprite = sprite;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = true;
+            image.color = Color.white;
+        }
+
+        EditorUtility.SetDirty(rect);
+        if (image != null)
+            EditorUtility.SetDirty(image);
+    }
+
+    private static void HideLegacyControlText(Transform control)
+    {
+        var legacyText = control.Find("Text");
+        if (legacyText != null)
+            legacyText.gameObject.SetActive(false);
     }
 
     private static void EnsureControlLabel(Transform control, string name, string title, string detail, float width, Font font)
@@ -145,7 +186,7 @@ public static class ApplyTreadShredStartScreen
         textRect.offsetMax = new Vector2(-8f, -4f);
 
         var text = textTransform.GetComponent<Text>();
-        text.text = title + "\n" + detail;
+        text.text = string.IsNullOrEmpty(detail) ? title : title + "\n" + detail;
         text.font = font;
         text.fontSize = 19;
         text.fontStyle = FontStyle.Normal;

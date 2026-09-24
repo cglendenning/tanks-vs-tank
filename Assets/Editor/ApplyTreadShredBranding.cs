@@ -88,9 +88,9 @@ public static class ApplyTreadShredBranding
         if (name == "TextTank (1)" && path.Contains("PanelStart"))
             return "NO MERCY. NO REVERSE.";
         if (path.Contains("PanelStart/Control/Play/"))
-            return "DEPLOY";
+            return "START MISSION";
         if (path.Contains("PanelStart/Control/Option/"))
-            return "FIELD OPS";
+            return "SETTINGS";
         if (path.Contains("PanelStart/Control/Stats/"))
             return "WAR RECORD";
         if (path.Contains("PanelStart/OptionPanel/Exit"))
