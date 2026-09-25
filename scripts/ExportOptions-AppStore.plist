@@ -9,13 +9,20 @@
 	<key>method</key>
 	<string>app-store</string>
 	<key>signingStyle</key>
-	<string>automatic</string>
+	<string>manual</string>
+	<key>signingCertificate</key>
+	<string>66F1F59CE546829AA563FE01BF325E9BC197584A</string>
 	<key>stripSwiftSymbols</key>
 	<true/>
 	<key>teamID</key>
 	<string>MCALPSQ5P5</string>
 	<key>uploadSymbols</key>
 	<true/>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>com.tgts.tanksvstank</key>
+		<string>09cbafed-fa70-412d-9046-904985906739</string>
+	</dict>
 	<key>uploadBitcode</key>
 	<false/>
 </dict>

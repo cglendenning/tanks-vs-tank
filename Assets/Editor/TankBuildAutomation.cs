@@ -19,7 +19,7 @@ public static class TankBuildAutomation
     private const string AndroidApkOutput = "Builds/Android/TreadShred.apk";
     private const string AndroidBundleOutput = "Builds/Android/TreadShred.aab";
     private const string ReleaseVersion = "1.8.0";
-    private const int ReleaseBuildNumber = 10;
+    private const int ReleaseBuildNumber = 11;
     private const string ProductionIosAppId = "ca-app-pub-4402198490627677~4284546322";
     private const string ProductionAndroidAppId = "ca-app-pub-4402198490627677~8381484915";
     private const string ProductionIosInterstitial = "ca-app-pub-4402198490627677/5342886245";
@@ -28,7 +28,14 @@ public static class TankBuildAutomation
     private const string ProductionAndroidRewarded = "ca-app-pub-4402198490627677/6501143322";
 
     [MenuItem("Tread Shred/Build/iOS device project")]
-    public static void BuildIosDeviceProject() => BuildIos(false);
+    public static void BuildIosDeviceProject()
+    {
+        Environment.SetEnvironmentVariable("TREAD_SHRED_USE_TEST_ADS", null);
+        Environment.SetEnvironmentVariable("TANK_TEAM_ID", "MCALPSQ5P5");
+        Environment.SetEnvironmentVariable("TANK_PROVISIONING_PROFILE_SPECIFIER", "e11cb221-3c7d-436b-a97e-b153ce24a285");
+        Environment.SetEnvironmentVariable("TANK_CODE_SIGN_IDENTITY", "Apple Distribution: Craig Glendenning (MCALPSQ5P5)");
+        BuildIos(false);
+    }
 
     [MenuItem("Tread Shred/Build/iOS device project (test ads)")]
     public static void BuildIosDeviceProjectWithTestAds()

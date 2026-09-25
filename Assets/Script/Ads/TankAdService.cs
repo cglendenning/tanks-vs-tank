@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Runtime.InteropServices;
 using GoogleMobileAds.Api;
 using GoogleMobileAds.Ump.Api;
 using UnityEngine;
@@ -37,6 +38,8 @@ public sealed class TankAdService : MonoBehaviour
     private bool rewardedAdEarned;
     private bool rewardedPresentationOpened;
     private bool rewardedPresentationFinalized;
+    private bool trackingAuthorizationStarted;
+    private bool trackingAuthorizationCompleted;
     private Action rewardedCallback;
     private Coroutine adAudioRoutine;
     private Coroutine consentRetryRoutine;
@@ -91,6 +94,15 @@ public sealed class TankAdService : MonoBehaviour
     {
         yield return null;
         yield return new WaitForSecondsRealtime(1f);
+
+#if UNITY_IOS && !UNITY_EDITOR
+        // Apple requires the ATT decision before any SDK can collect data that
+        // may be used for tracking. Keep this ahead of UMP and AdMob startup,
+        // and fail open after a short timeout so a native prompt/network issue
+        // can never block the game itself.
+        yield return RequestTrackingAuthorization();
+#endif
+
         startupConsentRoutine = null;
 
         try
@@ -104,6 +116,47 @@ public sealed class TankAdService : MonoBehaviour
             ScheduleConsentRetry();
         }
     }
+
+#if UNITY_IOS && !UNITY_EDITOR
+    [DllImport("__Internal")]
+    private static extern void TreadShredRequestTrackingAuthorization();
+
+    private IEnumerator RequestTrackingAuthorization()
+    {
+        if (trackingAuthorizationCompleted)
+            yield break;
+
+        trackingAuthorizationStarted = true;
+        try
+        {
+            TreadShredRequestTrackingAuthorization();
+        }
+        catch (Exception error)
+        {
+            Debug.LogWarning("[Ads] ATT request unavailable: " + error.Message);
+            trackingAuthorizationCompleted = true;
+            yield break;
+        }
+
+        var elapsed = 0f;
+        while (!trackingAuthorizationCompleted && elapsed < 8f)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        // Never hold up gameplay if iOS fails to deliver the native callback.
+        trackingAuthorizationCompleted = true;
+    }
+
+    // Called from the native iOS bridge after the ATT prompt (or immediately
+    // when iOS has already recorded a decision).
+    public void OnTrackingAuthorizationCompleted(string _)
+    {
+        if (trackingAuthorizationStarted)
+            trackingAuthorizationCompleted = true;
+    }
+#endif
 
     public void RequestBanner()
     {
