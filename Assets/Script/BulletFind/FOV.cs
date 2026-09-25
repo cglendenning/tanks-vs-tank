@@ -75,7 +75,7 @@ public class FOV : MonoBehaviour
         for (int i = 0; i < 10; i++)
         {
             yield return new WaitForSeconds(0.1f);
-            gameObject.GetComponent<Rigidbody>().velocity = gameObject.GetComponent<Rigidbody>().velocity * 0.7f; 
+            gameObject.GetComponent<Rigidbody>().linearVelocity = gameObject.GetComponent<Rigidbody>().linearVelocity * 0.7f; 
         }
 
     }

@@ -13,6 +13,7 @@ public static class ApplyTreadShredStartScreen
     private const string BasePath = "Assets/Image/TreadShredBaseIcon.png";
     private const string AdvancePath = "Assets/Image/TreadShredAdvanceIcon.png";
     private const string SettingsPath = "Assets/Image/TreadShredSettingsIcon.png";
+    private const string RedeployPath = "Assets/Image/TreadShredRedeployIcon.png";
     private const string FontPath = "Assets/Art/BlackOpsOne-Regular.ttf";
 
     public static void Run()
@@ -91,6 +92,7 @@ public static class ApplyTreadShredStartScreen
 
         ImportSprite(AdvancePath, 2048);
         ImportSprite(SettingsPath, 2048);
+        ImportSprite(RedeployPath, 2048);
 
         var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         var panelStart = FindByName(scene.GetRootGameObjects(), "PanelStart");
@@ -103,6 +105,25 @@ public static class ApplyTreadShredStartScreen
         if (option == null || stats == null || play == null)
             throw new System.InvalidOperationException("Could not find the start-screen command controls.");
 
+        // The legacy Control container was a 100x100 pixel layout island. In
+        // runtime that made the 20% and 80% child anchors collapse together,
+        // so Settings and Start Mission rendered on top of one another. Make
+        // the container span the full command canvas before positioning the
+        // controls relative to it.
+        var control = panelStart.transform.Find("Control");
+        if (control != null)
+        {
+            var controlRect = control.GetComponent<RectTransform>();
+            controlRect.anchorMin = Vector2.zero;
+            controlRect.anchorMax = Vector2.one;
+            controlRect.offsetMin = Vector2.zero;
+            controlRect.offsetMax = Vector2.zero;
+            controlRect.anchoredPosition = Vector2.zero;
+            controlRect.sizeDelta = Vector2.zero;
+            controlRect.localScale = Vector3.one;
+            EditorUtility.SetDirty(controlRect);
+        }
+
         var advanceIcon = AssetDatabase.LoadAssetAtPath<Sprite>(AdvancePath);
         var settingsIcon = AssetDatabase.LoadAssetAtPath<Sprite>(SettingsPath);
         ConfigureStartControl(option, settingsIcon, new Vector2(0.20f, 0.16f), 146f);
@@ -113,11 +134,58 @@ public static class ApplyTreadShredStartScreen
         EnsureControlLabel(option, "TreadShredFieldOpsLabel", "SETTINGS", string.Empty, 280f, commandFont);
         EnsureControlLabel(stats, "TreadShredWarRecordLabel", "WAR RECORD", "TOTAL SCORE // CONFIRMED KILLS // RANK", 440f, commandFont);
         EnsureControlLabel(play, "TreadShredDeployLabel", "START MISSION", string.Empty, 310f, commandFont);
+        ApplyOptionPanelIcons(panelStart.transform);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         AssetDatabase.SaveAssets();
         Debug.Log("[START SCREEN] Rebuilt SETTINGS, WAR RECORD, and START MISSION controls.");
+    }
+
+    private static void ApplyOptionPanelIcons(Transform panelStart)
+    {
+        var optionPanel = panelStart.Find("OptionPanel");
+        if (optionPanel == null)
+        {
+            foreach (var candidate in panelStart.GetComponentsInChildren<Transform>(true))
+            {
+                if (candidate.name == "OptionPanel")
+                {
+                    optionPanel = candidate;
+                    break;
+                }
+            }
+        }
+
+        if (optionPanel == null)
+            return;
+
+        var settingsIcon = AssetDatabase.LoadAssetAtPath<Sprite>(SettingsPath);
+        var cameraIcon = AssetDatabase.LoadAssetAtPath<Sprite>(RedeployPath);
+        foreach (var image in optionPanel.GetComponentsInChildren<Image>(true))
+        {
+            // ImageWhite/ImageBlack are the legacy toggle sprites. Replace
+            // both states so returning to settings can never reveal the old
+            // flat white glyphs.
+            if (image.gameObject.name != "ImageWhite" && image.gameObject.name != "ImageBlack")
+                continue;
+
+            var isCamera = false;
+            for (var ancestor = image.transform.parent; ancestor != null && ancestor != optionPanel; ancestor = ancestor.parent)
+            {
+                if (ancestor.name.ToLowerInvariant().Contains("camera"))
+                {
+                    isCamera = true;
+                    break;
+                }
+            }
+            image.sprite = isCamera ? cameraIcon : settingsIcon;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = true;
+            image.color = Color.white;
+            image.raycastTarget = false;
+            EditorUtility.SetDirty(image);
+        }
     }
 
     private static void ConfigureStartControl(Transform control, Sprite sprite, Vector2 anchor, float size)

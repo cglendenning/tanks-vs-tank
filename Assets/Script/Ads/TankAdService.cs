@@ -35,16 +35,25 @@ public sealed class TankAdService : MonoBehaviour
     private bool audioWasPausedBeforeInterstitial;
     private float audioVolumeBeforeInterstitial;
     private bool rewardedAdEarned;
+    private bool rewardedPresentationOpened;
+    private bool rewardedPresentationFinalized;
     private Action rewardedCallback;
     private Coroutine adAudioRoutine;
     private Coroutine consentRetryRoutine;
     private Coroutine startupConsentRoutine;
+    private Coroutine rewardedFocusRecoveryRoutine;
+    private Coroutine rewardedWatchdogRoutine;
     private int consentRetryCount;
     private float lastInterstitialTime = -999f;
 
     private const float MinimumInterstitialIntervalSeconds = 90f;
-    private const float AdAudioFadeOutSeconds = 0.12f;
+    // Keep the completed-mission scene audible while the ad transition starts,
+    // then give the player a deliberate one-second audio ramp instead of an
+    // abrupt cut immediately before the native ad is presented.
+    private const float AdAudioFadeOutSeconds = 1f;
     private const float AdAudioFadeInSeconds = 0.18f;
+    private const float RewardedFocusRecoveryDelaySeconds = 0.75f;
+    private const float RewardedWatchdogSeconds = 60f;
     private const int MaxConsentRetries = 3;
 
     public static TankAdService Ensure()
@@ -167,6 +176,8 @@ public sealed class TankAdService : MonoBehaviour
 
         rewardedPresentationInProgress = true;
         rewardedAdEarned = false;
+        rewardedPresentationOpened = false;
+        rewardedPresentationFinalized = false;
         rewardedCallback = onRewardEarned;
         adAudioRoutine = StartCoroutine(FadeOutAudioThenShowRewarded(rewarded));
         return true;
@@ -205,17 +216,19 @@ public sealed class TankAdService : MonoBehaviour
 
         try
         {
+            // Some iOS creatives transition between test ads without raising
+            // every intermediate presentation callback. Mark the native
+            // presentation before Show so app-return recovery can still
+            // release our state if the final close callback is lost.
+            rewardedPresentationOpened = true;
+            rewardedWatchdogRoutine = StartCoroutine(RewardedPresentationWatchdog());
             ad.Show(_ => rewardedAdEarned = true);
         }
         catch (Exception error)
         {
             Debug.LogException(error);
             rewarded = null;
-            rewardedCallback = null;
-            rewardedAdEarned = false;
-            EndRewardedAudioProtection();
-            rewardedPresentationInProgress = false;
-            LoadRewarded();
+            FinalizeRewardedPresentation(false);
         }
     }
 
@@ -266,15 +279,89 @@ public sealed class TankAdService : MonoBehaviour
     private IEnumerator RestoreAudioAfterRewarded()
     {
         var callback = rewardedCallback;
-        var earned = rewardedAdEarned;
         AudioListener.pause = audioWasPausedBeforeInterstitial;
         yield return FadeAudioVolume(audioVolumeBeforeInterstitial, AdAudioFadeInSeconds);
+        // Read this after the fade. Google normally delivers the reward before
+        // close, but keeping the value live also handles SDKs that deliver the
+        // two callbacks in the opposite order.
+        var earned = rewardedAdEarned;
         rewardedCallback = null;
         rewardedAdEarned = false;
+        rewardedPresentationOpened = false;
         rewardedPresentationInProgress = false;
         adAudioRoutine = null;
         if (earned)
             callback?.Invoke();
+    }
+
+    private void FinalizeRewardedPresentation(bool allowReward)
+    {
+        if (rewardedPresentationFinalized)
+            return;
+
+        rewardedPresentationFinalized = true;
+        if (!allowReward)
+            rewardedAdEarned = false;
+
+        if (rewardedFocusRecoveryRoutine != null)
+        {
+            StopCoroutine(rewardedFocusRecoveryRoutine);
+            rewardedFocusRecoveryRoutine = null;
+        }
+
+        if (rewardedWatchdogRoutine != null)
+        {
+            StopCoroutine(rewardedWatchdogRoutine);
+            rewardedWatchdogRoutine = null;
+        }
+
+        EndRewardedAudioProtection();
+        LoadRewarded();
+    }
+
+    private IEnumerator RewardedPresentationWatchdog()
+    {
+        yield return new WaitForSecondsRealtime(RewardedWatchdogSeconds);
+        rewardedWatchdogRoutine = null;
+
+        if (rewardedPresentationInProgress && !rewardedPresentationFinalized)
+        {
+            Debug.LogWarning("[Ads] Rewarded presentation exceeded the safety timeout; recovering app state without granting an unearned reward.");
+            rewarded = null;
+            FinalizeRewardedPresentation(false);
+        }
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus || !rewardedPresentationInProgress || !rewardedPresentationOpened ||
+            rewardedPresentationFinalized || rewardedFocusRecoveryRoutine != null)
+            return;
+
+        // A native ad can return focus before the Unity plugin raises its
+        // close event. Give that event a short chance to arrive, then recover
+        // locally so the player is never left in a blocked presentation state.
+        rewardedFocusRecoveryRoutine = StartCoroutine(RecoverRewardedPresentationAfterFocus());
+    }
+
+    private void OnApplicationPause(bool paused)
+    {
+        if (!paused)
+            OnApplicationFocus(true);
+    }
+
+    private IEnumerator RecoverRewardedPresentationAfterFocus()
+    {
+        yield return new WaitForSecondsRealtime(RewardedFocusRecoveryDelaySeconds);
+        rewardedFocusRecoveryRoutine = null;
+
+        if (rewardedPresentationInProgress && rewardedPresentationOpened &&
+            !rewardedPresentationFinalized)
+        {
+            Debug.LogWarning("[Ads] App regained focus before RewardedAd close callback; recovering presentation state.");
+            rewarded = null;
+            FinalizeRewardedPresentation(rewardedAdEarned);
+        }
     }
 
     public void ShowPrivacyOptionsForm()
@@ -518,20 +605,22 @@ public sealed class TankAdService : MonoBehaviour
                     }
 
                     rewarded = ad;
+                    rewarded.OnAdFullScreenContentOpened += () =>
+                    {
+                        rewardedPresentationOpened = true;
+                        Debug.Log("[Ads] Rewarded full-screen content opened.");
+                    };
                     rewarded.OnAdFullScreenContentClosed += () =>
                     {
                         rewarded = null;
-                        EndRewardedAudioProtection();
-                        LoadRewarded();
+                        Debug.Log("[Ads] Rewarded full-screen content closed.");
+                        FinalizeRewardedPresentation(true);
                     };
-                    rewarded.OnAdFullScreenContentFailed += _ =>
+                    rewarded.OnAdFullScreenContentFailed += error =>
                     {
                         rewarded = null;
-                        rewardedCallback = null;
-                        rewardedAdEarned = false;
-                        EndRewardedAudioProtection();
-                        rewardedPresentationInProgress = false;
-                        LoadRewarded();
+                        Debug.LogWarning("[Ads] Rewarded full-screen content failed: " + error);
+                        FinalizeRewardedPresentation(false);
                     };
                 }
                 catch (Exception callbackError)

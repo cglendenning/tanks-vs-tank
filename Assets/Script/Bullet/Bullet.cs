@@ -12,7 +12,7 @@ public class Bullet : MonoBehaviour {
     void Update()
     {
     
-        transform.rotation = Quaternion.LookRotation(rb.velocity);
+        transform.rotation = Quaternion.LookRotation(rb.linearVelocity);
        
     }
     bool bulletexplosion;

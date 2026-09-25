@@ -12,6 +12,7 @@ public class LoadLv : MonoBehaviour {
     public GameObject PanelMenu;
     public GameObject PanelStart;
     Animator anim;
+    Coroutine restoreStartLayoutRoutine;
     void Start()
     {
        // PlayerPrefs.DeleteAll();
@@ -97,6 +98,12 @@ public class LoadLv : MonoBehaviour {
         {
             Outgame.Play();
         }
+
+        // The settings animator can leave the legacy Control container with
+        // its old 100x100 layout after a round trip. Reassert the command
+        // layout once the scene is live so the three start-screen controls
+        // never collapse onto one another.
+        RestoreStartScreenLayout();
     }
 
     public void StopMS()
@@ -129,6 +136,7 @@ public class LoadLv : MonoBehaviour {
         {
             PanelStart.SetActive(true);
             PanelMenu.SetActive(false);
+            RestoreStartScreenLayout();
         }
     }
   
@@ -142,6 +150,7 @@ public class LoadLv : MonoBehaviour {
     {
         PanelStart.SetActive(true);
         PanelMenu.SetActive(false);
+        RestoreStartScreenLayout();
     }
 
 
@@ -186,6 +195,64 @@ public class LoadLv : MonoBehaviour {
     public void OptionBack()
     {
         anim.SetTrigger("OptionBack");
+        if (restoreStartLayoutRoutine != null)
+            StopCoroutine(restoreStartLayoutRoutine);
+        restoreStartLayoutRoutine = StartCoroutine(RestoreStartScreenLayoutAfterSettings());
+    }
+
+    private IEnumerator RestoreStartScreenLayoutAfterSettings()
+    {
+        // Let the OptionBack transition finish before writing the final
+        // positions. This prevents the animation from immediately overwriting
+        // the corrected anchors on the same frame.
+        yield return new WaitForSecondsRealtime(0.45f);
+        RestoreStartScreenLayout();
+        restoreStartLayoutRoutine = null;
+    }
+
+    private void RestoreStartScreenLayout()
+    {
+        if (PanelStart == null)
+            return;
+
+        var control = PanelStart.transform.Find("Control");
+        if (control == null)
+            return;
+
+        var controlRect = control.GetComponent<RectTransform>();
+        if (controlRect != null)
+        {
+            controlRect.anchorMin = Vector2.zero;
+            controlRect.anchorMax = Vector2.one;
+            controlRect.offsetMin = Vector2.zero;
+            controlRect.offsetMax = Vector2.zero;
+            controlRect.anchoredPosition = Vector2.zero;
+            controlRect.sizeDelta = Vector2.zero;
+            controlRect.localRotation = Quaternion.identity;
+            controlRect.localScale = Vector3.one;
+        }
+
+        RestoreStartControl(control.Find("Option"), new Vector2(0.20f, 0.16f), 146f);
+        RestoreStartControl(control.Find("Stats"), new Vector2(0.50f, 0.10f), 108f);
+        RestoreStartControl(control.Find("Play"), new Vector2(0.80f, 0.16f), 146f);
+    }
+
+    private static void RestoreStartControl(Transform control, Vector2 anchor, float size)
+    {
+        if (control == null)
+            return;
+
+        var rect = control.GetComponent<RectTransform>();
+        if (rect == null)
+            return;
+
+        rect.anchorMin = anchor;
+        rect.anchorMax = anchor;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = new Vector2(size, size);
+        rect.localRotation = Quaternion.identity;
+        rect.localScale = Vector3.one;
     }
 
     public Text ScoreStatic;

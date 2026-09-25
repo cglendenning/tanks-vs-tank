@@ -2,6 +2,7 @@
 using System.Linq;
 using System.IO;
 using UnityEditor;
+using UnityEditor.Events;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -42,7 +43,7 @@ public static class ApplyTreadShredVisualRefresh
         ApplyWallMaterials(wallTexture);
         ApplyTeamTankMaterials(tankTexture);
         ApplyArenaTorches(wallTorch);
-        ApplyMissionSelectUi(missionBoard, commandFont);
+        ApplyMissionSelectUi(missionBoard, advanceIcon, commandFont);
         ApplyCombatUi(baseIcon, advanceIcon, redeployIcon, livesIcon, commandFont);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -56,6 +57,31 @@ public static class ApplyTreadShredVisualRefresh
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[VISUAL REFRESH] Re-attached animated torches to the arena corner posts.");
+    }
+
+    [MenuItem("Tread Shred/Apply BASE confirmation dialog")]
+    public static void ApplyBaseConfirmationDialog()
+    {
+        var baseIcon = LoadSprite(BaseIconPath);
+        var redeployIcon = LoadSprite(RedeployIconPath);
+        var commandFont = AssetDatabase.LoadAssetAtPath<Font>(CommandFontPath);
+        if (commandFont == null)
+            throw new FileNotFoundException("Missing command font", CommandFontPath);
+
+        var canvas = PrefabUtility.LoadPrefabContents(CanvasPath);
+        try
+        {
+            ConfigureBaseConfirmationDialog(canvas.transform, baseIcon, redeployIcon, commandFont);
+            PrefabUtility.SaveAsPrefabAsset(canvas, CanvasPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(canvas);
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[TREAD SHRED] Applied BASE confirmation dialog.");
     }
 
     private static Texture2D LoadTexture(string path)
@@ -363,6 +389,7 @@ public static class ApplyTreadShredVisualRefresh
             ConfigureCommandButton(
                 FindByPath(canvas.transform, "PanelVictoryFailure/Victory/ButtonNext"),
                 advanceIcon, "NEXT MISSION", new Vector2(0.78f, 0.20f), 152f, commandFont);
+            ConfigureBaseConfirmationDialog(canvas.transform, baseIcon, redeployIcon, commandFont);
             ConfigureIconButton(FindByPath(canvas.transform, "PanelPause/ButtonMenu (1)"), baseIcon, 96f);
             ConfigureIconButton(FindByPath(canvas.transform, "PanelPause/ButtonRetry (1)"), redeployIcon, 96f);
             ApplyLivesIndicators(canvas.transform, livesIcon);
@@ -376,7 +403,7 @@ public static class ApplyTreadShredVisualRefresh
         }
     }
 
-    private static void ApplyMissionSelectUi(Sprite boardSprite, Font commandFont)
+    private static void ApplyMissionSelectUi(Sprite boardSprite, Sprite advanceIcon, Font commandFont)
     {
         var canvas = PrefabUtility.LoadPrefabContents(CanvasPath);
         try
@@ -518,7 +545,7 @@ public static class ApplyTreadShredVisualRefresh
                 }
             }
 
-            ConfigureMissionDeployButton(FindByPath(menu, "Play"), commandFont);
+            ConfigureMissionDeployButton(FindByPath(menu, "Play"), advanceIcon, commandFont);
             ConfigureMissionInfoText(FindByPath(menu, "Level"), commandFont, "MISSION: 01", new Vector2(0.175f, 0.075f), new Vector2(0.40f, 0.13f));
             ConfigureMissionInfoText(FindByPath(menu, "Hightscore"), commandFont, "BEST SCORE // 0", new Vector2(0.40f, 0.075f), new Vector2(0.67f, 0.13f));
             ConfigureMissionInfoText(FindByPath(menu, "Rank"), commandFont, "MEDAL: UNRANKED", new Vector2(0.67f, 0.075f), new Vector2(0.88f, 0.13f));
@@ -534,6 +561,17 @@ public static class ApplyTreadShredVisualRefresh
                 rect.pivot = new Vector2(0.5f, 0.5f);
                 rect.anchoredPosition = Vector2.zero;
                 rect.sizeDelta = new Vector2(72f, 72f);
+                var backImage = button.GetComponent<Image>();
+                if (backImage != null && advanceIcon != null)
+                {
+                    backImage.sprite = advanceIcon;
+                    backImage.type = Image.Type.Simple;
+                    backImage.preserveAspect = true;
+                    backImage.color = Color.white;
+                    backImage.raycastTarget = true;
+                    rect.localRotation = Quaternion.Euler(0f, 0f, 180f);
+                    EditorUtility.SetDirty(backImage);
+                }
                 EditorUtility.SetDirty(rect);
             }
 
@@ -596,7 +634,7 @@ public static class ApplyTreadShredVisualRefresh
         EditorUtility.SetDirty(label);
     }
 
-    private static void ConfigureMissionDeployButton(Transform button, Font commandFont)
+    private static void ConfigureMissionDeployButton(Transform button, Sprite advanceIcon, Font commandFont)
     {
         if (button == null)
             return;
@@ -614,12 +652,12 @@ public static class ApplyTreadShredVisualRefresh
         var image = button.GetComponent<Image>();
         if (image != null)
         {
-            image.color = new Color(0.92f, 0.30f, 0.08f, 1f);
+            image.sprite = advanceIcon;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = true;
+            image.color = Color.white;
             image.raycastTarget = true;
-            var outline = button.GetComponent<Outline>() ?? button.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(1f, 0.62f, 0.18f, 0.72f);
-            outline.effectDistance = new Vector2(2f, -2f);
-            outline.useGraphicAlpha = true;
+            EditorUtility.SetDirty(image);
         }
         var legacyText = button.Find("Text");
         if (legacyText != null)
@@ -627,7 +665,7 @@ public static class ApplyTreadShredVisualRefresh
             var label = legacyText.GetComponent<Text>();
             if (label != null)
             {
-                label.text = "DEPLOY";
+                label.text = "START MISSION";
                 label.font = commandFont;
                 label.fontSize = 22;
                 label.alignment = TextAnchor.MiddleCenter;
@@ -636,6 +674,7 @@ public static class ApplyTreadShredVisualRefresh
                 label.resizeTextMinSize = 14;
                 label.resizeTextMaxSize = 22;
                 label.raycastTarget = false;
+                legacyText.gameObject.SetActive(false);
                 EditorUtility.SetDirty(label);
             }
         }
@@ -788,6 +827,175 @@ public static class ApplyTreadShredVisualRefresh
         textOutline.effectDistance = new Vector2(2f, -2f);
         textOutline.useGraphicAlpha = true;
         EditorUtility.SetDirty(text);
+    }
+
+    private static void ConfigureBaseConfirmationDialog(Transform canvas, Sprite baseIcon, Sprite redeployIcon, Font commandFont)
+    {
+        var panel = FindByPath(canvas, "PanelVictoryFailure");
+        if (panel == null)
+            return;
+
+        var legacyDialog = panel.Find("BaseExitConfirm");
+        if (legacyDialog != null)
+            Object.DestroyImmediate(legacyDialog.gameObject);
+
+        var controller = canvas.GetComponent<TreadShredBaseConfirmation>();
+        if (controller == null)
+            controller = canvas.gameObject.AddComponent<TreadShredBaseConfirmation>();
+
+        var dialog = EnsureImage(canvas, "BaseExitConfirm");
+        var dialogRect = dialog.GetComponent<RectTransform>();
+        SetStretchRect(dialogRect, Vector2.zero, Vector2.one);
+        dialog.transform.SetAsLastSibling();
+        var scrim = dialog.GetComponent<Image>();
+        scrim.color = new Color(0.005f, 0.012f, 0.020f, 0.88f);
+        scrim.raycastTarget = true;
+
+        var card = EnsureImage(dialog.transform, "CommandCard");
+        var cardRect = card.GetComponent<RectTransform>();
+        cardRect.anchorMin = cardRect.anchorMax = new Vector2(0.5f, 0.53f);
+        cardRect.pivot = new Vector2(0.5f, 0.5f);
+        cardRect.anchoredPosition = Vector2.zero;
+        cardRect.sizeDelta = new Vector2(760f, 330f);
+        cardRect.localRotation = Quaternion.identity;
+        cardRect.localScale = Vector3.one;
+        var cardImage = card.GetComponent<Image>();
+        cardImage.color = new Color(0.015f, 0.035f, 0.055f, 0.98f);
+        cardImage.raycastTarget = true;
+        var cardOutline = card.GetComponent<Outline>() ?? card.AddComponent<Outline>();
+        cardOutline.effectColor = new Color(0.95f, 0.42f, 0.10f, 0.92f);
+        cardOutline.effectDistance = new Vector2(3f, -3f);
+        cardOutline.useGraphicAlpha = true;
+
+        ConfigureStripAccent(card.transform, "CyanRule", new Vector2(0f, 0.965f), new Vector2(0.72f, 1f),
+            new Color(0.20f, 0.78f, 0.85f, 0.95f));
+        ConfigureStripAccent(card.transform, "OrangeRule", new Vector2(0.72f, 0.965f), new Vector2(1f, 1f),
+            new Color(0.96f, 0.43f, 0.10f, 0.95f));
+
+        var title = EnsureText(card.transform, "Title");
+        ConfigureDialogText(title, "ABORT CURRENT SORTIE?", commandFont, 30,
+            new Vector2(0.07f, 0.66f), new Vector2(0.93f, 0.90f), TextAnchor.MiddleCenter, Color.white);
+
+        var body = EnsureText(card.transform, "Body");
+        ConfigureDialogText(body, "CURRENT RUN PROGRESS WILL BE LOST.\nRETURN TO COMMAND BASE?", commandFont, 17,
+            new Vector2(0.10f, 0.43f), new Vector2(0.90f, 0.65f), TextAnchor.MiddleCenter,
+            new Color(0.72f, 0.86f, 0.88f, 1f));
+
+        var confirm = EnsureDialogButton(card.transform, "ReturnToBase", baseIcon, "RETURN TO BASE", commandFont,
+            new Vector2(0.29f, 0.25f));
+        var cancel = EnsureDialogButton(card.transform, "HoldPosition", redeployIcon, "HOLD POSITION", commandFont,
+            new Vector2(0.71f, 0.25f));
+
+        controller.dialogRoot = dialog;
+        ReplaceButtonListener(FindByPath(canvas, "PanelVictoryFailure/ButtonMenu"), controller.RequestReturnToBase);
+        ReplaceButtonListener(FindByPath(canvas, "PanelPause/ButtonMenu (1)"), controller.RequestReturnToBase);
+        ReplaceButtonListener(confirm, controller.ConfirmReturnToBase);
+        ReplaceButtonListener(cancel, controller.CancelReturnToBase);
+
+        dialog.SetActive(false);
+        EditorUtility.SetDirty(controller);
+        EditorUtility.SetDirty(dialog);
+    }
+
+    private static Button EnsureDialogButton(Transform parent, string name, Sprite icon, string label, Font commandFont, Vector2 anchor)
+    {
+        var existing = parent.Find(name);
+        GameObject buttonObject;
+        if (existing != null)
+        {
+            buttonObject = existing.gameObject;
+        }
+        else
+        {
+            buttonObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+        }
+
+        var button = buttonObject.GetComponent<Button>();
+        var rect = buttonObject.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = anchor;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = new Vector2(270f, 112f);
+        rect.localRotation = Quaternion.identity;
+        rect.localScale = Vector3.one;
+
+        var image = buttonObject.GetComponent<Image>();
+        image.color = new Color(0.025f, 0.06f, 0.08f, 1f);
+        image.raycastTarget = true;
+        var outline = buttonObject.GetComponent<Outline>() ?? buttonObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0.20f, 0.72f, 0.78f, 0.82f);
+        outline.effectDistance = new Vector2(2f, -2f);
+        outline.useGraphicAlpha = true;
+
+        var iconObject = EnsureImage(buttonObject.transform, "Icon");
+        var iconRect = iconObject.GetComponent<RectTransform>();
+        iconRect.anchorMin = new Vector2(0.5f, 0.55f);
+        iconRect.anchorMax = new Vector2(0.5f, 0.55f);
+        iconRect.pivot = new Vector2(0.5f, 0.5f);
+        iconRect.anchoredPosition = Vector2.zero;
+        iconRect.sizeDelta = new Vector2(62f, 62f);
+        iconRect.localRotation = Quaternion.identity;
+        iconRect.localScale = Vector3.one;
+        var iconImage = iconObject.GetComponent<Image>();
+        iconImage.sprite = icon;
+        iconImage.type = Image.Type.Simple;
+        iconImage.preserveAspect = true;
+        iconImage.color = Color.white;
+        iconImage.raycastTarget = false;
+
+        var labelObject = EnsureText(buttonObject.transform, "Label");
+        ConfigureDialogText(labelObject, label, commandFont, 15,
+            new Vector2(0.03f, 0.04f), new Vector2(0.97f, 0.30f), TextAnchor.MiddleCenter, Color.white);
+
+        EditorUtility.SetDirty(button);
+        EditorUtility.SetDirty(rect);
+        EditorUtility.SetDirty(image);
+        return button;
+    }
+
+    private static void ConfigureDialogText(Text text, string value, Font font, int fontSize,
+        Vector2 anchorMin, Vector2 anchorMax, TextAnchor alignment, Color color)
+    {
+        if (text == null)
+            return;
+
+        var rect = text.GetComponent<RectTransform>();
+        SetStretchRect(rect, anchorMin, anchorMax);
+        text.text = value;
+        text.font = font;
+        text.fontSize = fontSize;
+        text.fontStyle = FontStyle.Normal;
+        text.alignment = alignment;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = Mathf.Max(10, fontSize - 8);
+        text.resizeTextMaxSize = fontSize;
+        text.color = color;
+        text.horizontalOverflow = HorizontalWrapMode.Overflow;
+        text.verticalOverflow = VerticalWrapMode.Truncate;
+        text.raycastTarget = false;
+        var outline = text.GetComponent<Outline>() ?? text.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.95f);
+        outline.effectDistance = new Vector2(2f, -2f);
+        outline.useGraphicAlpha = true;
+        EditorUtility.SetDirty(text);
+    }
+
+    private static void ReplaceButtonListener(Transform buttonTransform, UnityEngine.Events.UnityAction listener)
+    {
+        if (buttonTransform == null)
+            return;
+        ReplaceButtonListener(buttonTransform.GetComponent<Button>(), listener);
+    }
+
+    private static void ReplaceButtonListener(Button button, UnityEngine.Events.UnityAction listener)
+    {
+        if (button == null)
+            return;
+
+        button.onClick = new Button.ButtonClickedEvent();
+        UnityEventTools.AddPersistentListener(button.onClick, listener);
+        EditorUtility.SetDirty(button);
     }
 
     private static GameObject EnsureImage(Transform parent, string name)

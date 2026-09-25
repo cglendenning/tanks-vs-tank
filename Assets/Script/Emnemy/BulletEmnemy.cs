@@ -51,12 +51,12 @@ public class BulletEmnemy : MonoBehaviour {
 
                 if (gameObject.tag != "emnemyorange" && gameObject.tag != "emnemyblack")
                 {
-                    obj.GetComponent<Rigidbody>().velocity = -dir.normalized * 15f;
+                    obj.GetComponent<Rigidbody>().linearVelocity = -dir.normalized * 15f;
                 }
 
                 if (gameObject.tag == "emnemyblack")
                 {
-                    obj.GetComponent<Rigidbody>().velocity = -dir.normalized * 5f;
+                    obj.GetComponent<Rigidbody>().linearVelocity = -dir.normalized * 5f;
                 }  
 
                 StartCoroutine(BulletPlayerLan2(1f));
@@ -81,11 +81,11 @@ public class BulletEmnemy : MonoBehaviour {
        Vector3 dir = tower.position - pointbullet.position;
        if (gameObject.tag == "emnemyblack")
        {
-           obj.GetComponent<Rigidbody>().velocity = -dir.normalized * 5f;
+           obj.GetComponent<Rigidbody>().linearVelocity = -dir.normalized * 5f;
        }  
        if (gameObject.tag != "emnemyorange" && gameObject.tag != "emnemyblack")
        {
-           obj.GetComponent<Rigidbody>().velocity = -dir.normalized * 15f;
+           obj.GetComponent<Rigidbody>().linearVelocity = -dir.normalized * 15f;
        }    
 
    }

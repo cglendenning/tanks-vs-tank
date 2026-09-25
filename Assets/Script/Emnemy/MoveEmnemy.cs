@@ -39,31 +39,31 @@ public class MoveEmnemy : MonoBehaviour {
         switch (Dir)
         {
             case DirectionRandom.tren:
-                rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y, speedvelocity);
+                rb.linearVelocity = new Vector3(rb.linearVelocity.x, rb.linearVelocity.y, speedvelocity);
                 break;
             case DirectionRandom.duoi:
-                rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y, -speedvelocity);
+                rb.linearVelocity = new Vector3(rb.linearVelocity.x, rb.linearVelocity.y, -speedvelocity);
                 break;
             case DirectionRandom.trai:
-                rb.velocity = new Vector3(-speedvelocity, rb.velocity.y, rb.velocity.z);
+                rb.linearVelocity = new Vector3(-speedvelocity, rb.linearVelocity.y, rb.linearVelocity.z);
                 break;
             case DirectionRandom.phai:
-                rb.velocity = new Vector3(speedvelocity, rb.velocity.y, rb.velocity.z);
+                rb.linearVelocity = new Vector3(speedvelocity, rb.linearVelocity.y, rb.linearVelocity.z);
                 break;
             case DirectionRandom.trenphai:
-                rb.velocity = new Vector3(speedvelocity, rb.velocity.y, speedvelocity);
+                rb.linearVelocity = new Vector3(speedvelocity, rb.linearVelocity.y, speedvelocity);
                 break;
             case DirectionRandom.trentrai:
-                rb.velocity = new Vector3(-speedvelocity, rb.velocity.y, speedvelocity);
+                rb.linearVelocity = new Vector3(-speedvelocity, rb.linearVelocity.y, speedvelocity);
                 break;
             case DirectionRandom.duoiphai:
-                rb.velocity = new Vector3(speedvelocity, rb.velocity.y, -speedvelocity);
+                rb.linearVelocity = new Vector3(speedvelocity, rb.linearVelocity.y, -speedvelocity);
                 break;
             case DirectionRandom.duoitrai:
-                rb.velocity = new Vector3(-speedvelocity, rb.velocity.y, -speedvelocity);
+                rb.linearVelocity = new Vector3(-speedvelocity, rb.linearVelocity.y, -speedvelocity);
                 break;
             case DirectionRandom.idel:
-                rb.velocity = new Vector3(0, 0, 0);
+                rb.linearVelocity = new Vector3(0, 0, 0);
                 break;
             case DirectionRandom.tuantra:
                 if (player != null)
@@ -87,7 +87,7 @@ public class MoveEmnemy : MonoBehaviour {
     public int ratetruyduoi;
     void RandomDir()
     {
-        rb.velocity = new Vector3(0, 0, 0);
+        rb.linearVelocity = new Vector3(0, 0, 0);
         agent.enabled = false;
         indexdir = Random.Range(0, ratetruyduoi);
        //Debug.Log(indexdir);

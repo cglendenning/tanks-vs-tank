@@ -12,7 +12,7 @@ public class Bullet3 : MonoBehaviour {
 	
     void Fire()
     {
-        rb.velocity = transform.up * 10f;
+        rb.linearVelocity = transform.up * 10f;
     }
 
 

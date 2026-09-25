@@ -185,7 +185,7 @@ public class PlayerMoverment : MonoBehaviour {
                                                 GameObject ExP = Instantiate(Ex, pointbullet.position, Quaternion.Euler(-90, 0, 0)) as GameObject;
                                                 ExP.transform.SetParent(transform);
                                                 MusicManager.instance.GunTank();
-                                                obj.GetComponent<Rigidbody>().velocity = dir.normalized * 15f;
+                                                obj.GetComponent<Rigidbody>().linearVelocity = dir.normalized * 15f;
                                                 FireOverdrive(point);
                                                 break;
                                             case PlayerType.banvong:
@@ -223,7 +223,7 @@ public class PlayerMoverment : MonoBehaviour {
                                                 GameObject ExP4 = Instantiate(Ex, pointbullet.position, Quaternion.Euler(-90, 0, 0)) as GameObject;
                                                 ExP4.transform.SetParent(transform);
                                                 MusicManager.instance.GunTank();
-                                                obj4.GetComponent<Rigidbody>().velocity = dir4.normalized * 10f;
+                                                obj4.GetComponent<Rigidbody>().linearVelocity = dir4.normalized * 10f;
                                                 FireOverdrive(point4);
 
                                                 break;
@@ -381,7 +381,7 @@ public class PlayerMoverment : MonoBehaviour {
                                         GameObject ExP = Instantiate(Ex, pointbullet.position, Quaternion.Euler(-90, 0, 0)) as GameObject;
                                         ExP.transform.SetParent(transform);
                                         MusicManager.instance.GunTank();
-                                        obj.GetComponent<Rigidbody>().velocity = dir.normalized * 15f;
+                                        obj.GetComponent<Rigidbody>().linearVelocity = dir.normalized * 15f;
                                         FireOverdrive(point);
                                         break;
                                     case PlayerType.banvong:
@@ -419,7 +419,7 @@ public class PlayerMoverment : MonoBehaviour {
                                         GameObject ExP4 = Instantiate(Ex, pointbullet.position, Quaternion.Euler(-90, 0, 0)) as GameObject;
                                         ExP4.transform.SetParent(transform);
                                         MusicManager.instance.GunTank();
-                                        obj4.GetComponent<Rigidbody>().velocity = dir4.normalized * 10f;
+                                        obj4.GetComponent<Rigidbody>().linearVelocity = dir4.normalized * 10f;
                                         FireOverdrive(point4);
 
                                         break;
@@ -560,7 +560,7 @@ public class PlayerMoverment : MonoBehaviour {
             {
                 var projectile = Instantiate(Bullet, pointbullet.position + offset, pointbullet.rotation);
                 var direction = secondaryTarget - pointbullet.position;
-                projectile.GetComponent<Rigidbody>().velocity = direction.normalized * 15f;
+                projectile.GetComponent<Rigidbody>().linearVelocity = direction.normalized * 15f;
                 break;
             }
             case PlayerType.banvong:
@@ -573,7 +573,7 @@ public class PlayerMoverment : MonoBehaviour {
             {
                 var projectile = Instantiate(BulletFind, pointbullet.position + offset, pointbullet.rotation);
                 var direction = secondaryTarget - pointbullet.position;
-                projectile.GetComponent<Rigidbody>().velocity = direction.normalized * 10f;
+                projectile.GetComponent<Rigidbody>().linearVelocity = direction.normalized * 10f;
                 break;
             }
         }
