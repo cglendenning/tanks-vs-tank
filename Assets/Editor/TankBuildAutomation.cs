@@ -18,8 +18,11 @@ public static class TankBuildAutomation
     private const string IosSimulatorOutput = "Builds/iOSSimulator";
     private const string AndroidApkOutput = "Builds/Android/TreadShred.apk";
     private const string AndroidBundleOutput = "Builds/Android/TreadShred.aab";
-    private const string ReleaseVersion = "1.8.0";
-    private const int ReleaseBuildNumber = 11;
+    // Screenshot-only App Store metadata update. The live 1.8.0 build remains
+    // unchanged; App Store Connect requires a new version/build to replace
+    // screenshots after a version is approved.
+    private const string ReleaseVersion = "1.8.1";
+    private const int ReleaseBuildNumber = 12;
     private const int AndroidReleaseBuildNumber = 4;
     private const string ProductionIosAppId = "ca-app-pub-4402198490627677~4284546322";
     private const string ProductionAndroidAppId = "ca-app-pub-4402198490627677~8381484915";
