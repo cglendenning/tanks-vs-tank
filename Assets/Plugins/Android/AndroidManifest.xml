@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" android:installLocation="preferExternal">
   <application android:label="@string/app_name">
+    <!-- Keep the AdMob app ID in the application manifest itself. Relying only on
+         the plugin library manifest can be omitted by Unity/Gradle manifest
+         merging, which makes Google Play's pre-launch check treat the app as
+         unable to load. The build automation selects test ad units separately;
+         this is the production Android app ID required by the AdMob SDK. -->
+    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"
+               android:value="ca-app-pub-4402198490627677~8381484915" />
     <activity android:name="com.unity3d.player.UnityPlayerActivity"
               android:label="@string/app_name"
               android:screenOrientation="landscape"

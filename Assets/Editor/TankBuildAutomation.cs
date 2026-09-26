@@ -20,6 +20,7 @@ public static class TankBuildAutomation
     private const string AndroidBundleOutput = "Builds/Android/TreadShred.aab";
     private const string ReleaseVersion = "1.8.0";
     private const int ReleaseBuildNumber = 11;
+    private const int AndroidReleaseBuildNumber = 4;
     private const string ProductionIosAppId = "ca-app-pub-4402198490627677~4284546322";
     private const string ProductionAndroidAppId = "ca-app-pub-4402198490627677~8381484915";
     private const string ProductionIosInterstitial = "ca-app-pub-4402198490627677/5342886245";
@@ -92,6 +93,9 @@ public static class TankBuildAutomation
 
     private static void BuildAndroid(bool bundle)
     {
+        if (!EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android))
+            throw new BuildFailedException("Unable to switch Unity to the Android build target.");
+
         PreparePlayerSettings();
         var output = Path.GetFullPath(bundle ? AndroidBundleOutput : AndroidApkOutput);
         Directory.CreateDirectory(Path.GetDirectoryName(output));
@@ -121,7 +125,7 @@ public static class TankBuildAutomation
         PlayerSettings.iOS.buildNumber = ReleaseBuildNumber.ToString();
         PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS, IosBundleIdentifier);
         PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, AndroidBundleIdentifier);
-        PlayerSettings.Android.bundleVersionCode = ReleaseBuildNumber;
+        PlayerSettings.Android.bundleVersionCode = AndroidReleaseBuildNumber;
         // Unity 6 no longer supports API 23; keep the project aligned with the
         // current Android player minimum and avoid the legacy project's setting.
         PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
