@@ -13,6 +13,18 @@ public class LoadLv : MonoBehaviour {
     public GameObject PanelStart;
     Animator anim;
     Coroutine restoreStartLayoutRoutine;
+
+    private void LateUpdate()
+    {
+        // Animator states from the legacy settings screen used to keep
+        // writing the obsolete Control position after the transition ended.
+        // Keep the command layout authoritative whenever the actual start
+        // screen is visible, while leaving the settings/stats overlays free
+        // to animate normally.
+        if (ShouldEnforceStartScreenLayout())
+            RestoreStartScreenLayout();
+    }
+
     void Start()
     {
        // PlayerPrefs.DeleteAll();
@@ -194,7 +206,8 @@ public class LoadLv : MonoBehaviour {
 
     public void OptionBack()
     {
-        anim.SetTrigger("OptionBack");
+        if (anim != null)
+            anim.SetTrigger("OptionBack");
         if (restoreStartLayoutRoutine != null)
             StopCoroutine(restoreStartLayoutRoutine);
         restoreStartLayoutRoutine = StartCoroutine(RestoreStartScreenLayoutAfterSettings());
@@ -202,10 +215,18 @@ public class LoadLv : MonoBehaviour {
 
     private IEnumerator RestoreStartScreenLayoutAfterSettings()
     {
-        // Let the OptionBack transition finish before writing the final
-        // positions. This prevents the animation from immediately overwriting
-        // the corrected anchors on the same frame.
-        yield return new WaitForSecondsRealtime(0.45f);
+        // OptionBack contains legacy RectTransform keys for the old 100x100
+        // Control layout. Reapplying the layout only once is racy: on some
+        // devices the animator writes those keys after the old 0.45 second
+        // delay. Hold the corrected layout through the full transition and
+        // one settled frame so Settings can never collapse the command
+        // controls or hide Start Mission.
+        for (var i = 0; i < 24; i++)
+        {
+            RestoreStartScreenLayout();
+            yield return new WaitForSecondsRealtime(0.05f);
+        }
+
         RestoreStartScreenLayout();
         restoreStartLayoutRoutine = null;
     }
@@ -237,6 +258,29 @@ public class LoadLv : MonoBehaviour {
         RestoreStartControl(control.Find("Play"), new Vector2(0.80f, 0.16f), 146f);
     }
 
+    private bool ShouldEnforceStartScreenLayout()
+    {
+        if (PanelStart == null || !PanelStart.activeInHierarchy)
+            return false;
+        if (PanelMenu != null && PanelMenu.activeInHierarchy)
+            return false;
+
+        var optionBack = PanelStart.transform.Find("BackOption");
+        if (optionBack != null && optionBack.gameObject.activeInHierarchy)
+            return false;
+
+        var backStatic = PanelStart.transform.Find("BackStatic");
+        if (backStatic != null && backStatic.gameObject.activeInHierarchy)
+            return false;
+
+        var backStaticAlt = PanelStart.transform.Find("BackStatic (1)");
+        if (backStaticAlt != null && backStaticAlt.gameObject.activeInHierarchy)
+            return false;
+
+        var panelStatics = PanelStart.transform.Find("PanelStatics");
+        return panelStatics == null || !panelStatics.gameObject.activeInHierarchy;
+    }
+
     private static void RestoreStartControl(Transform control, Vector2 anchor, float size)
     {
         if (control == null)
@@ -250,6 +294,8 @@ public class LoadLv : MonoBehaviour {
         rect.anchorMax = anchor;
         rect.pivot = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = Vector2.zero;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
         rect.sizeDelta = new Vector2(size, size);
         rect.localRotation = Quaternion.identity;
         rect.localScale = Vector3.one;
@@ -366,6 +412,9 @@ public class LoadLv : MonoBehaviour {
     public GameObject CameraFixed;
     public void CameraGame()
     {
+        if (CameraFllow == null || CameraFixed == null)
+            return;
+
         if (CameraFllow.activeInHierarchy)
         {
             CameraFllow.SetActive(false);

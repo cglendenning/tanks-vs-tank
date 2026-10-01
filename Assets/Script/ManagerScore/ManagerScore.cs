@@ -543,6 +543,7 @@ public class ManagerScore : MonoBehaviour
 
     public void Rung()
     {
+#if UNITY_ANDROID || UNITY_IOS
         if (isrung == false)
         {
             if (Application.platform == RuntimePlatform.Android || Application.platform == RuntimePlatform.IPhonePlayer)
@@ -550,6 +551,7 @@ public class ManagerScore : MonoBehaviour
                 Handheld.Vibrate();
             }
         }
+#endif
 
 
     }

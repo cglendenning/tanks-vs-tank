@@ -91,6 +91,7 @@ public static class ApplyTreadShredStartScreen
             throw new System.InvalidOperationException("Missing command font at " + FontPath);
 
         ImportSprite(AdvancePath, 2048);
+        ImportSprite(BasePath, 2048);
         ImportSprite(SettingsPath, 2048);
         ImportSprite(RedeployPath, 2048);
 
@@ -135,6 +136,8 @@ public static class ApplyTreadShredStartScreen
         EnsureControlLabel(stats, "TreadShredWarRecordLabel", "WAR RECORD", "TOTAL SCORE // CONFIRMED KILLS // RANK", 440f, commandFont);
         EnsureControlLabel(play, "TreadShredDeployLabel", "START MISSION", string.Empty, 310f, commandFont);
         ApplyOptionPanelIcons(panelStart.transform);
+        ApplySettingsNavigationIcons(panelStart.transform, advanceIcon);
+        RemoveLegacySettingsLayoutCurve(panelStart.transform);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -161,7 +164,8 @@ public static class ApplyTreadShredStartScreen
             return;
 
         var settingsIcon = AssetDatabase.LoadAssetAtPath<Sprite>(SettingsPath);
-        var cameraIcon = AssetDatabase.LoadAssetAtPath<Sprite>(RedeployPath);
+        var cameraFollowIcon = AssetDatabase.LoadAssetAtPath<Sprite>(RedeployPath);
+        var cameraFixedIcon = AssetDatabase.LoadAssetAtPath<Sprite>(BasePath);
         foreach (var image in optionPanel.GetComponentsInChildren<Image>(true))
         {
             // ImageWhite/ImageBlack are the legacy toggle sprites. Replace
@@ -170,21 +174,95 @@ public static class ApplyTreadShredStartScreen
             if (image.gameObject.name != "ImageWhite" && image.gameObject.name != "ImageBlack")
                 continue;
 
-            var isCamera = false;
+            var cameraState = string.Empty;
             for (var ancestor = image.transform.parent; ancestor != null && ancestor != optionPanel; ancestor = ancestor.parent)
             {
-                if (ancestor.name.ToLowerInvariant().Contains("camera"))
+                var ancestorName = ancestor.name.ToLowerInvariant();
+                if (ancestorName == "fllow" || ancestorName == "follow")
                 {
-                    isCamera = true;
+                    cameraState = "follow";
+                    break;
+                }
+                if (ancestorName == "fix" || ancestorName == "fixed")
+                {
+                    cameraState = "fixed";
                     break;
                 }
             }
-            image.sprite = isCamera ? cameraIcon : settingsIcon;
+            image.sprite = cameraState == "follow"
+                ? cameraFollowIcon
+                : cameraState == "fixed" ? cameraFixedIcon : settingsIcon;
             image.type = Image.Type.Simple;
             image.preserveAspect = true;
             image.color = Color.white;
             image.raycastTarget = false;
             EditorUtility.SetDirty(image);
+        }
+    }
+
+    private static void ApplySettingsNavigationIcons(Transform panelStart, Sprite advanceIcon)
+    {
+        if (advanceIcon == null)
+            return;
+
+        // BackOption is the large legacy white arrow shown over the settings
+        // panel. BackStatic and BackStatic (1) are the equivalent navigation
+        // controls for the stats panel. Use the same authored advance icon as
+        // the mission navigation, rotated 180 degrees for a consistent,
+        // aggressive back command.
+        foreach (var candidate in panelStart.GetComponentsInChildren<Transform>(true))
+        {
+            if (candidate.name != "BackOption" && candidate.name != "BackStatic" && candidate.name != "BackStatic (1)")
+                continue;
+
+            var image = candidate.GetComponent<Image>();
+            if (image != null)
+            {
+                image.sprite = advanceIcon;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = true;
+                image.color = Color.white;
+                image.raycastTarget = true;
+                EditorUtility.SetDirty(image);
+            }
+
+            var rect = candidate.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.sizeDelta = new Vector2(96f, 96f);
+                rect.localRotation = Quaternion.Euler(0f, 0f, 180f);
+                rect.localScale = Vector3.one;
+                EditorUtility.SetDirty(rect);
+            }
+        }
+    }
+
+    private static void RemoveLegacySettingsLayoutCurve(Transform panelStart)
+    {
+        var animator = panelStart.GetComponentInParent<Animator>();
+        var controller = animator == null ? null : animator.runtimeAnimatorController;
+        if (controller == null)
+            return;
+
+        // The imported legacy Option clip animates the root Control container
+        // from the old 100x100 layout. That curve wins again after the
+        // transition completes, which is why a one-shot runtime correction
+        // eventually puts SETTINGS over the WAR RECORD icon and pushes START
+        // MISSION off-screen. The menu now owns the Control layout, so the
+        // settings transition must not animate it at all.
+        foreach (var clip in controller.animationClips)
+        {
+            if (clip == null || clip.name != "Option")
+                continue;
+
+            foreach (var binding in AnimationUtility.GetCurveBindings(clip))
+            {
+                if (binding.path != "PanelStart/Control" || binding.propertyName != "m_AnchoredPosition.x")
+                    continue;
+
+                AnimationUtility.SetEditorCurve(clip, binding, null);
+                EditorUtility.SetDirty(clip);
+            }
         }
     }
 
