@@ -96,9 +96,9 @@ public static class ApplyTreadShredBranding
         if (path.Contains("PanelStart/OptionPanel/Exit"))
             return "ABORT MISSION";
         if (path.Contains("PanelStart/OptionPanel/Camera/fix"))
-            return "CAMERA VIEW\nLOCKED ARENA // FULL BATTLEFIELD";
+            return "CAMERA VIEW\nLOCKED FIELD";
         if (path.Contains("PanelStart/OptionPanel/Camera/fllow"))
-            return "CAMERA VIEW\nFOLLOW TANK // TRACK YOUR ARMOR";
+            return "CAMERA VIEW\nFOLLOW ARMOR";
         if (path.Contains("PanelStart/PanelStatics/Score"))
             return "TOTAL SCORE // 0";
         if (path.Contains("PanelStart/PanelStatics/Kill"))

@@ -14,6 +14,9 @@ public static class ApplyTreadShredStartScreen
     private const string AdvancePath = "Assets/Image/TreadShredAdvanceIcon.png";
     private const string SettingsPath = "Assets/Image/TreadShredSettingsIcon.png";
     private const string RedeployPath = "Assets/Image/TreadShredRedeployIcon.png";
+    private const string CameraPath = "Assets/Image/TreadShredCameraOpticsIcon.png";
+    private const string SoundPath = "Assets/Image/TreadShredSoundIcon.png";
+    private const string MusicPath = "Assets/Image/TreadShredMusicIcon.png";
     private const string FontPath = "Assets/Art/BlackOpsOne-Regular.ttf";
 
     public static void Run()
@@ -94,6 +97,9 @@ public static class ApplyTreadShredStartScreen
         ImportSprite(BasePath, 2048);
         ImportSprite(SettingsPath, 2048);
         ImportSprite(RedeployPath, 2048);
+        ImportSprite(CameraPath, 2048);
+        ImportSprite(SoundPath, 2048);
+        ImportSprite(MusicPath, 2048);
 
         var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         var panelStart = FindByName(scene.GetRootGameObjects(), "PanelStart");
@@ -135,7 +141,7 @@ public static class ApplyTreadShredStartScreen
         EnsureControlLabel(option, "TreadShredFieldOpsLabel", "SETTINGS", string.Empty, 280f, commandFont);
         EnsureControlLabel(stats, "TreadShredWarRecordLabel", "WAR RECORD", "TOTAL SCORE // CONFIRMED KILLS // RANK", 440f, commandFont);
         EnsureControlLabel(play, "TreadShredDeployLabel", "START MISSION", string.Empty, 310f, commandFont);
-        ApplyOptionPanelIcons(panelStart.transform);
+        ApplyOptionPanelIcons(panelStart.transform, commandFont);
         ApplySettingsNavigationIcons(panelStart.transform, advanceIcon);
         RemoveLegacySettingsLayoutCurve(panelStart.transform);
 
@@ -145,7 +151,7 @@ public static class ApplyTreadShredStartScreen
         Debug.Log("[START SCREEN] Rebuilt SETTINGS, WAR RECORD, and START MISSION controls.");
     }
 
-    private static void ApplyOptionPanelIcons(Transform panelStart)
+    private static void ApplyOptionPanelIcons(Transform panelStart, Font commandFont)
     {
         var optionPanel = panelStart.Find("OptionPanel");
         if (optionPanel == null)
@@ -164,8 +170,9 @@ public static class ApplyTreadShredStartScreen
             return;
 
         var settingsIcon = AssetDatabase.LoadAssetAtPath<Sprite>(SettingsPath);
-        var cameraFollowIcon = AssetDatabase.LoadAssetAtPath<Sprite>(RedeployPath);
-        var cameraFixedIcon = AssetDatabase.LoadAssetAtPath<Sprite>(BasePath);
+        var cameraIcon = AssetDatabase.LoadAssetAtPath<Sprite>(CameraPath);
+        var soundIcon = AssetDatabase.LoadAssetAtPath<Sprite>(SoundPath);
+        var musicIcon = AssetDatabase.LoadAssetAtPath<Sprite>(MusicPath);
         foreach (var image in optionPanel.GetComponentsInChildren<Image>(true))
         {
             // ImageWhite/ImageBlack are the legacy toggle sprites. Replace
@@ -174,30 +181,101 @@ public static class ApplyTreadShredStartScreen
             if (image.gameObject.name != "ImageWhite" && image.gameObject.name != "ImageBlack")
                 continue;
 
-            var cameraState = string.Empty;
+            var semantic = string.Empty;
             for (var ancestor = image.transform.parent; ancestor != null && ancestor != optionPanel; ancestor = ancestor.parent)
             {
                 var ancestorName = ancestor.name.ToLowerInvariant();
-                if (ancestorName == "fllow" || ancestorName == "follow")
+                if (ancestorName.Contains("camera") || ancestorName == "fllow" || ancestorName == "follow" || ancestorName == "fix" || ancestorName == "fixed")
                 {
-                    cameraState = "follow";
+                    semantic = "camera";
                     break;
                 }
-                if (ancestorName == "fix" || ancestorName == "fixed")
+                if (ancestorName.Contains("sound"))
                 {
-                    cameraState = "fixed";
+                    semantic = "sound";
+                    break;
+                }
+                if (ancestorName.Contains("music"))
+                {
+                    semantic = "music";
                     break;
                 }
             }
-            image.sprite = cameraState == "follow"
-                ? cameraFollowIcon
-                : cameraState == "fixed" ? cameraFixedIcon : settingsIcon;
+            image.sprite = semantic == "camera"
+                ? cameraIcon
+                : semantic == "sound" ? soundIcon
+                : semantic == "music" ? musicIcon
+                : settingsIcon;
             image.type = Image.Type.Simple;
             image.preserveAspect = true;
             image.color = Color.white;
             image.raycastTarget = false;
             EditorUtility.SetDirty(image);
         }
+
+        foreach (var text in optionPanel.GetComponentsInChildren<Text>(true))
+        {
+            var semantic = FindOptionSemantic(text.transform, optionPanel);
+            if (semantic != "camera")
+                continue;
+
+            var state = FindCameraState(text.transform, optionPanel);
+            var rect = text.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.anchorMin = new Vector2(0.5f, 0.05f);
+                rect.anchorMax = new Vector2(0.5f, 0.05f);
+                rect.pivot = new Vector2(0.5f, 0f);
+                rect.anchoredPosition = Vector2.zero;
+                rect.sizeDelta = new Vector2(430f, 44f);
+                rect.localScale = Vector3.one;
+                EditorUtility.SetDirty(rect);
+            }
+
+            text.text = state == "follow" ? "CAMERA VIEW\nFOLLOW ARMOR" : "CAMERA VIEW\nLOCKED FIELD";
+            text.font = commandFont;
+            text.fontSize = 16;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = 11;
+            text.resizeTextMaxSize = 16;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.color = Color.white;
+            text.raycastTarget = false;
+            var outline = text.GetComponent<Outline>() ?? text.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.95f);
+            outline.effectDistance = new Vector2(1.5f, -1.5f);
+            EditorUtility.SetDirty(text);
+        }
+    }
+
+    private static string FindOptionSemantic(Transform target, Transform optionPanel)
+    {
+        for (var ancestor = target; ancestor != null && ancestor != optionPanel; ancestor = ancestor.parent)
+        {
+            var name = ancestor.name.ToLowerInvariant();
+            if (name.Contains("camera") || name == "fllow" || name == "follow" || name == "fix" || name == "fixed")
+                return "camera";
+            if (name.Contains("sound"))
+                return "sound";
+            if (name.Contains("music"))
+                return "music";
+        }
+        return string.Empty;
+    }
+
+    private static string FindCameraState(Transform target, Transform optionPanel)
+    {
+        for (var ancestor = target; ancestor != null && ancestor != optionPanel; ancestor = ancestor.parent)
+        {
+            var name = ancestor.name.ToLowerInvariant();
+            if (name == "fllow" || name == "follow")
+                return "follow";
+            if (name == "fix" || name == "fixed")
+                return "fixed";
+        }
+        return "fixed";
     }
 
     private static void ApplySettingsNavigationIcons(Transform panelStart, Sprite advanceIcon)
@@ -229,12 +307,67 @@ public static class ApplyTreadShredStartScreen
             var rect = candidate.GetComponent<RectTransform>();
             if (rect != null)
             {
+                rect.anchorMin = rect.anchorMax = new Vector2(0.10f, 0.86f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = Vector2.zero;
                 rect.sizeDelta = new Vector2(96f, 96f);
                 rect.localRotation = Quaternion.Euler(0f, 0f, 180f);
                 rect.localScale = Vector3.one;
                 EditorUtility.SetDirty(rect);
             }
+
+            EnsureNavigationLabel(candidate, "COMMAND", "TreadShredBackLabel");
         }
+    }
+
+    private static void EnsureNavigationLabel(Transform control, string value, string name)
+    {
+        var label = control.Find(name);
+        if (label == null)
+        {
+            label = new GameObject(name, typeof(RectTransform), typeof(Image)).transform;
+            label.SetParent(control, false);
+        }
+
+        var labelRect = label.GetComponent<RectTransform>();
+        labelRect.anchorMin = new Vector2(0.5f, 0f);
+        labelRect.anchorMax = new Vector2(0.5f, 0f);
+        labelRect.pivot = new Vector2(0.5f, 1f);
+        labelRect.anchoredPosition = new Vector2(0f, -7f);
+        labelRect.sizeDelta = new Vector2(150f, 30f);
+
+        var background = label.GetComponent<Image>();
+        background.color = new Color(0.01f, 0.015f, 0.02f, 0.92f);
+        background.raycastTarget = false;
+
+        var textTransform = label.Find("Text");
+        if (textTransform == null)
+        {
+            textTransform = new GameObject("Text", typeof(RectTransform), typeof(Text), typeof(Outline)).transform;
+            textTransform.SetParent(label, false);
+        }
+
+        var textRect = textTransform.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(4f, 2f);
+        textRect.offsetMax = new Vector2(-4f, -2f);
+
+        var text = textTransform.GetComponent<Text>();
+        text.text = value;
+        text.font = AssetDatabase.LoadAssetAtPath<Font>(FontPath);
+        text.fontSize = 15;
+        text.alignment = TextAnchor.MiddleCenter;
+        text.color = Color.white;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 11;
+        text.resizeTextMaxSize = 15;
+        text.raycastTarget = false;
+        var outline = textTransform.GetComponent<Outline>() ?? textTransform.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.95f);
+        outline.effectDistance = new Vector2(1.5f, -1.5f);
+        EditorUtility.SetDirty(label.gameObject);
+        EditorUtility.SetDirty(textTransform.gameObject);
     }
 
     private static void RemoveLegacySettingsLayoutCurve(Transform panelStart)

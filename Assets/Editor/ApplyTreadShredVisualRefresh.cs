@@ -554,25 +554,20 @@ public static class ApplyTreadShredVisualRefresh
             {
                 if (!button.name.ToLowerInvariant().Contains("back"))
                     continue;
-                var rect = button.GetComponent<RectTransform>();
-                if (rect == null)
+                ConfigureMissionBackControl(button.transform, advanceIcon);
+            }
+
+            // Some Unity versions keep the visible glyph on a child Image or
+            // serialize the navigation object without a Button component. Fix
+            // those variants too, otherwise the legacy white arrow survives
+            // in the generated player.
+            foreach (var candidate in menu.GetComponentsInChildren<Transform>(true))
+            {
+                if (!candidate.name.ToLowerInvariant().Contains("back"))
                     continue;
-                rect.anchorMin = rect.anchorMax = new Vector2(0.055f, 0.875f);
-                rect.pivot = new Vector2(0.5f, 0.5f);
-                rect.anchoredPosition = Vector2.zero;
-                rect.sizeDelta = new Vector2(72f, 72f);
-                var backImage = button.GetComponent<Image>();
-                if (backImage != null && advanceIcon != null)
-                {
-                    backImage.sprite = advanceIcon;
-                    backImage.type = Image.Type.Simple;
-                    backImage.preserveAspect = true;
-                    backImage.color = Color.white;
-                    backImage.raycastTarget = true;
-                    rect.localRotation = Quaternion.Euler(0f, 0f, 180f);
-                    EditorUtility.SetDirty(backImage);
-                }
-                EditorUtility.SetDirty(rect);
+                if (candidate.GetComponentsInChildren<Image>(true).Length == 0)
+                    continue;
+                ConfigureMissionBackControl(candidate, advanceIcon);
             }
 
             PrefabUtility.SaveAsPrefabAsset(canvas, PanelMenuPath);
@@ -644,13 +639,12 @@ public static class ApplyTreadShredVisualRefresh
             rect.anchorMin = rect.anchorMax = new Vector2(0.90f, 0.085f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = new Vector2(132f, 58f);
+            rect.sizeDelta = new Vector2(182f, 136f);
             rect.localRotation = Quaternion.identity;
             rect.localScale = Vector3.one;
             EditorUtility.SetDirty(rect);
         }
-        var image = button.GetComponent<Image>();
-        if (image != null)
+        foreach (var image in button.GetComponentsInChildren<Image>(true))
         {
             image.sprite = advanceIcon;
             image.type = Image.Type.Simple;
@@ -659,11 +653,12 @@ public static class ApplyTreadShredVisualRefresh
             image.raycastTarget = true;
             EditorUtility.SetDirty(image);
         }
-        var legacyText = button.Find("Text");
-        if (legacyText != null)
+
+        var textTargets = button.GetComponentsInChildren<Text>(true);
+        for (var index = 0; index < textTargets.Length; index++)
         {
-            var label = legacyText.GetComponent<Text>();
-            if (label != null)
+            var label = textTargets[index];
+            if (index == 0)
             {
                 label.text = "START MISSION";
                 label.font = commandFont;
@@ -674,9 +669,46 @@ public static class ApplyTreadShredVisualRefresh
                 label.resizeTextMinSize = 14;
                 label.resizeTextMaxSize = 22;
                 label.raycastTarget = false;
-                legacyText.gameObject.SetActive(false);
+                var labelRect = label.GetComponent<RectTransform>();
+                if (labelRect != null)
+                {
+                    labelRect.anchorMin = new Vector2(0.5f, 0.02f);
+                    labelRect.anchorMax = new Vector2(0.5f, 0.02f);
+                    labelRect.pivot = new Vector2(0.5f, 0f);
+                    labelRect.anchoredPosition = Vector2.zero;
+                    labelRect.sizeDelta = new Vector2(182f, 32f);
+                    EditorUtility.SetDirty(labelRect);
+                }
+                label.gameObject.SetActive(true);
                 EditorUtility.SetDirty(label);
             }
+            else
+                label.gameObject.SetActive(false);
+        }
+    }
+
+    private static void ConfigureMissionBackControl(Transform control, Sprite advanceIcon)
+    {
+        var rect = control.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            rect.anchorMin = rect.anchorMax = new Vector2(0.075f, 0.89f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(104f, 104f);
+            rect.localRotation = Quaternion.Euler(0f, 0f, 180f);
+            rect.localScale = Vector3.one;
+            EditorUtility.SetDirty(rect);
+        }
+
+        foreach (var image in control.GetComponentsInChildren<Image>(true))
+        {
+            image.sprite = advanceIcon;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = true;
+            image.color = Color.white;
+            image.raycastTarget = true;
+            EditorUtility.SetDirty(image);
         }
     }
 
