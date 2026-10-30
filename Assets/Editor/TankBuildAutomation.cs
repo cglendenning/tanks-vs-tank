@@ -32,7 +32,9 @@ public static class TankBuildAutomation
         // Use the profile UUID so Xcode cannot resolve a stale profile with
         // the same display name from another local download.
         Environment.SetEnvironmentVariable("TANK_PROVISIONING_PROFILE_SPECIFIER", "e11cb221-3c7d-436b-a97e-b153ce24a285");
-        Environment.SetEnvironmentVariable("TANK_CODE_SIGN_IDENTITY", "Apple Distribution: Craig Glendenning (MCALPSQ5P5)");
+        // Pin the certificate by SHA-1: two certificates on this Mac share the
+        // "Apple Distribution: Craig Glendenning" name and only this one is in the profile.
+        Environment.SetEnvironmentVariable("TANK_CODE_SIGN_IDENTITY", "66F1F59CE546829AA563FE01BF325E9BC197584A");
         BuildIos(false);
     }
 
