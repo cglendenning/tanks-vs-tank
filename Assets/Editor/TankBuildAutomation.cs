@@ -74,7 +74,7 @@ public static class TankBuildAutomation
         });
         AssertBuildSucceeded(report, "iOS");
         PatchIosInfoPlist(output);
-        PatchIosEntitlements(output);
+        ConfigureGameCenter(output);
         EnforceNoAdvertisingId(output);
         // Simulator apps are not provisioned; only device exports need the
         // distribution identity and profile.
@@ -291,17 +291,17 @@ public static class TankBuildAutomation
         File.WriteAllText(podfilePath, podfile);
     }
 
-    private static void PatchIosEntitlements(string buildPath)
+    // D-032: Game Center for the platform leaderboard. The App ID and the Ad Hoc
+    // profile carry the Game Center capability, so the entitlement is signed in.
+    private static void ConfigureGameCenter(string buildPath)
     {
-        // The legacy project enabled Game Center without an App ID capability.
-        // Remove that stale entitlement so Ad Hoc provisioning remains valid.
-        var path = Path.Combine(buildPath, "TreadShred.entitlements");
-        if (!File.Exists(path))
-            return;
-
-        File.WriteAllText(path, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
-            "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
-            "<plist version=\"1.0\"><dict/></plist>\n");
+        var projectPath = PBXProject.GetPBXProjectPath(buildPath);
+        var project = new PBXProject();
+        project.ReadFromFile(projectPath);
+        var capabilities = new ProjectCapabilityManager(projectPath, "TreadShred.entitlements", null,
+            project.GetUnityMainTargetGuid());
+        capabilities.AddGameCenter();
+        capabilities.WriteToFile();
     }
 
     private static void AssertBuildSucceeded(BuildReport report, string platform)

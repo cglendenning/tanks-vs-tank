@@ -133,6 +133,15 @@ public class LoadLv : MonoBehaviour {
                 new Vector2(320f, 96f), 34, font, Upgrades);
             var rect = (RectTransform)upgrades.transform;
             rect.anchorMin = rect.anchorMax = new Vector2(0.86f, 0.50f);
+
+            // Platform leaderboard (D-032).
+            if (TreadShredLeaderboard.Available)
+            {
+                var leaderboard = TreadShredUi.CreateButton("LEADERBOARD", (RectTransform)PanelStart.transform, Vector2.zero,
+                    new Vector2(360f, 96f), 34, font, TreadShredLeaderboard.Open);
+                var boardRect = (RectTransform)leaderboard.transform;
+                boardRect.anchorMin = boardRect.anchorMax = new Vector2(0.86f, 0.64f);
+            }
         }
         TreadShredTierSelector.Attach(PanelMenu, font);
     }
@@ -370,11 +379,7 @@ public class LoadLv : MonoBehaviour {
     {
         anim.SetTrigger("Static");
 
-        int TotalHighScore = 0;
-        for (int i = 1; i <= PlayerPrefs.GetFloat("OpenLv"); i++)
-        {
-            TotalHighScore += (int)PlayerPrefs.GetFloat("Lvs" + i);
-        }
+        int TotalHighScore = TreadShredScores.TotalScore();
 
         ScoreStatic.text = "TOTAL SCORE // " + TotalHighScore.ToString();
         KillStatic.text = "CONFIRMED KILLS // " + PlayerPrefs.GetFloat("CountKill").ToString();

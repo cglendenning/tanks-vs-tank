@@ -175,11 +175,9 @@ public class ManagerScore : MonoBehaviour
         }
 
 
-        if (SumForMedel > PlayerPrefs.GetFloat("Lvs" + currentLevel.ToString()))
-        {
-            PlayerPrefs.SetFloat("Lvs" + currentLevel.ToString(), SumForMedel);
-            PlayerPrefs.Save();
-        }
+        // Each tier keeps its own best, so replaying on Veteran and Elite adds to TOTAL SCORE (D-019, D-032).
+        TreadShredScores.SaveIfBest(TreadShredProgress.Ensure().SelectedTier, currentLevel, SumForMedel);
+        TreadShredLeaderboard.SubmitIfRaised();
 
 
         StartCoroutine(DelayScore(LevelS));
@@ -379,6 +377,16 @@ public class ManagerScore : MonoBehaviour
         if (reward.HasValue)
             TreadShredUi.CreateText(ProgressionLabels.Reward(reward.Value), (RectTransform)VictoryofFail.transform,
                 new Vector2(0f, 104f), new Vector2(900f, 32f), 22, rewardFont).color = TreadShredUi.TitleColor;
+
+        // Where the player stands on the platform leaderboard, once it reports (D-032).
+        var rankText = TreadShredUi.CreateText(string.Empty, (RectTransform)VictoryofFail.transform,
+            new Vector2(0f, 136f), new Vector2(900f, 32f), 22, rewardFont);
+        rankText.color = Color.white;
+        TreadShredLeaderboard.RequestRank(rank =>
+        {
+            if (rankText != null)
+                rankText.text = LeaderboardRules.RankLine(rank);
+        });
     }
 
     // D-009: gems already held are spent only after the player confirms; when
