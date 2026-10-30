@@ -22,7 +22,7 @@ public static class TankBuildAutomation
     // unchanged; App Store Connect requires a new version/build to replace
     // screenshots after a version is approved.
     private const string ReleaseVersion = "1.8.1";
-    private const int ReleaseBuildNumber = 14;
+    private const int ReleaseBuildNumber = 16;
     private const int AndroidReleaseBuildNumber = 4;
     private const string ProductionIosAppId = "ca-app-pub-4402198490627677~4284546322";
     private const string ProductionAndroidAppId = "ca-app-pub-4402198490627677~8381484915";
