@@ -442,9 +442,9 @@ public static class ApplyTreadShredVisualRefresh
             ConfigureStripAccent(header.transform, "OrangeRule", new Vector2(0.72f, 0f), new Vector2(1f, 0.025f),
                 new Color(0.96f, 0.43f, 0.10f, 0.90f));
 
-            ConfigureMissionHeaderText(menu, "TextTank (2)", "MISSION SELECT // OPERATIONS", commandFont,
+            ConfigureMissionHeaderText(menu, "TextTank (2)", "MISSION SELECT", commandFont,
                 new Vector2(0.175f, 0.85f), new Vector2(0.90f, 0.955f), 34, TextAnchor.MiddleLeft);
-            ConfigureMissionHeaderText(menu, "TextTank (3)", "SELECT AN OPERATION // 01—25", commandFont,
+            ConfigureMissionHeaderText(menu, "TextTank (3)", "SELECT A MISSION", commandFont,
                 new Vector2(0.175f, 0.80f), new Vector2(0.90f, 0.855f), 15, TextAnchor.MiddleLeft);
 
             var scroll = FindByPath(menu, "Scroll");

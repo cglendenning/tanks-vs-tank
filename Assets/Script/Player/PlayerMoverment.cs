@@ -593,6 +593,7 @@ public class PlayerMoverment : MonoBehaviour {
         }
 
         countdie -= index;
+        TreadShredImpact.HitTaken();
         StartCoroutine(DelayHeath());
 
         if (countdie < 1 && countdie > -1)

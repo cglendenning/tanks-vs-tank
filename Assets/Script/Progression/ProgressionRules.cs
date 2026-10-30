@@ -97,6 +97,15 @@ namespace TreadShred.Progression
         }
     }
 
+    // R-IMPACT combat feedback timings, in seconds (D-027).
+    public static class ImpactRules
+    {
+        public const float ShakeOnHitTaken = 0.15f;
+        public const float ShakeOnKill = 0.25f;
+        public const float KillFreezeFrame = 0.06f;
+        public const float KillCallout = 1.0f;
+    }
+
     public static class ReviveRules
     {
         public static bool CanOffer(int revivesUsed)

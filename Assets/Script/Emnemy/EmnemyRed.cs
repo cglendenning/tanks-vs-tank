@@ -21,6 +21,7 @@ public class EmnemyRed : MonoBehaviour {
             ManagerScore.instance.Rung();
             MusicManager.instance.ExplosionTank();
             completed = false;
+            TreadShredImpact.Kill(transform.position);
             ManagerScore.instance.CurDieEmnemy += 1;
             ManagerScore.instance.Victory();
             gameObject.layer = 0;

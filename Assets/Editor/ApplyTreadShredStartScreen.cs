@@ -70,7 +70,7 @@ public static class ApplyTreadShredStartScreen
         briefingRect.anchoredPosition = new Vector2(0f, -22f);
         briefingRect.sizeDelta = new Vector2(720f, 34f);
         var briefingText = briefing.GetComponent<Text>() ?? briefing.gameObject.AddComponent<Text>();
-        briefingText.text = "ARMORED COMBAT // LIVE FIRE RANGE";
+        briefingText.text = "ARMORED COMBAT";
         briefingText.font = AssetDatabase.LoadAssetAtPath<Font>(FontPath);
         briefingText.fontSize = 22;
         briefingText.fontStyle = FontStyle.Normal;
@@ -139,7 +139,7 @@ public static class ApplyTreadShredStartScreen
         HideLegacyControlText(play);
 
         EnsureControlLabel(option, "TreadShredFieldOpsLabel", "SETTINGS", string.Empty, 280f, commandFont);
-        EnsureControlLabel(stats, "TreadShredWarRecordLabel", "WAR RECORD", "TOTAL SCORE // CONFIRMED KILLS // RANK", 440f, commandFont);
+        EnsureControlLabel(stats, "TreadShredWarRecordLabel", "WAR RECORD", "SCORE, KILLS AND RANK", 440f, commandFont);
         EnsureControlLabel(play, "TreadShredDeployLabel", "START MISSION", string.Empty, 310f, commandFont);
         ApplyOptionPanelIcons(panelStart.transform, commandFont);
         ApplySettingsNavigationIcons(panelStart.transform, advanceIcon);

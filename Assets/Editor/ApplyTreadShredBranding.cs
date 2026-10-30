@@ -130,7 +130,7 @@ public static class ApplyTreadShredBranding
         if (path.Contains("PanelIntro/Image/Text2"))
             return "TAP TARGET TO FIRE";
         if (path.Contains("PanelPause/Text"))
-            return "PAUSED // HOLD";
+            return "PAUSED";
         if (path.Contains("PanelPause/ButtonRetry"))
             return "REDEPLOY";
         if (path.Contains("PanelPause/ButtonMenu"))
@@ -166,7 +166,7 @@ public static class ApplyTreadShredBranding
             return "SCORE // 0";
 
         if (current == "FIGHT") return "ENGAGE";
-        if (current == "PAUSED") return "PAUSED // HOLD";
+        if (current == "PAUSED") return "PAUSED";
         if (current == "FAILED") return "MISSION FAILED";
         if (current == "Good Job") return "TARGETS CLEARED";
         if (current == "EXIT") return "ABORT MISSION";
