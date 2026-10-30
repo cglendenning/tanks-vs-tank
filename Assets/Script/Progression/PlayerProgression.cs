@@ -81,6 +81,21 @@ namespace TreadShred.Progression
 
         public event Action Changed;
 
+        /// <summary>D-025-AC-03: takes a restored save as a whole, replacing what is held now.</summary>
+        public void Replace(ProgressionState restored)
+        {
+            if (restored == null)
+                throw new ArgumentNullException(nameof(restored));
+            state.coins = restored.coins;
+            state.highestUnlockedTier = restored.highestUnlockedTier;
+            state.upgradeLevels = restored.upgradeLevels != null && restored.upgradeLevels.Length == 3
+                ? (int[])restored.upgradeLevels.Clone() : new int[3];
+            state.clearedMissions = restored.clearedMissions != null && restored.clearedMissions.Length == 3
+                ? (long[])restored.clearedMissions.Clone() : new long[3];
+            state.claimedMilestones = new List<string>(restored.claimedMilestones ?? new List<string>());
+            Commit();
+        }
+
         public int Coins => state.coins;
 
         public int Level(UpgradeTrack track)

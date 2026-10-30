@@ -100,6 +100,17 @@ namespace TreadShred.Economy
             return true;
         }
 
+        /// <summary>D-025-AC-03: takes a restored save as a whole, replacing what is held now.</summary>
+        public void Replace(WalletState restored)
+        {
+            if (restored == null)
+                throw new ArgumentNullException(nameof(restored));
+            state.balance = restored.balance;
+            state.starterGranted = restored.starterGranted;
+            state.creditedTransactions = new List<string>(restored.creditedTransactions ?? new List<string>());
+            Commit();
+        }
+
         private void Commit()
         {
             store.Save(state);

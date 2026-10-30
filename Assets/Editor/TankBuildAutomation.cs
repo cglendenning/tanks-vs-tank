@@ -32,7 +32,7 @@ public static class TankBuildAutomation
         Environment.SetEnvironmentVariable("TANK_TEAM_ID", "MCALPSQ5P5");
         // Use the profile UUID so Xcode cannot resolve a stale profile with
         // the same display name from another local download.
-        Environment.SetEnvironmentVariable("TANK_PROVISIONING_PROFILE_SPECIFIER", "e11cb221-3c7d-436b-a97e-b153ce24a285");
+        Environment.SetEnvironmentVariable("TANK_PROVISIONING_PROFILE_SPECIFIER", "6fd40f8b-c6b6-4cac-8c17-703352d44a8d");
         // Pin the certificate by SHA-1: two certificates on this Mac share the
         // "Apple Distribution: Craig Glendenning" name and only this one is in the profile.
         Environment.SetEnvironmentVariable("TANK_CODE_SIGN_IDENTITY", "66F1F59CE546829AA563FE01BF325E9BC197584A");
@@ -74,7 +74,7 @@ public static class TankBuildAutomation
         });
         AssertBuildSucceeded(report, "iOS");
         PatchIosInfoPlist(output);
-        ConfigureGameCenter(output);
+        ConfigureCapabilities(output);
         EnforceNoAdvertisingId(output);
         // Simulator apps are not provisioned; only device exports need the
         // distribution identity and profile.
@@ -291,9 +291,9 @@ public static class TankBuildAutomation
         File.WriteAllText(podfilePath, podfile);
     }
 
-    // D-032: Game Center for the platform leaderboard. The App ID and the Ad Hoc
-    // profile carry the Game Center capability, so the entitlement is signed in.
-    private static void ConfigureGameCenter(string buildPath)
+    // D-032 Game Center for the leaderboard and D-025 iCloud key-value storage for cloud
+    // save. The App ID and the Ad Hoc profile carry both capabilities.
+    private static void ConfigureCapabilities(string buildPath)
     {
         var projectPath = PBXProject.GetPBXProjectPath(buildPath);
         var project = new PBXProject();
@@ -301,6 +301,7 @@ public static class TankBuildAutomation
         var capabilities = new ProjectCapabilityManager(projectPath, "TreadShred.entitlements", null,
             project.GetUnityMainTargetGuid());
         capabilities.AddGameCenter();
+        capabilities.AddiCloud(true, false, false, false, null);
         capabilities.WriteToFile();
     }
 

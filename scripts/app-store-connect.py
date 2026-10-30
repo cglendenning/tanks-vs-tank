@@ -2,6 +2,14 @@
 """App Store Connect setup for Tread Shred through the App Store Connect API.
 
     ASC_ISSUER_ID=<issuer> ASC_KEY_ID=<key> python3 scripts/app-store-connect.py game-center
+    ... app-store-connect.py icloud
+    ... app-store-connect.py adhoc-profile <certificate serial> <device UDID>
+
+icloud: enables the iCloud capability on the App ID, for cloud save (D-025).
+adhoc-profile: creates an Ad Hoc profile for the App ID with that distribution
+certificate and device, installs it in ~/Library/MobileDevice/Provisioning
+Profiles and prints its UUID. Capabilities enabled since the last profile
+(iCloud) are only signed into profiles created afterwards.
 
 game-center: enables Game Center for the app, creates the HIGH SCORE
 leaderboard with its score limits (D-032) and archives retired boards. Safe to
@@ -9,6 +17,7 @@ rerun: existing items are left as they are. The private key is read from
 ~/.appstoreconnect/private_keys/AuthKey_<ASC_KEY_ID>.p8; only statuses and IDs
 are printed, never the key or the signed token.
 """
+import base64
 import json
 import os
 import sys
@@ -113,13 +122,61 @@ def game_center(api):
           f"scores {LEADERBOARD['scoreRangeStart']}-{LEADERBOARD['scoreRangeEnd']}")
 
 
+def bundle_id(api):
+    found = [b for b in api.call("GET", f"/v1/bundleIds?filter[identifier]={BUNDLE_ID}")["data"]
+             if b["attributes"]["identifier"] == BUNDLE_ID]
+    if not found:
+        raise SystemExit(f"No App ID {BUNDLE_ID}")
+    return found[0]["id"]
+
+
+def icloud(api):
+    app_id = bundle_id(api)
+    capabilities = api.call("GET", f"/v1/bundleIds/{app_id}/bundleIdCapabilities")["data"]
+    if any(c["attributes"]["capabilityType"] == "ICLOUD" for c in capabilities):
+        print("iCloud already enabled on", BUNDLE_ID)
+        return
+    api.create("bundleIdCapabilities", {
+        "capabilityType": "ICLOUD",
+        "settings": [{"key": "ICLOUD_VERSION", "options": [{"key": "XCODE_6"}]}],
+    }, {"bundleId": {"data": {"type": "bundleIds", "id": app_id}}})
+    print("iCloud enabled on", BUNDLE_ID)
+
+
+def adhoc_profile(api, certificate_serial, udid):
+    app_id = bundle_id(api)
+    certificates = [c["id"] for c in api.call("GET", "/v1/certificates?filter[certificateType]=DISTRIBUTION")["data"]
+                    if c["attributes"]["serialNumber"].upper() == certificate_serial.upper()]
+    devices = [d["id"] for d in api.call("GET", f"/v1/devices?filter[udid]={udid}")["data"]]
+    if not certificates or not devices:
+        raise SystemExit(f"Certificate {certificate_serial} or device {udid} not found")
+    name = "Tread Shred Ad Hoc " + time.strftime("%Y-%m-%d %H%M")
+    profile = api.create("profiles", {"name": name, "profileType": "IOS_APP_ADHOC"}, {
+        "bundleId": {"data": {"type": "bundleIds", "id": app_id}},
+        "certificates": {"data": [{"type": "certificates", "id": c} for c in certificates]},
+        "devices": {"data": [{"type": "devices", "id": d} for d in devices]},
+    })
+    uuid = profile["attributes"]["uuid"]
+    folder = Path.home() / "Library/MobileDevice/Provisioning Profiles"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / f"{uuid}.mobileprovision").write_bytes(base64.b64decode(profile["attributes"]["profileContent"]))
+    print("Ad Hoc profile created and installed:", name, uuid)
+
+
 def main():
-    if sys.argv[1:] != ["game-center"]:
-        raise SystemExit(__doc__)
+    command = sys.argv[1:2]
     issuer, key_id = os.environ.get("ASC_ISSUER_ID"), os.environ.get("ASC_KEY_ID")
     if not issuer or not key_id:
         raise SystemExit("Set ASC_ISSUER_ID and ASC_KEY_ID (see the usage at the top of this script).")
-    game_center(AppStoreConnect(issuer, key_id))
+    api = AppStoreConnect(issuer, key_id)
+    if command == ["game-center"] and len(sys.argv) == 2:
+        game_center(api)
+    elif command == ["icloud"] and len(sys.argv) == 2:
+        icloud(api)
+    elif command == ["adhoc-profile"] and len(sys.argv) == 4:
+        adhoc_profile(api, sys.argv[2], sys.argv[3])
+    else:
+        raise SystemExit(__doc__)
 
 
 if __name__ == "__main__":

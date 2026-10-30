@@ -2,7 +2,7 @@ using TreadShred.Economy;
 
 public sealed class PlayerPrefsWalletStore : IWalletStore
 {
-    private const string Key = "TreadShredGemWallet";
+    public const string Key = "TreadShredGemWallet";
 
     public WalletState Load()
     {
@@ -12,5 +12,6 @@ public sealed class PlayerPrefsWalletStore : IWalletStore
     public void Save(WalletState state)
     {
         PlayerPrefsJson.Save(Key, state);
+        TreadShredCloudSave.LocalSaved();
     }
 }

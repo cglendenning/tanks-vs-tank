@@ -2,7 +2,7 @@ using TreadShred.Progression;
 
 public sealed class PlayerPrefsProgressionStore : IProgressionStore
 {
-    private const string Key = "TreadShredProgression";
+    public const string Key = "TreadShredProgression";
 
     public ProgressionState Load()
     {
@@ -12,5 +12,6 @@ public sealed class PlayerPrefsProgressionStore : IProgressionStore
     public void Save(ProgressionState state)
     {
         PlayerPrefsJson.Save(Key, state);
+        TreadShredCloudSave.LocalSaved();
     }
 }

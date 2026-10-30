@@ -1,0 +1,17 @@
+{
+    "name": "TreadShred.Save",
+    "rootNamespace": "TreadShred.Save",
+    "references": [
+        "TreadShred.Economy",
+        "TreadShred.Progression"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}
