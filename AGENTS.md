@@ -1,5 +1,21 @@
 # Tread Shred agent notes
 
+## Specification (source of truth)
+
+- The build contract lives in the private repository `../../treadshred-spec`
+  (GitHub `cglendenning/treadshred-spec`). `TREAD_SHRED_SPECIFICATION.md` is
+  the only source of truth; its HTML, index and manifest are generated.
+- Read `SPEC_INDEX.md`, then `python3 spec_tools.py brief D-###` for the
+  directive you are working on. Never load the whole specification into
+  context.
+- **Never change the specification or any existing test (assertions, data,
+  structure, or deletion) without explicit approval from Craig in the current
+  conversation.** Propose the change and wait. Adding new tests is allowed.
+- Every Unity test names the directive it enforces as the first token of its
+  description: `[Test(Description = "D-011-AC-01: ...")]`. Validate with
+  `python3 spec_tools.py validate --app-root ../games/tread-shred` from the
+  spec repository; it fails on any unlabeled test.
+
 ## Unity editor and build tooling
 
 - The Unity editor is already installed on this Mac. Never download, install,

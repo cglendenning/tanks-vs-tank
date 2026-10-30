@@ -22,7 +22,7 @@ namespace TreadShred.Economy.Tests
 
         private static GemPack SmallPack => GemCatalog.Packs[0];
 
-        [Test]
+        [Test(Description = "D-008-AC-01: a new wallet holds no gems before the starter grant")]
         public void NewWalletStartsEmpty()
         {
             var wallet = new GemWallet(new InMemoryWalletStore());
@@ -30,7 +30,7 @@ namespace TreadShred.Economy.Tests
             Assert.AreEqual(0, wallet.Balance);
         }
 
-        [Test]
+        [Test(Description = "D-008-AC-01: the starter grant is applied once")]
         public void StarterGrantIsAppliedOnlyOnce()
         {
             var wallet = new GemWallet(new InMemoryWalletStore());
@@ -40,7 +40,7 @@ namespace TreadShred.Economy.Tests
             Assert.AreEqual(GemCatalog.StarterGrant, wallet.Balance);
         }
 
-        [Test]
+        [Test(Description = "D-008-AC-01: the starter grant is not repeated after the wallet reloads")]
         public void StarterGrantIsNotRepeatedAfterReload()
         {
             var store = new InMemoryWalletStore();
@@ -52,7 +52,7 @@ namespace TreadShred.Economy.Tests
             Assert.AreEqual(GemCatalog.StarterGrant, reloaded.Balance);
         }
 
-        [Test]
+        [Test(Description = "D-011-AC-01: a known pack credits its gems")]
         public void CreditingAKnownPackAddsItsGems()
         {
             var wallet = new GemWallet(new InMemoryWalletStore());
@@ -63,7 +63,7 @@ namespace TreadShred.Economy.Tests
             Assert.AreEqual(SmallPack.Gems, wallet.Balance);
         }
 
-        [Test]
+        [Test(Description = "D-011-AC-01: a redelivered transaction is not credited twice")]
         public void RedeliveredTransactionIsNotCreditedTwice()
         {
             var wallet = new GemWallet(new InMemoryWalletStore());
@@ -75,7 +75,7 @@ namespace TreadShred.Economy.Tests
             Assert.AreEqual(SmallPack.Gems, wallet.Balance);
         }
 
-        [Test]
+        [Test(Description = "D-011-AC-01: a redelivered transaction is rejected after reload")]
         public void RedeliveredTransactionIsRejectedAfterReload()
         {
             var store = new InMemoryWalletStore();
@@ -87,7 +87,7 @@ namespace TreadShred.Economy.Tests
             Assert.AreEqual(SmallPack.Gems, reloaded.Balance);
         }
 
-        [Test]
+        [Test(Description = "D-011-AC-02: an unknown product is not credited")]
         public void UnknownProductIsRejectedWithoutChangingBalance()
         {
             var store = new InMemoryWalletStore();
@@ -100,7 +100,7 @@ namespace TreadShred.Economy.Tests
             Assert.AreEqual(0, store.SaveCount);
         }
 
-        [Test]
+        [Test(Description = "D-011-AC-01: a purchase without a transaction ID is still credited")]
         public void PurchaseWithoutTransactionIdIsStillCredited()
         {
             var wallet = new GemWallet(new InMemoryWalletStore());
@@ -109,7 +109,7 @@ namespace TreadShred.Economy.Tests
             Assert.AreEqual(SmallPack.Gems, wallet.Balance);
         }
 
-        [Test]
+        [Test(Description = "D-011-AC-01: transaction history is bounded and keeps recent IDs")]
         public void TransactionHistoryIsTrimmedButKeepsRecentIds()
         {
             var store = new InMemoryWalletStore();
@@ -124,7 +124,7 @@ namespace TreadShred.Economy.Tests
                 wallet.CreditPurchase(SmallPack.ProductId, "txn-" + GemWallet.RememberedTransactionLimit));
         }
 
-        [Test]
+        [Test(Description = "D-010-AC-01: spending within the balance deducts gems")]
         public void SpendingWithinBalanceDeducts()
         {
             var wallet = new GemWallet(new InMemoryWalletStore());
@@ -134,7 +134,7 @@ namespace TreadShred.Economy.Tests
             Assert.AreEqual(GemCatalog.StarterGrant - 40, wallet.Balance);
         }
 
-        [Test]
+        [Test(Description = "D-010-AC-01: spending beyond the balance fails and keeps it")]
         public void SpendingBeyondBalanceFailsAndKeepsBalance()
         {
             var wallet = new GemWallet(new InMemoryWalletStore());
@@ -144,7 +144,7 @@ namespace TreadShred.Economy.Tests
             Assert.AreEqual(GemCatalog.StarterGrant, wallet.Balance);
         }
 
-        [Test]
+        [Test(Description = "D-010-AC-01: a non-positive spend is rejected")]
         public void SpendingANonPositiveAmountThrows()
         {
             var wallet = new GemWallet(new InMemoryWalletStore());
@@ -152,7 +152,7 @@ namespace TreadShred.Economy.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => wallet.TrySpend(0));
         }
 
-        [Test]
+        [Test(Description = "D-012: the wallet reports every balance change so screens can update")]
         public void BalanceChangedReportsEveryMutation()
         {
             var wallet = new GemWallet(new InMemoryWalletStore());
@@ -168,7 +168,7 @@ namespace TreadShred.Economy.Tests
                 reported);
         }
 
-        [Test]
+        [Test(Description = "D-011-AC-01: saved state without a transaction list loads safely")]
         public void StateWithMissingTransactionListLoadsSafely()
         {
             var store = new InMemoryWalletStore { Saved = new WalletState { balance = 7, creditedTransactions = null } };
