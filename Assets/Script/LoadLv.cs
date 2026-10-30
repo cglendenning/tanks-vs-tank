@@ -106,9 +106,16 @@ public class LoadLv : MonoBehaviour {
 
         
 
+        // Start each fresh command-deck session at the authored full level so
+        // nothing that paused or faded the global listener earlier can leave
+        // launch audio quiet or paused.
+        AudioListener.pause = false;
+        AudioListener.volume = 1f;
+
         if (isSoundStart == false)
         {
-            Outgame.Play();
+            if (Outgame != null)
+                Outgame.Play();
         }
 
         // The settings animator can leave the legacy Control container with
@@ -116,6 +123,7 @@ public class LoadLv : MonoBehaviour {
         // layout once the scene is live so the three start-screen controls
         // never collapse onto one another.
         RestoreStartScreenLayout();
+        RestoreSettingsInteractivity();
     }
 
     public void StopMS()
@@ -201,6 +209,7 @@ public class LoadLv : MonoBehaviour {
 
     public void Option()
     {
+        RestoreSettingsInteractivity();
         anim.SetTrigger("Option");
     }
 
@@ -256,6 +265,38 @@ public class LoadLv : MonoBehaviour {
         RestoreStartControl(control.Find("Option"), new Vector2(0.20f, 0.16f), 146f);
         RestoreStartControl(control.Find("Stats"), new Vector2(0.50f, 0.10f), 108f);
         RestoreStartControl(control.Find("Play"), new Vector2(0.80f, 0.16f), 146f);
+    }
+
+    private void RestoreSettingsInteractivity()
+    {
+        if (PanelStart == null)
+            return;
+
+        var optionPanel = PanelStart.transform.Find("OptionPanel");
+        if (optionPanel == null)
+            return;
+
+        var panelImage = optionPanel.GetComponent<Image>();
+        if (panelImage != null)
+            panelImage.raycastTarget = false;
+
+        foreach (Transform child in optionPanel)
+        {
+            var button = child.GetComponent<UnityEngine.UI.Button>();
+            if (button == null)
+                continue;
+
+            button.interactable = true;
+            var rowImage = child.GetComponent<Image>();
+            if (rowImage != null)
+                rowImage.raycastTarget = true;
+
+            foreach (var image in child.GetComponentsInChildren<Image>(true))
+            {
+                if (image.transform != child)
+                    image.raycastTarget = false;
+            }
+        }
     }
 
     private bool ShouldEnforceStartScreenLayout()
@@ -371,8 +412,9 @@ public class LoadLv : MonoBehaviour {
     {
         if (MusicdOn.activeInHierarchy)
         {
-            
-            Outgame.Stop();
+
+            if (Outgame != null)
+                Outgame.Stop();
             MusicdOn.SetActive(false);
             MusicOff.SetActive(true);
             PlayerPrefs.SetFloat("Music", 1);
@@ -380,7 +422,8 @@ public class LoadLv : MonoBehaviour {
         }
         else
         {
-            Outgame.Play();
+            if (Outgame != null)
+                Outgame.Play();
             MusicdOn.SetActive(true);
             MusicOff.SetActive(false);
             PlayerPrefs.SetFloat("Music", 0);

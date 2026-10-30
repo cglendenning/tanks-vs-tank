@@ -90,17 +90,38 @@ cat > "$OTA_DIR/manifest.plist" <<EOF
 </dict></dict></array>
 </dict></plist>
 EOF
+# Python's built-in server labels .plist as application/octet-stream. Keep
+# the canonical plist for inspection, but serve an identical .xml copy so
+# iOS receives an XML content type when it requests the OTA manifest.
+cp "$OTA_DIR/manifest.plist" "$OTA_DIR/manifest.xml"
 
-for URL in "${TUNNEL_URL}/manifest.plist" "${TUNNEL_URL}/TreadShred.ipa"; do
+for URL in "${TUNNEL_URL}/manifest.xml" "${TUNNEL_URL}/TreadShred.ipa"; do
   for _ in $(seq 1 20); do
-    if curl --resolve "$TUNNEL_HOST:443:$TUNNEL_IP" --http1.1 -fsS --max-time 60 -o /dev/null "$URL" >/dev/null 2>&1; then break; fi
+    if curl --resolve "$TUNNEL_HOST:443:$TUNNEL_IP" --http1.1 -fsSI --max-time 20 -o /dev/null "$URL" >/dev/null 2>&1; then break; fi
     sleep 1
   done
-  curl --resolve "$TUNNEL_HOST:443:$TUNNEL_IP" --http1.1 -fsS --max-time 60 -o /dev/null "$URL" >/dev/null
+  curl --resolve "$TUNNEL_HOST:443:$TUNNEL_IP" --http1.1 -fsSI --max-time 20 -o /dev/null "$URL" >/dev/null
 done
 
-echo "OTA_URL=itms-services://?action=download-manifest&url=${TUNNEL_URL}/manifest.plist"
-echo "MANIFEST_URL=${TUNNEL_URL}/manifest.plist"
+MANIFEST_URL="${TUNNEL_URL}/manifest.xml"
+ENCODED_MANIFEST_URL="$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=""))' "$MANIFEST_URL")"
+OTA_URL="itms-services://?action=download-manifest&url=${ENCODED_MANIFEST_URL}"
+cat > "$OTA_DIR/install.html" <<EOF
+<!doctype html>
+<html lang="en">
+<head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tread Shred install</title></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:24px;background:#101820;color:#fff">
+  <h1>Tread Shred</h1>
+  <p>Open this page in Safari on the registered iPhone, then tap Install.</p>
+  <p><a style="display:inline-block;padding:14px 20px;background:#e86f16;color:#fff;text-decoration:none;border-radius:8px" href="${OTA_URL}">Install Tread Shred</a></p>
+  <p><a style="color:#8bd7e5" href="${MANIFEST_URL}">View manifest</a></p>
+</body>
+</html>
+EOF
+
+echo "OTA_URL=${OTA_URL}"
+echo "INSTALL_PAGE_URL=${TUNNEL_URL}/install.html"
+echo "MANIFEST_URL=${MANIFEST_URL}"
 echo "IPA_URL=${TUNNEL_URL}/TreadShred.ipa"
 echo "SHA256=$(shasum -a 256 "$OTA_DIR/TreadShred.ipa" | awk '{print $1}')"
 echo "Serving from $OTA_DIR; keep this process running while installing."

@@ -169,38 +169,24 @@ public static class ApplyTreadShredStartScreen
         if (optionPanel == null)
             return;
 
+        ConfigureSettingsContainer(optionPanel);
+
         var settingsIcon = AssetDatabase.LoadAssetAtPath<Sprite>(SettingsPath);
         var cameraIcon = AssetDatabase.LoadAssetAtPath<Sprite>(CameraPath);
         var soundIcon = AssetDatabase.LoadAssetAtPath<Sprite>(SoundPath);
         var musicIcon = AssetDatabase.LoadAssetAtPath<Sprite>(MusicPath);
         foreach (var image in optionPanel.GetComponentsInChildren<Image>(true))
         {
-            // ImageWhite/ImageBlack are the legacy toggle sprites. Replace
-            // both states so returning to settings can never reveal the old
-            // flat white glyphs.
-            if (image.gameObject.name != "ImageWhite" && image.gameObject.name != "ImageBlack")
+            if (image.transform == optionPanel || image.gameObject.name == "TreadShredSettingsIconStrip")
                 continue;
 
-            var semantic = string.Empty;
-            for (var ancestor = image.transform.parent; ancestor != null && ancestor != optionPanel; ancestor = ancestor.parent)
-            {
-                var ancestorName = ancestor.name.ToLowerInvariant();
-                if (ancestorName.Contains("camera") || ancestorName == "fllow" || ancestorName == "follow" || ancestorName == "fix" || ancestorName == "fixed")
-                {
-                    semantic = "camera";
-                    break;
-                }
-                if (ancestorName.Contains("sound"))
-                {
-                    semantic = "sound";
-                    break;
-                }
-                if (ancestorName.Contains("music"))
-                {
-                    semantic = "music";
-                    break;
-                }
-            }
+            var row = FindSettingsRow(image.transform, optionPanel);
+            if (row == null || image.transform == row)
+                continue;
+
+            // Replace only the legacy state glyphs. Preserve every existing
+            // RectTransform so the original settings layout remains intact.
+            var semantic = FindOptionSemantic(image.transform, optionPanel);
             image.sprite = semantic == "camera"
                 ? cameraIcon
                 : semantic == "sound" ? soundIcon
@@ -210,8 +196,33 @@ public static class ApplyTreadShredStartScreen
             image.preserveAspect = true;
             image.color = Color.white;
             image.raycastTarget = false;
+            var contrast = image.GetComponent<Outline>() ?? image.gameObject.AddComponent<Outline>();
+            contrast.effectColor = new Color(0.005f, 0.012f, 0.016f, 0.96f);
+            contrast.effectDistance = new Vector2(3f, -3f);
+            contrast.useGraphicAlpha = true;
             EditorUtility.SetDirty(image);
         }
+
+        foreach (var rowName in new[] { "Sound", "Music", "VIBRATE", "Camera" })
+        {
+            var row = optionPanel.Find(rowName);
+            if (row == null)
+                continue;
+
+            RemoveGeneratedSettingsObject(row, "TreadShredIconGlass");
+            RemoveGeneratedSettingsObject(row, "TreadShredSettingsLabel");
+            ConfigureSettingsRowInteraction(row);
+            if (row.name == "Camera")
+                EnsureSettingsCameraIcon(row, cameraIcon);
+        }
+
+        EnsureSettingsRowLabel(optionPanel.Find("Sound"), "SOUND // EFFECTS", commandFont);
+        EnsureSettingsRowLabel(optionPanel.Find("Music"), "MUSIC // BATTLEFIELD", commandFont);
+        EnsureSettingsRowLabel(optionPanel.Find("VIBRATE"), "VIBRATION // IMPACT", commandFont);
+
+        RemoveGeneratedSettingsObject(optionPanel, "TreadShredSettingsGlassFrame");
+        RemoveGeneratedSettingsObject(optionPanel, "TreadShredSystemsHeader");
+        EnsureSettingsIconStrip(optionPanel);
 
         foreach (var text in optionPanel.GetComponentsInChildren<Text>(true))
         {
@@ -223,11 +234,11 @@ public static class ApplyTreadShredStartScreen
             var rect = text.GetComponent<RectTransform>();
             if (rect != null)
             {
-                rect.anchorMin = new Vector2(0.5f, 0.05f);
-                rect.anchorMax = new Vector2(0.5f, 0.05f);
-                rect.pivot = new Vector2(0.5f, 0f);
-                rect.anchoredPosition = Vector2.zero;
-                rect.sizeDelta = new Vector2(430f, 44f);
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.zero;
+                rect.pivot = new Vector2(0f, 0.5f);
+                rect.anchoredPosition = new Vector2(260f, 0f);
+                rect.sizeDelta = new Vector2(760f, 64f);
                 rect.localScale = Vector3.one;
                 EditorUtility.SetDirty(rect);
             }
@@ -235,7 +246,7 @@ public static class ApplyTreadShredStartScreen
             text.text = state == "follow" ? "CAMERA VIEW\nFOLLOW ARMOR" : "CAMERA VIEW\nLOCKED FIELD";
             text.font = commandFont;
             text.fontSize = 16;
-            text.alignment = TextAnchor.MiddleCenter;
+            text.alignment = TextAnchor.MiddleLeft;
             text.resizeTextForBestFit = true;
             text.resizeTextMinSize = 11;
             text.resizeTextMaxSize = 16;
@@ -248,6 +259,226 @@ public static class ApplyTreadShredStartScreen
             outline.effectDistance = new Vector2(1.5f, -1.5f);
             EditorUtility.SetDirty(text);
         }
+    }
+
+    private static void ConfigureSettingsContainer(Transform optionPanel)
+    {
+        var panelImage = optionPanel.GetComponent<Image>();
+        if (panelImage != null)
+        {
+            panelImage.sprite = null;
+            panelImage.color = new Color(1f, 1f, 1f, 0.004f);
+            panelImage.raycastTarget = false;
+            EditorUtility.SetDirty(panelImage);
+        }
+    }
+
+    private static void ConfigureSettingsRowInteraction(Transform row)
+    {
+        var image = row.GetComponent<Image>();
+        if (image != null)
+        {
+            // Keep the original row-sized hit target, but do not paint the
+            // old horizontal background across the natural scene.
+            image.sprite = null;
+            image.color = new Color(1f, 1f, 1f, 0.004f);
+            image.raycastTarget = true;
+            EditorUtility.SetDirty(image);
+        }
+
+        var button = row.GetComponent<Button>();
+        if (button != null)
+        {
+            button.interactable = true;
+            button.targetGraphic = image;
+            EditorUtility.SetDirty(button);
+        }
+
+        foreach (var childImage in row.GetComponentsInChildren<Image>(true))
+        {
+            if (childImage.transform != row)
+                childImage.raycastTarget = false;
+        }
+    }
+
+    private static Transform FindSettingsRow(Transform target, Transform optionPanel)
+    {
+        for (var ancestor = target.parent; ancestor != null && ancestor != optionPanel; ancestor = ancestor.parent)
+        {
+            if (ancestor.name == "Sound" || ancestor.name == "Music" ||
+                ancestor.name == "VIBRATE" || ancestor.name == "Camera")
+                return ancestor;
+        }
+
+        return null;
+    }
+
+    private static void RemoveGeneratedSettingsObject(Transform parent, string name)
+    {
+        var child = parent.Find(name);
+        if (child != null)
+            Object.DestroyImmediate(child.gameObject);
+    }
+
+    private static void EnsureSettingsIconStrip(Transform optionPanel)
+    {
+        var strip = EnsureImage(optionPanel, "TreadShredSettingsIconStrip");
+        var rect = strip.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        // This matches the original row/icon coordinate system: the strip
+        // follows the icon column when the legacy settings animation slides
+        // the panel into view, regardless of device aspect ratio.
+        rect.anchoredPosition = new Vector2(17f, -21f);
+        rect.sizeDelta = new Vector2(210f, 760f);
+        rect.localRotation = Quaternion.identity;
+        rect.localScale = Vector3.one;
+        strip.sprite = null;
+        strip.color = new Color(0.005f, 0.012f, 0.016f, 0.46f);
+        strip.raycastTarget = false;
+        var outline = strip.GetComponent<Outline>() ?? strip.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0.90f, 0.35f, 0.08f, 0.28f);
+        outline.effectDistance = new Vector2(2f, -2f);
+        outline.useGraphicAlpha = true;
+        strip.transform.SetAsFirstSibling();
+
+        ConfigureSettingsRailElement(strip.transform, "TreadShredSettingsRailInset", Vector2.zero,
+            new Vector2(174f, 730f), new Color(0.02f, 0.03f, 0.04f, 0.34f), false);
+        ConfigureSettingsRailElement(strip.transform, "TreadShredSettingsRailSpine", Vector2.zero,
+            new Vector2(4f, 704f), new Color(1f, 0.30f, 0.06f, 0.08f), false);
+        ConfigureSettingsRailElement(strip.transform, "TreadShredSettingsRailLeft", new Vector2(-101f, 0f),
+            new Vector2(3f, 724f), new Color(1f, 0.34f, 0.08f, 0.62f), false);
+        ConfigureSettingsRailElement(strip.transform, "TreadShredSettingsRailRight", new Vector2(101f, 0f),
+            new Vector2(3f, 724f), new Color(1f, 0.34f, 0.08f, 0.34f), false);
+        ConfigureSettingsRailElement(strip.transform, "TreadShredSettingsRailTop", new Vector2(0f, 361f),
+            new Vector2(184f, 3f), new Color(1f, 0.44f, 0.12f, 0.72f), false);
+        ConfigureSettingsRailElement(strip.transform, "TreadShredSettingsRailBottom", new Vector2(0f, -361f),
+            new Vector2(184f, 3f), new Color(1f, 0.44f, 0.12f, 0.72f), false);
+
+        var iconCenters = new[] { 295f, 100f, -111f, -295f };
+        var plateNames = new[] { "Sound", "Music", "Vibrate", "Camera" };
+        for (var i = 0; i < iconCenters.Length; i++)
+        {
+            ConfigureSettingsRailElement(strip.transform, "TreadShredSettingsIconPlate_" + plateNames[i],
+                new Vector2(0f, iconCenters[i]), new Vector2(170f, 170f),
+                new Color(0.005f, 0.010f, 0.014f, 0.54f), true);
+        }
+
+        var separatorCenters = new[] { 197.5f, -5.5f, -203f };
+        for (var i = 0; i < separatorCenters.Length; i++)
+        {
+            ConfigureSettingsRailElement(strip.transform, "TreadShredSettingsRailSeparator_" + (i + 1),
+                new Vector2(0f, separatorCenters[i]), new Vector2(144f, 2f),
+                new Color(1f, 0.30f, 0.06f, 0.34f), false);
+        }
+
+        EditorUtility.SetDirty(rect);
+        EditorUtility.SetDirty(strip);
+    }
+
+    private static void ConfigureSettingsRailElement(Transform parent, string name, Vector2 position,
+        Vector2 size, Color color, bool outlined)
+    {
+        var image = EnsureImage(parent, name);
+        var rect = image.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+        rect.localRotation = Quaternion.identity;
+        rect.localScale = Vector3.one;
+        image.sprite = null;
+        image.color = color;
+        image.raycastTarget = false;
+        var outline = image.GetComponent<Outline>();
+        if (outlined)
+        {
+            if (outline == null)
+                outline = image.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(1f, 0.34f, 0.08f, 0.40f);
+            outline.effectDistance = new Vector2(2f, -2f);
+            outline.useGraphicAlpha = true;
+        }
+        else if (outline != null)
+        {
+            Object.DestroyImmediate(outline);
+        }
+        EditorUtility.SetDirty(rect);
+        EditorUtility.SetDirty(image);
+    }
+
+    private static void EnsureSettingsRowLabel(Transform row, string value, Font commandFont)
+    {
+        if (row == null)
+            return;
+
+        var label = row.Find("TreadShredSettingsLabel");
+        if (label == null)
+        {
+            label = new GameObject("TreadShredSettingsLabel", typeof(RectTransform), typeof(Text), typeof(Outline)).transform;
+            label.SetParent(row, false);
+        }
+
+        var rect = label.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.zero;
+        rect.pivot = new Vector2(0f, 0.5f);
+        rect.anchoredPosition = new Vector2(260f, 0f);
+        rect.sizeDelta = new Vector2(760f, 58f);
+        rect.localScale = Vector3.one;
+
+        var text = label.GetComponent<Text>();
+        text.text = value;
+        text.font = commandFont;
+        text.fontSize = 20;
+        text.fontStyle = FontStyle.Normal;
+        text.alignment = TextAnchor.MiddleLeft;
+        text.color = new Color(0.96f, 0.98f, 1f, 1f);
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 13;
+        text.resizeTextMaxSize = 20;
+        text.horizontalOverflow = HorizontalWrapMode.Overflow;
+        text.verticalOverflow = VerticalWrapMode.Overflow;
+        text.raycastTarget = false;
+
+        var outline = label.GetComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.98f);
+        outline.effectDistance = new Vector2(2.5f, -2.5f);
+        outline.useGraphicAlpha = true;
+        EditorUtility.SetDirty(rect);
+        EditorUtility.SetDirty(text);
+    }
+
+    private static void EnsureSettingsCameraIcon(Transform row, Sprite cameraIcon)
+    {
+        var icon = row.Find("TreadShredCameraIcon");
+        if (icon == null)
+        {
+            icon = new GameObject("TreadShredCameraIcon", typeof(RectTransform), typeof(Image)).transform;
+            icon.SetParent(row, false);
+        }
+
+        var rect = icon.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.zero;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = new Vector2(68f, 0f);
+        rect.sizeDelta = new Vector2(150f, 150f);
+        rect.localRotation = Quaternion.identity;
+        rect.localScale = Vector3.one;
+
+        var image = icon.GetComponent<Image>();
+        image.sprite = cameraIcon;
+        image.type = Image.Type.Simple;
+        image.preserveAspect = true;
+        image.color = Color.white;
+        image.raycastTarget = false;
+        var outline = image.GetComponent<Outline>() ?? image.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0.005f, 0.012f, 0.016f, 0.96f);
+        outline.effectDistance = new Vector2(3f, -3f);
+        outline.useGraphicAlpha = true;
+        EditorUtility.SetDirty(rect);
+        EditorUtility.SetDirty(image);
     }
 
     private static string FindOptionSemantic(Transform target, Transform optionPanel)
