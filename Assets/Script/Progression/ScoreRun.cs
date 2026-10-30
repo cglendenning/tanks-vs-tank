@@ -48,21 +48,24 @@ namespace TreadShred.Progression
             }
         }
 
-        public static string ScoreLine(int score) => "SCORE // " + Format(score);
+        public static string ScoreLine(int score) => "SCORE: " + Format(score);
 
         public static string HighScoreLine(int highScore, bool isNew) =>
-            (isNew ? "NEW HIGH SCORE // " : "HIGH SCORE // ") + Format(highScore);
+            (isNew ? "NEW HIGH SCORE: " : "HIGH SCORE: ") + Format(highScore);
 
         public static string KillCallout(int points) => "TARGET DESTROYED +" + Format(points);
 
         public static string ClearCallout(int points) => "MISSION CLEAR +" + Format(points);
 
-        /// <summary>What this mission added, in parts that add up: "THIS MISSION +800 // 3 KILLS +300 // CLEAR +500".</summary>
+        /// <summary>What this mission added, with the parts that make it: "THIS MISSION: 800 (3 KILLS 300 + CLEAR 500)".</summary>
         public static string MissionLine(MissionScore mission)
         {
-            var line = "THIS MISSION +" + Format(mission.MissionPoints) + " // " + mission.Kills +
-                       (mission.Kills == 1 ? " KILL +" : " KILLS +") + Format(mission.KillPoints);
-            return mission.ClearPoints > 0 ? line + " // CLEAR +" + Format(mission.ClearPoints) : line;
+            if (mission.MissionPoints == 0)
+                return "THIS MISSION: 0";
+            var parts = mission.Kills + (mission.Kills == 1 ? " KILL " : " KILLS ") + Format(mission.KillPoints);
+            if (mission.ClearPoints > 0)
+                parts += " + CLEAR " + Format(mission.ClearPoints);
+            return "THIS MISSION: " + Format(mission.MissionPoints) + " (" + parts + ")";
         }
 
         private static string Format(int value) => value.ToString("N0", CultureInfo.InvariantCulture);

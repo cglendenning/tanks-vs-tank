@@ -19,9 +19,9 @@ namespace TreadShred.Progression.Tests
         [Test(Description = "D-032-AC-02: the result screen shows SCORE and the HIGH SCORE the leaderboard ranks")]
         public void ResultScreenShowsTheRankedTotal()
         {
-            Assert.AreEqual("SCORE // 1,100", ScoreRules.ScoreLine(1100));
-            Assert.AreEqual("HIGH SCORE // 2,195", ScoreRules.HighScoreLine(2195, false));
-            Assert.AreEqual("NEW HIGH SCORE // 221,400", ScoreRules.HighScoreLine(221400, true));
+            Assert.AreEqual("SCORE: 1,100", ScoreRules.ScoreLine(1100));
+            Assert.AreEqual("HIGH SCORE: 2,195", ScoreRules.HighScoreLine(2195, false));
+            Assert.AreEqual("NEW HIGH SCORE: 221,400", ScoreRules.HighScoreLine(221400, true));
             var score = System.IO.File.ReadAllText(System.IO.Path.Combine(UnityEngine.Application.dataPath,
                 "Script/ManagerScore/ManagerScore.cs"));
             StringAssert.Contains("ScoreRules.HighScoreLine(TreadShredScores.HighScore, newHighScore)", score);

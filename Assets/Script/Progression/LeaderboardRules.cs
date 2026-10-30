@@ -27,10 +27,10 @@ namespace TreadShred.Progression
 
         // The in-game leaderboard screen (D-032-AC-02).
         public const string Title = "LEADERBOARD";
-        public const string Subtitle = "HIGH SCORE // TOP 25";
+        public const string Subtitle = "HIGH SCORE: TOP 25";
         public const string Loading = "LOADING SCORES";
-        public const string Empty = "NO SCORES YET // FINISH A MISSION TO RANK";
-        public const string Unavailable = "LEADERBOARD UNAVAILABLE // TRY AGAIN SOON";
+        public const string Empty = "NO SCORES YET. FINISH A MISSION TO RANK";
+        public const string Unavailable = "LEADERBOARD UNAVAILABLE. TRY AGAIN SOON";
         public const string Back = "BACK";
 
         // Game Center queues a score and uploads it a few seconds later, so a board read right
@@ -46,7 +46,7 @@ namespace TreadShred.Progression
 
         public static string RankLine(int rank)
         {
-            return "LEADERBOARD RANK // #" + rank.ToString("N0", CultureInfo.InvariantCulture);
+            return "LEADERBOARD RANK: #" + rank.ToString("N0", CultureInfo.InvariantCulture);
         }
     }
 }

@@ -41,7 +41,7 @@ namespace TreadShred.Economy.Tests
         {
             var plan = GemCatalog.Plan(GemOffer.Overdrive, 40);
 
-            Assert.AreEqual("YOU HAVE 40 GEMS // NEED 60", OfferLabels.BalanceLine(40, plan));
+            Assert.AreEqual("YOU HAVE 40 GEMS. NEED 60", OfferLabels.BalanceLine(40, plan));
         }
 
         [Test(Description = "D-012-AC-01: a pack label shows its gems and price")]

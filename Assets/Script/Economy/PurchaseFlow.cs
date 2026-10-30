@@ -22,10 +22,10 @@ namespace TreadShred.Economy
     {
         public const string InProgress = "PURCHASE IN PROGRESS";
         public const string NotEnoughGems = "NOT ENOUGH GEMS";
-        public const string Unavailable = "STORE UNAVAILABLE // TRY AGAIN SOON";
+        public const string Unavailable = "STORE UNAVAILABLE. TRY AGAIN SOON";
         public const string Cancelled = "PURCHASE CANCELLED";
-        public const string Failed = "PURCHASE FAILED // TRY AGAIN";
-        public const string AwaitingApproval = "WAITING FOR APPROVAL // GEMS ARRIVE WHEN APPROVED";
+        public const string Failed = "PURCHASE FAILED. TRY AGAIN";
+        public const string AwaitingApproval = "WAITING FOR APPROVAL. GEMS ARRIVE WHEN APPROVED";
     }
 
     /// <summary>

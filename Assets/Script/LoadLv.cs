@@ -405,23 +405,23 @@ public class LoadLv : MonoBehaviour {
         int TotalHighScore = TreadShredScores.HighScore;
 
         ScoreStatic.text = ScoreRules.HighScoreLine(TotalHighScore, false);
-        KillStatic.text = "CONFIRMED KILLS // " + PlayerPrefs.GetFloat("CountKill").ToString();
+        KillStatic.text = "CONFIRMED KILLS: " + PlayerPrefs.GetFloat("CountKill").ToString();
 
         if (TotalHighScore > 10000 && TotalHighScore < 23000)
         {
-            RankStatic.text = "RANK // CORPORAL";
+            RankStatic.text = "RANK: CORPORAL";
         }
         else if (TotalHighScore >= 23000 && TotalHighScore < 47000)
         {
-            RankStatic.text = "RANK // SERGEANT";
+            RankStatic.text = "RANK: SERGEANT";
         }
         else if (TotalHighScore >= 47000)
         {
-            RankStatic.text = "RANK // STAFF SERGEANT";
+            RankStatic.text = "RANK: STAFF SERGEANT";
         }
         else
         {
-            RankStatic.text = "RANK // PRIVATE";
+            RankStatic.text = "RANK: PRIVATE";
         }
 	
 	

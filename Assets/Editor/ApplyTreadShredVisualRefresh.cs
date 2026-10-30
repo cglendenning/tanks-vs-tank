@@ -547,7 +547,7 @@ public static class ApplyTreadShredVisualRefresh
 
             ConfigureMissionDeployButton(FindByPath(menu, "Play"), advanceIcon, commandFont);
             ConfigureMissionInfoText(FindByPath(menu, "Level"), commandFont, "MISSION: 01", new Vector2(0.175f, 0.075f), new Vector2(0.40f, 0.13f));
-            ConfigureMissionInfoText(FindByPath(menu, "Hightscore"), commandFont, "BEST SCORE // 0", new Vector2(0.40f, 0.075f), new Vector2(0.67f, 0.13f));
+            ConfigureMissionInfoText(FindByPath(menu, "Hightscore"), commandFont, "HIGH SCORE: 0", new Vector2(0.40f, 0.075f), new Vector2(0.67f, 0.13f));
             ConfigureMissionInfoText(FindByPath(menu, "Rank"), commandFont, "MEDAL: UNRANKED", new Vector2(0.67f, 0.075f), new Vector2(0.88f, 0.13f));
 
             foreach (var button in menu.GetComponentsInChildren<Button>(true))

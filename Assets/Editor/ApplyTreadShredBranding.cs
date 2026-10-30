@@ -100,11 +100,11 @@ public static class ApplyTreadShredBranding
         if (path.Contains("PanelStart/OptionPanel/Camera/fllow"))
             return "CAMERA VIEW\nFOLLOW ARMOR";
         if (path.Contains("PanelStart/PanelStatics/Score"))
-            return "TOTAL SCORE // 0";
+            return "HIGH SCORE: 0";
         if (path.Contains("PanelStart/PanelStatics/Kill"))
-            return "CONFIRMED KILLS // 0";
+            return "CONFIRMED KILLS: 0";
         if (path.Contains("PanelStart/PanelStatics/Rank"))
-            return "RANK // PRIVATE";
+            return "RANK: PRIVATE";
         if (path.Contains("PanelStart/Button/T"))
             return "PURCHASED";
 
@@ -115,7 +115,7 @@ public static class ApplyTreadShredBranding
         if (path.Contains("PanelMenu/Play/"))
             return "DEPLOY";
         if (path.Contains("PanelMenu/Hightscore"))
-            return "BEST SCORE // 0";
+            return "HIGH SCORE: 0";
         if (path.Contains("PanelMenu/Level"))
             return "MISSION 0";
         if (path.Contains("PanelMenu/Rank"))
@@ -151,19 +151,19 @@ public static class ApplyTreadShredBranding
         if (path.Contains("PanelVictoryFailure/Victory/A WESOME"))
             return "TARGETS CLEARED";
         if (name == "TOTAL")
-            return "TOTAL SCORE //";
+            return "HIGH SCORE:";
         if (name == "KILL RATING")
-            return "KILL SCORE //";
+            return "KILL SCORE:";
         if (name == "HEALTH RATING")
-            return "ARMOR SCORE //";
+            return "ARMOR SCORE:";
         if (name == "ACCURACY RATING")
-            return "ACCURACY //";
+            return "ACCURACY:";
         if (name == "LEVEL SOCRE")
-            return "MISSION SCORE //";
+            return "MISSION SCORE:";
         if (name == "TOTAL FAILURE")
             return "MISSION FAILED";
         if (name == "Kill Score")
-            return "SCORE // 0";
+            return "SCORE: 0";
 
         if (current == "FIGHT") return "ENGAGE";
         if (current == "PAUSED") return "PAUSED";
@@ -179,12 +179,12 @@ public static class ApplyTreadShredBranding
         if (current == "LOADING...") return "STAGING...";
         if (current.StartsWith("LEVEL: ", StringComparison.Ordinal)) return current.Replace("LEVEL: ", "MISSION: ");
         if (current.StartsWith("LEVEL ", StringComparison.Ordinal)) return current.Replace("LEVEL ", "MISSION ");
-        if (current.StartsWith("HIGHT SCORE: ", StringComparison.Ordinal)) return current.Replace("HIGHT SCORE: ", "BEST SCORE // ");
+        if (current.StartsWith("HIGHT SCORE: ", StringComparison.Ordinal)) return current.Replace("HIGHT SCORE: ", "HIGH SCORE: ");
         if (current.StartsWith("RANKING: ", StringComparison.Ordinal)) return current.Replace("RANKING: ", "MEDAL: ");
-        if (current.StartsWith("SCORE: ", StringComparison.Ordinal)) return current.Replace("SCORE: ", "SCORE // ");
-        if (current.StartsWith("SCORE : ", StringComparison.Ordinal)) return current.Replace("SCORE : ", "SCORE // ");
-        if (current.StartsWith("KILL: ", StringComparison.Ordinal)) return current.Replace("KILL: ", "KILLS // ");
-        if (current.StartsWith("RANK: ", StringComparison.Ordinal)) return current.Replace("RANK: ", "RANK // ");
+        if (current.StartsWith("SCORE: ", StringComparison.Ordinal)) return current;
+        if (current.StartsWith("SCORE : ", StringComparison.Ordinal)) return current.Replace("SCORE : ", "SCORE: ");
+        if (current.StartsWith("KILL: ", StringComparison.Ordinal)) return current.Replace("KILL: ", "KILLS: ");
+        if (current.StartsWith("RANK: ", StringComparison.Ordinal)) return current;
         if (current == "SLIVER") return "SILVER";
         return current;
     }

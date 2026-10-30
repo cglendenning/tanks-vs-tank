@@ -216,9 +216,9 @@ public static class ApplyTreadShredStartScreen
                 EnsureSettingsCameraIcon(row, cameraIcon);
         }
 
-        EnsureSettingsRowLabel(optionPanel.Find("Sound"), "SOUND // EFFECTS", commandFont);
-        EnsureSettingsRowLabel(optionPanel.Find("Music"), "MUSIC // BATTLEFIELD", commandFont);
-        EnsureSettingsRowLabel(optionPanel.Find("VIBRATE"), "VIBRATION // IMPACT", commandFont);
+        EnsureSettingsRowLabel(optionPanel.Find("Sound"), "SOUND", commandFont);
+        EnsureSettingsRowLabel(optionPanel.Find("Music"), "MUSIC", commandFont);
+        EnsureSettingsRowLabel(optionPanel.Find("VIBRATE"), "VIBRATION", commandFont);
 
         RemoveGeneratedSettingsObject(optionPanel, "TreadShredSettingsGlassFrame");
         RemoveGeneratedSettingsObject(optionPanel, "TreadShredSystemsHeader");

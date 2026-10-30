@@ -13,7 +13,7 @@ namespace TreadShred.Progression.Tests
                 StringAssert.DoesNotContain("//", entry.Value);
                 Assert.AreEqual(entry.Value, CommandCopy.Replace(entry.Key));
             }
-            Assert.AreEqual("SCORE // 100", CommandCopy.Replace("SCORE // 100"));
+            Assert.AreEqual("SCORE: 100", CommandCopy.Replace("SCORE // 100"));
         }
     }
 }

@@ -18,7 +18,7 @@ namespace TreadShred.Economy
 
         public static string BalanceLine(int balance, OfferPlan plan)
         {
-            return plan.CanSpendNow ? Owned(balance) : Owned(balance) + " // NEED " + plan.Cost;
+            return plan.CanSpendNow ? Owned(balance) : Owned(balance) + ". NEED " + plan.Cost;
         }
 
         // Spending gems the player already holds is confirmed in a dialog first.
@@ -42,7 +42,7 @@ namespace TreadShred.Economy
 
         public static string OverdriveActiveDetail(int gemsSpent)
         {
-            return "NEXT MISSION: 2 SHOTS PER TAP // " + gemsSpent + " GEMS SPENT";
+            return "NEXT MISSION: 2 SHOTS PER TAP. " + gemsSpent + " GEMS SPENT";
         }
 
         public static string Pack(GemPack pack, string localizedPrice, string prefix = "")

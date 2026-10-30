@@ -366,7 +366,7 @@ public class ManagerScore : MonoBehaviour
         var reward = TreadShredProgress.Ensure().LastReward;
         if (reward.HasValue)
             // Currency, labelled apart from SCORE.
-            TreadShredUi.CreateText("EARNED // " + ProgressionLabels.Reward(reward.Value), (RectTransform)VictoryofFail.transform,
+            TreadShredUi.CreateText("EARNED: " + ProgressionLabels.Reward(reward.Value), (RectTransform)VictoryofFail.transform,
                 new Vector2(0f, 104f), new Vector2(900f, 32f), 22, rewardFont).color = TreadShredUi.TitleColor;
 
         // Where the player stands right after the mission (D-032-AC-02).

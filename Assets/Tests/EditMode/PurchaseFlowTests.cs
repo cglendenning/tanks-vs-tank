@@ -115,8 +115,8 @@ namespace TreadShred.Economy.Tests
             var expectations = new (System.Action<PurchaseFlow> outcome, string status)[]
             {
                 (flow => flow.PurchaseFailed(true), "PURCHASE CANCELLED"),
-                (flow => flow.PurchaseFailed(false), "PURCHASE FAILED // TRY AGAIN"),
-                (flow => flow.PurchaseDeferred(), "WAITING FOR APPROVAL // GEMS ARRIVE WHEN APPROVED"),
+                (flow => flow.PurchaseFailed(false), "PURCHASE FAILED. TRY AGAIN"),
+                (flow => flow.PurchaseDeferred(), "WAITING FOR APPROVAL. GEMS ARRIVE WHEN APPROVED"),
             };
             foreach (var (outcome, expected) in expectations)
             {
@@ -143,7 +143,7 @@ namespace TreadShred.Economy.Tests
 
             new PurchaseFlow(wallet, new FakeGateway { Available = false }).SpendOrBuy(60, () => Assert.Fail("nothing applies"), statuses.Add);
 
-            Assert.AreEqual(new[] { "STORE UNAVAILABLE // TRY AGAIN SOON" }, statuses);
+            Assert.AreEqual(new[] { "STORE UNAVAILABLE. TRY AGAIN SOON" }, statuses);
             Assert.AreEqual(10, wallet.Balance);
         }
 
