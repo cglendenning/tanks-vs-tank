@@ -132,12 +132,6 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
         player = FindObjectOfType<PlayerMoverment>();
         score = FindObjectOfType<ManagerScore>();
         Debug.Log($"[STORE_CAPTURE] attach player={(player != null)} score={(score != null)} mode={mode}");
-        var ads = FindObjectOfType<GoogleMobileAdsDemoScript>();
-        if (ads != null)
-        {
-            ads.showOnWin = false;
-            ads.showOnLost = false;
-        }
         if (IsRealActionCapture)
         {
             // Keep the authentic player fire/explosion sequence alive long
@@ -390,12 +384,6 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
         resultShown = true;
         Debug.Log($"[STORE_CAPTURE] presenting result mode={mode}");
         player.isstop = true;
-        var ads = FindObjectOfType<GoogleMobileAdsDemoScript>();
-        if (ads != null)
-        {
-            ads.showOnWin = false;
-            ads.showOnLost = false;
-        }
         var score = FindObjectOfType<ManagerScore>();
         if (score == null)
         {

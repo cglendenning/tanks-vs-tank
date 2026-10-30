@@ -10,17 +10,21 @@ Modern Unity 6 rebuild of the original tank game for iOS and Android from one so
 - iOS bundle ID: `com.tgts.tanksvstank`
 - Android application ID: `com.tgts.tankkvstank`
 
-## Ads and privacy
+## In-app purchases
 
-The old Google Mobile Ads integration has been replaced with the current Unity plugin plus UMP consent handling. Production builds use the Tread Shred AdMob app and unit IDs stored in `Assets/Resources/TankAdConfiguration.asset`; test ads are selected only when `TREAD_SHRED_USE_TEST_ADS=1` is explicitly set for a validation build. Interstitials are shown only at the existing win/loss break points, are preloaded, and are rate-limited. No banner is requested unless explicitly enabled.
+The game has no ads. Revenue comes from consumable gem packs sold through Unity IAP (`com.unity.purchasing`), which uses StoreKit on iOS and Google Play Billing on Android. Gems are spent on the result-screen boosts: Armored Redeploy after a loss and Overdrive after a win. When the balance is short, the same button buys the smallest covering pack and applies the boost once the purchase is delivered.
 
-Before a store submission, verify the Tread Shred app and ad-unit IDs in `Assets/Resources/TankAdConfiguration.asset` against the AdMob account for this app. New AdMob units can take time to begin serving after creation; the app must remain compliant with consent and policy requirements while they ramp.
+- Catalog, prices in gems, and the starter grant: `Assets/Script/Economy/GemCatalog.cs`.
+- Wallet persistence and duplicate-delivery protection: `Assets/Script/Economy/GemWallet.cs`, tested under `Assets/Tests/EditMode`.
+- Store bridge: `Assets/Script/Store/TreadShredStore.cs`.
+
+Before release, create consumable products with exactly the IDs in `GemCatalog.Packs` in App Store Connect and the Google Play Console, then test with Apple sandbox accounts and Play license testers. Purchases cannot complete in the iOS Simulator without a StoreKit configuration; the boosts still work there from the starter grant.
 
 The in-game display type is Black Ops One, bundled under the SIL Open Font License; its license is included at `Assets/Art/BlackOpsOne-OFL.txt`.
 
 ## Source-of-truth assets
 
-All runtime art ships with this Unity project and is tracked in Git. Tank and projectile surfaces live under `Assets/Art/`, tactical UI icons live under `Assets/Image/`, and ad/build configuration lives under `Assets/Resources/`. Every imported asset has its matching Unity `.meta` file. The `Builds/` directory is intentionally ignored because it contains generated iOS/Android products, not source assets.
+All runtime art ships with this Unity project and is tracked in Git. Tank and projectile surfaces live under `Assets/Art/`, and tactical UI icons live under `Assets/Image/`. Every imported asset has its matching Unity `.meta` file. The `Builds/` directory is intentionally ignored because it contains generated iOS/Android products, not source assets.
 
 ## Build validation
 

@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using TreadShred.Economy;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -91,6 +92,11 @@ public class ManagerScore : MonoBehaviour
     float hightscore;
     private GameObject rewardedActionPanel;
     private bool rewardUsedThisScreen;
+    private GemOffer activeOffer;
+    private string activeOfferAction;
+    private string activeOfferDetail;
+    private Text rewardDetailText;
+    private Button rewardButton;
     private Font rewardFont;
     private static int activeRunScore;
     private static bool activeRunStarted;
@@ -272,7 +278,6 @@ public class ManagerScore : MonoBehaviour
                 wf = true;
                 VictoryObj.SetActive(true);
                 StartCoroutine(DelayVictotory());
-                StartCoroutine(DelayShowAD(false));
 
                 Debug.Log("thắng");
 
@@ -297,32 +302,6 @@ public class ManagerScore : MonoBehaviour
             BuildFailureRewardActions();
         else
             BuildVictoryRewardActions();
-        //if (Showadsmob.instance.isadsmob)
-        //{
-        //      Showadsmob.instance.isadsmob = false;
-        //      Showadsmob.instance.timecount = 0f;
-        //      GoogleMobileAdsDemoScript.Instance.ShowInterstitial();
-        //}
-
-
-    }
-    public IEnumerator DelayShowAD(bool islost)
-    {
-        yield return new WaitForSeconds(1.5f);
-        if (islost)
-        {
-            if (GoogleMobileAdsDemoScript.Instance.showOnLost)
-            {
-                GoogleMobileAdsDemoScript.Instance.ShowInterstitial();
-            }
-        }
-        else
-        {
-            if (GoogleMobileAdsDemoScript.Instance.showOnWin)
-            {
-                GoogleMobileAdsDemoScript.Instance.ShowInterstitial();
-            }
-        }
     }
     public void Failure()
     {
@@ -336,7 +315,6 @@ public class ManagerScore : MonoBehaviour
             campaignScore = 0;
             FailureObj.SetActive(true);
             StartCoroutine(DelayVictotory());
-            StartCoroutine(DelayShowAD(true));
             Debug.Log("thua");
         }
     }
@@ -375,19 +353,13 @@ public class ManagerScore : MonoBehaviour
             24);
         title.color = new Color(1f, 0.72f, 0.28f, 1f);
 
-        var detail = CreateRewardText(
-            "REPLAY IS FREE // WATCH FOR AN EXTRA HIT",
+        CreateOfferControls(
             rootRect,
-            new Vector2(0f, 18f),
-            new Vector2(680f, 24f),
-            15);
-        detail.color = new Color(0.78f, 0.86f, 0.88f, 1f);
-
-        CreateRewardButton(
-            "WATCH AD // ARMORED REDEPLOY",
-            rootRect,
-            new Vector2(0f, -28f),
-            ArmoredRedeployAfterReward);
+            GemOffer.ArmoredRedeploy,
+            "REDEPLOY",
+            "REPLAY IS FREE // GEMS BUY AN EXTRA HIT",
+            680f,
+            RedeemArmoredRedeploy);
     }
 
     private void BuildVictoryRewardActions()
@@ -424,19 +396,51 @@ public class ManagerScore : MonoBehaviour
             24);
         title.color = new Color(1f, 0.72f, 0.28f, 1f);
 
-        var detail = CreateRewardText(
+        CreateOfferControls(
+            rootRect,
+            GemOffer.Overdrive,
+            "OVERDRIVE",
             "NEXT MISSION // TWO ROUNDS PER TAP",
+            700f,
+            RedeemOverdrive);
+    }
+
+    private void CreateOfferControls(
+        RectTransform rootRect,
+        GemOffer offer,
+        string action,
+        string detail,
+        float width,
+        UnityEngine.Events.UnityAction onTap)
+    {
+        activeOffer = offer;
+        activeOfferAction = action;
+        activeOfferDetail = detail;
+
+        rewardDetailText = CreateRewardText(
+            string.Empty,
             rootRect,
             new Vector2(0f, 18f),
-            new Vector2(700f, 24f),
+            new Vector2(width, 24f),
             15);
-        detail.color = new Color(0.78f, 0.86f, 0.88f, 1f);
+        rewardDetailText.color = new Color(0.78f, 0.86f, 0.88f, 1f);
 
-        CreateRewardButton(
-            "WATCH AD // ARM THE OVERDRIVE",
-            rootRect,
-            new Vector2(0f, -28f),
-            OverdriveAfterReward);
+        rewardButton = CreateRewardButton(action, rootRect, new Vector2(0f, -28f), onTap);
+        RefreshOfferControls(null);
+    }
+
+    // Pass a status to replace the detail line, or null for the default
+    // detail with the current gem balance.
+    private void RefreshOfferControls(string status)
+    {
+        if (rewardButton == null)
+            return;
+
+        var store = TreadShredStore.Ensure();
+        var plan = store.PlanFor(activeOffer);
+        var price = plan.CanSpendNow ? null : store.PriceFor(plan.PackToBuy);
+        rewardButton.GetComponentInChildren<Text>().text = OfferLabels.Button(activeOfferAction, plan, price);
+        rewardDetailText.text = status ?? activeOfferDetail + "     " + OfferLabels.Balance(store.Wallet.Balance);
     }
 
     private Text CreateRewardText(string value, RectTransform parent, Vector2 position, Vector2 size, int fontSize)
@@ -505,31 +509,33 @@ public class ManagerScore : MonoBehaviour
         return button;
     }
 
-    private void ArmoredRedeployAfterReward()
+    private void RedeemArmoredRedeploy()
     {
         if (rewardUsedThisScreen)
             return;
 
-        if (TankAdService.Ensure().TryShowRewarded(() =>
+        TreadShredStore.Ensure().RedeemOffer(GemOffer.ArmoredRedeploy, () =>
         {
+            rewardUsedThisScreen = true;
             PlayerPrefs.SetInt("TreadShredArmorCache", 1);
             PlayerPrefs.Save();
             ReloadCurrentMission();
-        }))
-            rewardUsedThisScreen = true;
+        }, RefreshOfferControls);
     }
 
-    private void OverdriveAfterReward()
+    private void RedeemOverdrive()
     {
         if (rewardUsedThisScreen)
             return;
 
-        if (TankAdService.Ensure().TryShowRewarded(() =>
+        TreadShredStore.Ensure().RedeemOffer(GemOffer.Overdrive, () =>
         {
+            rewardUsedThisScreen = true;
             PlayerPrefs.SetInt("TreadShredOverdrive", 1);
             PlayerPrefs.Save();
-        }))
-            rewardUsedThisScreen = true;
+            rewardButton.interactable = false;
+            RefreshOfferControls("OVERDRIVE ARMED // NEXT MISSION");
+        }, RefreshOfferControls);
     }
 
     private void ReloadCurrentMission()

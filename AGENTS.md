@@ -29,11 +29,10 @@
   `security find-identity` alone. Use the reference workflow from
   `/Users/craig/greenpyramid` and `/Users/craig/superhero-game` when needed.
 - Inspect the current bundle identifier, version, export options, profile,
-  and ad configuration before each build. Never reuse another app's bundle ID,
-  profile, or production AdMob IDs.
-- Test-ad mode must remain enabled for every device-test release. Do not ship
-  production ad units in an OTA test IPA. Confirm that audio is paused/faded
-  before interstitial ads and restored afterward.
+  and gem pack product IDs before each build. Never reuse another app's
+  bundle ID or profile.
+- The game has no ads. Monetization is consumable gem packs through Unity IAP;
+  device-test purchases must use an Apple sandbox account.
 - After export, validate all of the following before sharing the link: the IPA
   is Apple Distribution signed, the bundle ID and version match the manifest,
   the Ad Hoc profile contains the target UDID, and the IPA passes a public HTTP
@@ -70,8 +69,8 @@
   Never kill or reuse a server owned by another app. Keep the Tread Shred
   server and tunnel process running until the user has installed the build.
 - The repeatable sequence is: prepare the isolated copy, run
-  `scripts/build-tank-release.sh` with the Tread Shred signing/profile and
-  `TREAD_SHRED_USE_TEST_ADS=1`, validate the IPA, run
+  `scripts/build-tank-release.sh` with the Tread Shred signing/profile,
+  validate the IPA, run
   `PORT=<unique-port> scripts/serve-tank-ota.sh`, verify public HTTP 200 for
   both manifest and IPA, then return the OTA URL, direct IPA URL, version, and
   SHA-256. Do not report completion before all of those checks pass.

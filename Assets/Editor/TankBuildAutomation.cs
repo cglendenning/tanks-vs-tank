@@ -11,7 +11,7 @@ using UnityEngine;
 public static class TankBuildAutomation
 {
     private const string ProductName = "Tread Shred";
-    // These are the identifiers already registered in the stores and AdMob.
+    // These are the identifiers already registered in the stores.
     private const string IosBundleIdentifier = "com.tgts.tanksvstank";
     private const string AndroidBundleIdentifier = "com.tgts.tankkvstank";
     private const string IosOutput = "Builds/iOSDevice";
@@ -24,27 +24,10 @@ public static class TankBuildAutomation
     private const string ReleaseVersion = "1.8.1";
     private const int ReleaseBuildNumber = 14;
     private const int AndroidReleaseBuildNumber = 4;
-    private const string ProductionIosAppId = "ca-app-pub-4402198490627677~4284546322";
-    private const string ProductionAndroidAppId = "ca-app-pub-4402198490627677~8381484915";
-    private const string ProductionIosInterstitial = "ca-app-pub-4402198490627677/5342886245";
-    private const string ProductionAndroidInterstitial = "ca-app-pub-4402198490627677/3893066258";
-    private const string ProductionIosRewarded = "ca-app-pub-4402198490627677/3118275391";
-    private const string ProductionAndroidRewarded = "ca-app-pub-4402198490627677/6501143322";
 
     [MenuItem("Tread Shred/Build/iOS device project")]
     public static void BuildIosDeviceProject()
     {
-        Environment.SetEnvironmentVariable("TREAD_SHRED_USE_TEST_ADS", null);
-        Environment.SetEnvironmentVariable("TANK_TEAM_ID", "MCALPSQ5P5");
-        Environment.SetEnvironmentVariable("TANK_PROVISIONING_PROFILE_SPECIFIER", "e11cb221-3c7d-436b-a97e-b153ce24a285");
-        Environment.SetEnvironmentVariable("TANK_CODE_SIGN_IDENTITY", "Apple Distribution: Craig Glendenning (MCALPSQ5P5)");
-        BuildIos(false);
-    }
-
-    [MenuItem("Tread Shred/Build/iOS device project (test ads)")]
-    public static void BuildIosDeviceProjectWithTestAds()
-    {
-        Environment.SetEnvironmentVariable("TREAD_SHRED_USE_TEST_ADS", "1");
         Environment.SetEnvironmentVariable("TANK_TEAM_ID", "MCALPSQ5P5");
         // Use the profile UUID so Xcode cannot resolve a stale profile with
         // the same display name from another local download.
@@ -89,7 +72,10 @@ public static class TankBuildAutomation
         AssertBuildSucceeded(report, "iOS");
         PatchIosInfoPlist(output);
         PatchIosEntitlements(output);
-        PatchIosSigning(output);
+        // Simulator apps are not provisioned; only device exports need the
+        // distribution identity and profile.
+        if (!simulator)
+            PatchIosSigning(output);
         PatchIosPodfile(output);
         Debug.Log("Tread Shred iOS export created at " + output);
     }
@@ -117,7 +103,6 @@ public static class TankBuildAutomation
 
     private static void PreparePlayerSettings()
     {
-        EnsureAdConfigurationAsset();
         var scenes = ScenePaths();
         EditorBuildSettings.scenes = scenes.Select(path => new EditorBuildSettingsScene(path, true)).ToArray();
 
@@ -192,35 +177,6 @@ public static class TankBuildAutomation
             : int.MaxValue;
     }
 
-    private static void EnsureAdConfigurationAsset()
-    {
-        const string directory = "Assets/Resources";
-        const string path = directory + "/TankAdConfiguration.asset";
-        Directory.CreateDirectory(Path.Combine(Application.dataPath, "Resources"));
-        var configuration = AssetDatabase.LoadAssetAtPath<TankAdConfiguration>(path);
-        if (configuration == null)
-        {
-            configuration = ScriptableObject.CreateInstance<TankAdConfiguration>();
-            AssetDatabase.CreateAsset(configuration, path);
-        }
-
-        // The checked-in binary asset predates the store migration, so do not
-        // rely on C# field initializers to update it. Test builds opt in via
-        // TREAD_SHRED_USE_TEST_ADS; production is the safe default.
-        configuration.iosAppId = ProductionIosAppId;
-        configuration.androidAppId = ProductionAndroidAppId;
-        configuration.iosInterstitialUnitId = ProductionIosInterstitial;
-        configuration.androidInterstitialUnitId = ProductionAndroidInterstitial;
-        configuration.iosRewardedUnitId = ProductionIosRewarded;
-        configuration.androidRewardedUnitId = ProductionAndroidRewarded;
-        configuration.useTestAds = string.Equals(
-            Environment.GetEnvironmentVariable("TREAD_SHRED_USE_TEST_ADS"),
-            "1",
-            StringComparison.Ordinal);
-        EditorUtility.SetDirty(configuration);
-        AssetDatabase.SaveAssets();
-    }
-
     private static void ConfigureAndroidSigning()
     {
         var keystore = Environment.GetEnvironmentVariable("TREAD_SHRED_ANDROID_KEYSTORE");
@@ -261,19 +217,8 @@ public static class TankBuildAutomation
         if (!File.Exists(plistPath))
             return;
 
-        var configuration = AssetDatabase.LoadAssetAtPath<TankAdConfiguration>(
-            "Assets/Resources/TankAdConfiguration.asset");
-        var iosAppId = configuration != null ? configuration.iosAppId : ProductionIosAppId;
-        if (string.IsNullOrWhiteSpace(iosAppId))
-            iosAppId = ProductionIosAppId;
-
         var plist = new PlistDocument();
         plist.ReadFromFile(plistPath);
-        // Do not rely solely on the Google Mobile Ads postprocessor here. A
-        // release export must always carry the app ID or the native iOS SDK
-        // throws GADInvalidInitializationException during launch.
-        plist.root.SetString("GADApplicationIdentifier", iosAppId);
-        plist.root.SetString("NSUserTrackingUsageDescription", "This identifier will be used to deliver personalized ads to you.");
         plist.root.SetBoolean("ITSAppUsesNonExemptEncryption", false);
         File.WriteAllText(plistPath, plist.WriteToString());
     }
@@ -291,13 +236,6 @@ public static class TankBuildAutomation
         var project = new PBXProject();
         project.ReadFromFile(projectPath);
         var mainTarget = project.GetUnityMainTargetGuid();
-        var frameworkTarget = project.GetUnityFrameworkTargetGuid();
-
-        // TreadShredTracking.mm calls ATTrackingManager directly. Newer Xcode
-        // versions no longer resolve that symbol through the weak AdSupport
-        // entry generated by the legacy exporter, so link the owning Apple
-        // framework explicitly on UnityFramework.
-        project.AddFrameworkToProject(frameworkTarget, "AppTrackingTransparency.framework", false);
 
         // Sign only the application target. UnityFramework and CocoaPods are
         // embedded code and must not inherit the app's provisioning profile.

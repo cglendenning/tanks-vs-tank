@@ -1,6 +1,0 @@
-apply plugin: 'com.android.library'
-
-android {
-    compileSdk 35
-    namespace 'com.google.unity.ads.plugin'
-}
