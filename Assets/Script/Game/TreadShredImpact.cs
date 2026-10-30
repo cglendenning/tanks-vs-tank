@@ -35,7 +35,7 @@ public sealed class TreadShredImpact : MonoBehaviour
         Ensure().Shake(ImpactRules.ShakeOnHitTaken);
         // Kill paths already pulse through Rung; hits taken did not (D-027-AC-03).
         if (ManagerScore.instance != null)
-            ManagerScore.instance.Rung();
+            ManagerScore.instance.Rung(HapticPulse.Hit);
     }
 
     public static void Kill(Vector3 position)
@@ -105,16 +105,8 @@ public sealed class TreadShredImpact : MonoBehaviour
     {
         if (callout == null)
         {
-            var canvasObject = new GameObject("Impact Callout", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
-            canvasObject.transform.SetParent(transform, false);
-            var canvas = canvasObject.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 90;
-            var scaler = canvasObject.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 1f;
-            callout = TreadShredUi.CreateText("TARGET DESTROYED", (RectTransform)canvasObject.transform,
+            var overlay = TreadShredUi.CreateOverlay("Impact Callout", 90, receivesTaps: false, parent: transform);
+            callout = TreadShredUi.CreateText("TARGET DESTROYED", overlay,
                 new Vector2(0f, 300f), new Vector2(1200f, 110f), 84, TreadShredUi.FindFont(GameObject.Find("Canvas")));
             var outline = callout.gameObject.AddComponent<Outline>();
             outline.effectColor = Color.black;

@@ -15,6 +15,38 @@ public static class TreadShredUi
     private static readonly Color ButtonColor = new Color(0.08f, 0.14f, 0.16f, 0.98f);
 
     // The first font used by existing text under root, so new labels match.
+    // A full-screen landscape canvas above the scene, scaled by height so
+    // layouts fit phones and iPads. Without taps it never blocks input.
+    public static RectTransform CreateOverlay(string name, int sortingOrder, bool receivesTaps = true,
+        Transform parent = null)
+    {
+        var root = receivesTaps
+            ? new GameObject(name, typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster))
+            : new GameObject(name, typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
+        if (parent != null)
+            root.transform.SetParent(parent, false);
+        var canvas = root.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = sortingOrder;
+        var scaler = root.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 1f;
+        return (RectTransform)root.transform;
+    }
+
+    // Dims everything behind a dialog and swallows taps meant for it.
+    public static RectTransform CreateBackdrop(RectTransform root, float opacity)
+    {
+        var backdrop = new GameObject("Backdrop", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+        backdrop.SetParent(root, false);
+        backdrop.anchorMin = Vector2.zero;
+        backdrop.anchorMax = Vector2.one;
+        backdrop.offsetMin = backdrop.offsetMax = Vector2.zero;
+        backdrop.GetComponent<Image>().color = new Color(0.01f, 0.02f, 0.03f, opacity);
+        return backdrop;
+    }
+
     public static Font FindFont(GameObject root)
     {
         if (root == null)

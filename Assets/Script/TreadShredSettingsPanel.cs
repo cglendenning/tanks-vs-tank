@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using TreadShred.Economy;
+using TreadShred.Progression;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,21 +26,11 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
 
     public static TreadShredSettingsPanel Show(LoadLv menu, Font font)
     {
-        var root = new GameObject("TreadShredSettings", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler),
-            typeof(GraphicRaycaster));
-        var canvas = root.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 100;
-        var scaler = root.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        // Landscape only: scale by height so the layout fits phones and iPads.
-        scaler.matchWidthOrHeight = 1f;
-
-        var panel = root.AddComponent<TreadShredSettingsPanel>();
+        var root = TreadShredUi.CreateOverlay("TreadShredSettings", 100);
+        var panel = root.gameObject.AddComponent<TreadShredSettingsPanel>();
         panel.menu = menu;
         panel.font = font;
-        panel.Build((RectTransform)root.transform);
+        panel.Build(root);
         return panel;
     }
 
@@ -111,7 +102,9 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
     {
         TreadShredUi.SetLabel(soundButton, menu.SoundEnabled ? "ON" : "OFF");
         TreadShredUi.SetLabel(musicButton, menu.MusicEnabled ? "ON" : "OFF");
-        TreadShredUi.SetLabel(vibrationButton, menu.VibrationEnabled ? "ON" : "OFF");
+        TreadShredUi.SetLabel(vibrationButton,
+            HapticsRules.SettingLabel(menu.VibrationEnabled, TreadShredHaptics.DeviceCanVibrate));
+        vibrationButton.interactable = TreadShredHaptics.DeviceCanVibrate;
         TreadShredUi.SetLabel(cameraButton, menu.CameraFollows ? "FOLLOW" : "FIXED");
 
         var store = TreadShredStore.Ensure();

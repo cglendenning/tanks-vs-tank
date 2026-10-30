@@ -21,6 +21,9 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private const int RealActionCapture = 10;
     private const int Upgrades = 11;
     private const int ReviveOffer = 12;
+    // D-009: the Overdrive confirmation dialog, and the panel once Overdrive is active.
+    private const int OverdriveConfirm = 13;
+    private const int OverdriveActive = 14;
 
     private PlayerMoverment player;
     private ManagerScore score;
@@ -40,7 +43,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private static void InstallIfEnabled()
     {
         var mode = PlayerPrefs.GetInt(CaptureModeKey, 0);
-        if (mode < CombatSingle || mode > ReviveOffer)
+        if (mode < CombatSingle || mode > OverdriveActive)
             return;
 
         Debug.Log($"[STORE_CAPTURE] installing capture driver mode={mode}");
@@ -179,7 +182,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
         }
 
         nextShotAt = Time.time + (mode == ActionCapture ? 1.4f : 0.2f);
-        if (mode == MissionSuccess || mode == MissionFailure)
+        if (mode == MissionSuccess || mode == MissionFailure || ShowsOverdriveOffer)
             resultAt = Time.time + 4.5f;
     }
 
@@ -412,7 +415,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
             return;
         }
 
-        if (mode == MissionSuccess)
+        if (mode == MissionSuccess || ShowsOverdriveOffer)
         {
             score.CountEmnemy = 1;
             score.CurDieEmnemy = 1;
@@ -420,12 +423,36 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
             score.CurHeath = 3;
             score.Victory();
             StartCoroutine(EnsureResultPanel(score, true));
+            if (ShowsOverdriveOffer)
+                StartCoroutine(UseOverdriveOffer(score));
         }
         else
         {
             score.Failure();
             StartCoroutine(EnsureResultPanel(score, false));
         }
+    }
+
+    private bool ShowsOverdriveOffer => mode == OverdriveConfirm || mode == OverdriveActive;
+
+    // Taps the offer through its real button and, for the active shot, confirms the real dialog.
+    private System.Collections.IEnumerator UseOverdriveOffer(ManagerScore score)
+    {
+        yield return new WaitForSeconds(3.5f);
+        if (score.OfferButton == null)
+        {
+            Debug.LogError("[STORE_CAPTURE] Overdrive offer button not found");
+            yield break;
+        }
+        score.OfferButton.onClick.Invoke();
+        if (mode != OverdriveActive)
+            yield break;
+        yield return new WaitForSeconds(1f);
+        var dialog = FindObjectOfType<TreadShredConfirmDialog>();
+        if (dialog == null)
+            Debug.LogError("[STORE_CAPTURE] confirmation dialog not shown");
+        else
+            dialog.Confirm();
     }
 
     private System.Collections.IEnumerator EnsureResultPanel(ManagerScore score, bool success)

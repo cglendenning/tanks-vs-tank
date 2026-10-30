@@ -32,32 +32,18 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
         if (!ReviveRules.CanOffer(revivesThisMission))
             return false;
 
-        var root = new GameObject("TreadShredRevive", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler),
-            typeof(GraphicRaycaster));
-        var canvas = root.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 120;
-        var scaler = root.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 1f;
-
-        var panel = root.AddComponent<TreadShredRevivePanel>();
+        var root = TreadShredUi.CreateOverlay("TreadShredRevive", 120);
+        var panel = root.gameObject.AddComponent<TreadShredRevivePanel>();
         panel.player = player;
         panel.offer = new ReviveOffer(revivesThisMission);
-        panel.Build((RectTransform)root.transform, TreadShredUi.FindFont(GameObject.Find("Canvas")));
+        panel.Build(root, TreadShredUi.FindFont(GameObject.Find("Canvas")));
         Time.timeScale = 0f;
         return true;
     }
 
     private void Build(RectTransform root, Font font)
     {
-        var backdrop = new GameObject("Backdrop", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-        backdrop.SetParent(root, false);
-        backdrop.anchorMin = Vector2.zero;
-        backdrop.anchorMax = Vector2.one;
-        backdrop.offsetMin = backdrop.offsetMax = Vector2.zero;
-        backdrop.GetComponent<Image>().color = new Color(0.01f, 0.02f, 0.03f, 0.85f);
+        var backdrop = TreadShredUi.CreateBackdrop(root, 0.85f);
 
         var panel = TreadShredUi.CreateRect("RevivePanel", backdrop, Vector2.zero, new Vector2(900f, 460f),
             typeof(RectTransform), typeof(Image), typeof(Outline));

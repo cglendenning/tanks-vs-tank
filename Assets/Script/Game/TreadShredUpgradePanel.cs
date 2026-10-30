@@ -23,19 +23,10 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
 
     public static TreadShredUpgradePanel Show(Font font)
     {
-        var root = new GameObject("TreadShredUpgrades", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler),
-            typeof(GraphicRaycaster));
-        var canvas = root.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 100;
-        var scaler = root.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 1f;
-
-        var panel = root.AddComponent<TreadShredUpgradePanel>();
+        var root = TreadShredUi.CreateOverlay("TreadShredUpgrades", 100);
+        var panel = root.gameObject.AddComponent<TreadShredUpgradePanel>();
         panel.font = font;
-        panel.Build((RectTransform)root.transform);
+        panel.Build(root);
         return panel;
     }
 

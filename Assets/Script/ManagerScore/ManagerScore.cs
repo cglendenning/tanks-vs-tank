@@ -331,7 +331,7 @@ public class ManagerScore : MonoBehaviour
             "ARMORED REDEPLOY",
             "REPLAY THIS MISSION WITH 1 EXTRA HIT",
             "REDEPLOY",
-            RedeemArmoredRedeploy);
+            () => ConfirmThen(GemOffer.ArmoredRedeploy, RedeemArmoredRedeploy));
     }
 
     private void BuildVictoryRewardActions()
@@ -341,7 +341,7 @@ public class ManagerScore : MonoBehaviour
             "OVERDRIVE",
             "NEXT MISSION: 2 SHOTS PER TAP",
             "ACTIVATE",
-            RedeemOverdrive);
+            () => ConfirmThen(GemOffer.Overdrive, RedeemOverdrive));
     }
 
     private void BuildOfferPanel(GemOffer offer, string title, string detail, string action,
@@ -381,10 +381,30 @@ public class ManagerScore : MonoBehaviour
                 new Vector2(0f, 104f), new Vector2(900f, 32f), 22, rewardFont).color = TreadShredUi.TitleColor;
     }
 
+    // D-009: gems already held are spent only after the player confirms; when
+    // short, the store's purchase sheet confirms and the boost applies on delivery.
+    private void ConfirmThen(GemOffer offer, System.Action redeem)
+    {
+        if (rewardUsedThisScreen)
+            return;
+
+        var store = TreadShredStore.Ensure();
+        if (!OfferLabels.NeedsConfirmation(store.PlanFor(offer)))
+        {
+            redeem();
+            return;
+        }
+        TreadShredConfirmDialog.Show(OfferLabels.Confirmation(offer, store.Wallet.Balance), rewardFont, redeem);
+    }
+
+    // The offer's button, for the store capture mode's confirmation shots.
+    internal Button OfferButton => rewardButton;
+
     // Pass a status to replace the balance line, or null to show the balance.
     private void RefreshOfferControls(string status)
     {
-        if (rewardButton == null)
+        // Once used, the panel keeps saying what was bought.
+        if (rewardButton == null || rewardUsedThisScreen)
             return;
 
         var store = TreadShredStore.Ensure();
@@ -420,9 +440,23 @@ public class ManagerScore : MonoBehaviour
             rewardUsedThisScreen = true;
             TreadShredAnalytics.Log(GameEvents.OfferAccepted(OfferName(GemOffer.Overdrive), GemCatalog.Cost(GemOffer.Overdrive), packBought));
             TreadShredBoosts.Current.ArmOverdrive();
-            rewardButton.interactable = false;
-            RefreshOfferControls("OVERDRIVE READY FOR YOUR NEXT MISSION");
+            ShowOverdriveActive();
         }, RefreshOfferControls);
+    }
+
+    private void ShowOverdriveActive()
+    {
+        TreadShredUi.SetLabel(rewardButton, OfferLabels.OverdriveActive);
+        // The tint multiplies the image color, so use a white image for a solid accent fill.
+        rewardButton.image.color = Color.white;
+        var colors = rewardButton.colors;
+        colors.disabledColor = TreadShredUi.AccentColor;
+        rewardButton.colors = colors;
+        rewardButton.interactable = false;
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
+        rewardBalanceText.text = OfferLabels.OverdriveActiveDetail(GemCatalog.Cost(GemOffer.Overdrive));
+        rewardBalanceText.color = TreadShredUi.TitleColor;
     }
 
     private static string OfferName(GemOffer offer)
@@ -455,19 +489,10 @@ public class ManagerScore : MonoBehaviour
 
     public bool isrung;
 
-    public void Rung()
+    // D-027-AC-03: a haptic pulse when Vibration is on and the device can vibrate.
+    public void Rung(HapticPulse pulse = HapticPulse.Kill)
     {
-#if UNITY_ANDROID || UNITY_IOS
-        if (isrung == false)
-        {
-            if (Application.platform == RuntimePlatform.Android || Application.platform == RuntimePlatform.IPhonePlayer)
-            {
-                Handheld.Vibrate();
-            }
-        }
-#endif
-
-
+        TreadShredHaptics.Pulse(pulse, !isrung);
     }
 
 
