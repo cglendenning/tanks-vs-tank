@@ -14,6 +14,9 @@ IOS_BUNDLE_ID="com.tgts.tanksvstank"
 : "${TANK_CODE_SIGN_IDENTITY:?Set TANK_CODE_SIGN_IDENTITY to the exact Apple Distribution certificate fingerprint}"
 : "${TANK_PROVISIONING_PROFILE_SPECIFIER:?Set TANK_PROVISIONING_PROFILE_SPECIFIER to the App Store profile name or UUID}"
 
+# D-029-AC-05: refuse to build a store release unless the game meets the specification.
+"$ROOT_DIR/scripts/spec-compliance-gate.sh"
+
 mkdir -p "$ARCHIVE_DIR" "$EXPORT_DIR"
 "$UNITY_BIN" -batchmode -quit -nographics -projectPath "$ROOT_DIR" \
   -executeMethod TankBuildAutomation.BuildIosFromCommandLine \

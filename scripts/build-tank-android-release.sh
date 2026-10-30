@@ -9,6 +9,9 @@ UNITY_BIN="${UNITY_BIN:-/Users/craig/Unity/Hub/Editor/6000.3.24f1-arm64/Unity.ap
 : "${TREAD_SHRED_ANDROID_KEYSTORE_PASSWORD:?Set the Android upload keystore password}"
 : "${TREAD_SHRED_ANDROID_KEY_PASSWORD:?Set the Android upload key password}"
 
+# D-029-AC-05: refuse to build a store release unless the game meets the specification.
+"$ROOT_DIR/scripts/spec-compliance-gate.sh"
+
 export TREAD_SHRED_ANDROID_RELEASE=1
 mkdir -p "$ROOT_DIR/Builds/Android"
 "$UNITY_BIN" -batchmode -quit -nographics -projectPath "$ROOT_DIR" \
