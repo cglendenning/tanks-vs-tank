@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OTA_DIR="$ROOT_DIR/Builds/iOSDevice/ota"
 IPA_PATH="${1:-$OTA_DIR/TreadShred.ipa}"
-PORT="${PORT:-8765}"
+# Port: second argument, then $PORT, then 8765. Pick one no other app owns.
+PORT="${2:-${PORT:-8765}}"
 HTTP_LOG="$OTA_DIR/http.log"
 TUNNEL_LOG="$OTA_DIR/cloudflared.log"
 BUNDLE_ID="com.tgts.tanksvstank"
@@ -50,7 +51,7 @@ cloudflared tunnel --url "http://127.0.0.1:${PORT}" --no-autoupdate >"$TUNNEL_LO
 TUNNEL_PID=$!
 TUNNEL_URL=""
 for _ in $(seq 1 60); do
-  TUNNEL_URL="$(rg -o 'https://[a-z0-9-]+\.trycloudflare\.com' "$TUNNEL_LOG" | head -1 || true)"
+  TUNNEL_URL="$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' "$TUNNEL_LOG" | head -1 || true)"
   [[ -n "$TUNNEL_URL" ]] && break
   sleep 1
 done
@@ -63,7 +64,7 @@ TUNNEL_IP=""
 for _ in $(seq 1 60); do
   TUNNEL_IP="$(dscacheutil -q host -a name "$TUNNEL_HOST" 2>/dev/null | awk '$1 == "ip_address:" && $2 ~ /^[0-9.]+$/ {print $2; exit}' || true)"
   if [[ -z "$TUNNEL_IP" ]]; then
-    TUNNEL_IP="$(curl -k -fsS --max-time 5 -H 'accept: application/dns-json' "https://1.1.1.1/dns-query?name=${TUNNEL_HOST}&type=A" 2>/dev/null | rg -o '"data":"[0-9.]+"' | head -1 | sed 's/.*"data":"//;s/"//' || true)"
+    TUNNEL_IP="$(curl -k -fsS --max-time 5 -H 'accept: application/dns-json' "https://1.1.1.1/dns-query?name=${TUNNEL_HOST}&type=A" 2>/dev/null | grep -oE '"data":"[0-9.]+"' | head -1 | sed 's/.*"data":"//;s/"//' || true)"
   fi
   [[ -n "$TUNNEL_IP" ]] && break
   sleep 1
