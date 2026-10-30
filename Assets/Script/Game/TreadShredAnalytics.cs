@@ -28,6 +28,7 @@ public static class TreadShredAnalytics
                 return;
             }
             ready = true;
+            Debug.Log("[Analytics] Firebase ready; sending " + queued.Count + " queued events");
             while (queued.Count > 0)
                 Send(queued.Dequeue());
         });
