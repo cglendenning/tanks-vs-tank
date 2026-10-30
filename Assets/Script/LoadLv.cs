@@ -207,11 +207,15 @@ public class LoadLv : MonoBehaviour {
       
     //}
 
+    // Opens the full-screen settings panel; it replaces the legacy animated
+    // OptionPanel, which overlapped the start screen and had no clear exit.
     public void Option()
     {
-        RestoreSettingsInteractivity();
-        anim.SetTrigger("Option");
+        if (settingsPanel == null)
+            settingsPanel = TreadShredSettingsPanel.Show(this, TreadShredUi.FindFont(PanelStart));
     }
+
+    TreadShredSettingsPanel settingsPanel;
 
     public void OptionBack()
     {
@@ -386,92 +390,84 @@ public class LoadLv : MonoBehaviour {
         anim.SetTrigger("StaticBack");
     }
 
+    // Saved settings use 0 for on (and 0 for the follow camera); the legacy
+    // on/off icons are kept in step so either panel shows the same state.
+    public bool SoundEnabled { get { return PlayerPrefs.GetFloat("Sound") == 0; } }
+    public bool MusicEnabled { get { return PlayerPrefs.GetFloat("Music") == 0; } }
+    public bool VibrationEnabled { get { return PlayerPrefs.GetFloat("Vibrate") == 0; } }
+    public bool CameraFollows { get { return PlayerPrefs.GetFloat("Camera") == 0; } }
+
     public GameObject SoundOn;
     public GameObject SoundOff;
     public void SoundGame()
     {
-        if (SoundOn.activeInHierarchy)
-        {
-            SoundOn.SetActive(false);
-            SoundOff.SetActive(true);
-            PlayerPrefs.SetFloat("Sound",1);
-            PlayerPrefs.Save();
-        }
-        else
-        {
-            SoundOn.SetActive(true);
-            SoundOff.SetActive(false);
-            PlayerPrefs.SetFloat("Sound", 0);
-            PlayerPrefs.Save();
-        }
+        SetSoundEnabled(!SoundEnabled);
+    }
+
+    public void SetSoundEnabled(bool enabled)
+    {
+        SetLegacyIcons(SoundOn, SoundOff, enabled);
+        SavePreference("Sound", enabled);
     }
 
     public GameObject MusicdOn;
     public GameObject MusicOff;
     public void MusicGame()
     {
-        if (MusicdOn.activeInHierarchy)
-        {
+        SetMusicEnabled(!MusicEnabled);
+    }
 
-            if (Outgame != null)
-                Outgame.Stop();
-            MusicdOn.SetActive(false);
-            MusicOff.SetActive(true);
-            PlayerPrefs.SetFloat("Music", 1);
-            PlayerPrefs.Save();
-        }
-        else
+    public void SetMusicEnabled(bool enabled)
+    {
+        if (Outgame != null)
         {
-            if (Outgame != null)
+            if (enabled)
                 Outgame.Play();
-            MusicdOn.SetActive(true);
-            MusicOff.SetActive(false);
-            PlayerPrefs.SetFloat("Music", 0);
-            PlayerPrefs.Save();
+            else
+                Outgame.Stop();
         }
+        SetLegacyIcons(MusicdOn, MusicOff, enabled);
+        SavePreference("Music", enabled);
     }
 
     public GameObject ViBrateOn;
     public GameObject ViBrateOff;
     public void ViBrateGame()
     {
-        if (ViBrateOn.activeInHierarchy)
-        {
-            ViBrateOn.SetActive(false);
-            ViBrateOff.SetActive(true);
-            PlayerPrefs.SetFloat("Vibrate", 1);
-            PlayerPrefs.Save();
-        }
-        else
-        {
-            ViBrateOn.SetActive(true);
-            ViBrateOff.SetActive(false);
-            PlayerPrefs.SetFloat("Vibrate", 0);
-            PlayerPrefs.Save();
-        }
+        SetVibrationEnabled(!VibrationEnabled);
+    }
+
+    public void SetVibrationEnabled(bool enabled)
+    {
+        SetLegacyIcons(ViBrateOn, ViBrateOff, enabled);
+        SavePreference("Vibrate", enabled);
     }
 
     public GameObject CameraFllow;
     public GameObject CameraFixed;
     public void CameraGame()
     {
-        if (CameraFllow == null || CameraFixed == null)
-            return;
+        SetCameraFollows(!CameraFollows);
+    }
 
-        if (CameraFllow.activeInHierarchy)
-        {
-            CameraFllow.SetActive(false);
-            CameraFixed.SetActive(true);
-            PlayerPrefs.SetFloat("Camera", 1);
-            PlayerPrefs.Save();
-        }
-        else
-        {
-            CameraFllow.SetActive(true);
-            CameraFixed.SetActive(false);
-            PlayerPrefs.SetFloat("Camera", 0);
-            PlayerPrefs.Save();
-        }
+    public void SetCameraFollows(bool follows)
+    {
+        SetLegacyIcons(CameraFllow, CameraFixed, follows);
+        SavePreference("Camera", follows);
+    }
+
+    private static void SetLegacyIcons(GameObject onIcon, GameObject offIcon, bool on)
+    {
+        if (onIcon != null)
+            onIcon.SetActive(on);
+        if (offIcon != null)
+            offIcon.SetActive(!on);
+    }
+
+    private static void SavePreference(string key, bool on)
+    {
+        PlayerPrefs.SetFloat(key, on ? 0 : 1);
+        PlayerPrefs.Save();
     }
 
     public void ExitGame()

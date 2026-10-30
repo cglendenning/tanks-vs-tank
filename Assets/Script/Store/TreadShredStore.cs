@@ -12,9 +12,10 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public sealed class TreadShredStore : MonoBehaviour
 {
-    private sealed class PendingOffer
+    private sealed class PendingPurchase
     {
-        public GemOffer Offer;
+        // Null when the player is only buying gems, not redeeming an offer.
+        public GemOffer? Offer;
         public Action OnApplied;
         public Action<string> OnStatus;
     }
@@ -24,7 +25,7 @@ public sealed class TreadShredStore : MonoBehaviour
     public GemWallet Wallet { get; private set; }
 
     private StoreController storeController;
-    private PendingOffer pendingOffer;
+    private PendingPurchase pendingPurchase;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
@@ -83,7 +84,7 @@ public sealed class TreadShredStore : MonoBehaviour
     /// </summary>
     public void RedeemOffer(GemOffer offer, Action onApplied, Action<string> onStatus)
     {
-        if (pendingOffer != null)
+        if (pendingPurchase != null)
         {
             onStatus("PURCHASE IN PROGRESS");
             return;
@@ -99,22 +100,41 @@ public sealed class TreadShredStore : MonoBehaviour
             return;
         }
 
-        var product = FindProduct(plan.PackToBuy.ProductId);
-        if (product == null || !product.availableToPurchase)
+        StartPurchase(plan.PackToBuy, new PendingPurchase { Offer = offer, OnApplied = onApplied, OnStatus = onStatus });
+    }
+
+    /// <summary>
+    /// Buys a gem pack outright; onCredited runs once the gems are in the wallet.
+    /// </summary>
+    public void BuyPack(GemPack pack, Action onCredited, Action<string> onStatus)
+    {
+        if (pendingPurchase != null)
         {
-            Debug.LogWarning("[Store] Gem pack unavailable: " + plan.PackToBuy.ProductId);
-            onStatus("STORE UNAVAILABLE // TRY AGAIN SOON");
+            onStatus("PURCHASE IN PROGRESS");
             return;
         }
 
-        pendingOffer = new PendingOffer { Offer = offer, OnApplied = onApplied, OnStatus = onStatus };
+        StartPurchase(pack, new PendingPurchase { OnApplied = onCredited, OnStatus = onStatus });
+    }
+
+    private void StartPurchase(GemPack pack, PendingPurchase purchase)
+    {
+        var product = FindProduct(pack.ProductId);
+        if (product == null || !product.availableToPurchase)
+        {
+            Debug.LogWarning("[Store] Gem pack unavailable: " + pack.ProductId);
+            purchase.OnStatus("STORE UNAVAILABLE // TRY AGAIN SOON");
+            return;
+        }
+
+        pendingPurchase = purchase;
         storeController.PurchaseProduct(product);
     }
 
-    // Offer callbacks belong to the scene that requested them.
+    // Purchase callbacks belong to the scene that requested them.
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        pendingOffer = null;
+        pendingPurchase = null;
     }
 
     private Product FindProduct(string productId)
@@ -203,20 +223,20 @@ public sealed class TreadShredStore : MonoBehaviour
 
         Debug.Log("[Store] " + result + " " + product.definition.id + "; balance " + Wallet.Balance);
         storeController.ConfirmPurchase(order);
-        FulfillPendingOffer();
+        FulfillPendingPurchase();
     }
 
-    private void FulfillPendingOffer()
+    private void FulfillPendingPurchase()
     {
-        if (pendingOffer == null)
+        if (pendingPurchase == null)
             return;
 
-        var offer = pendingOffer;
-        pendingOffer = null;
-        if (Wallet.TrySpend(GemCatalog.Cost(offer.Offer)))
-            offer.OnApplied();
+        var purchase = pendingPurchase;
+        pendingPurchase = null;
+        if (!purchase.Offer.HasValue || Wallet.TrySpend(GemCatalog.Cost(purchase.Offer.Value)))
+            purchase.OnApplied();
         else
-            offer.OnStatus("NOT ENOUGH GEMS");
+            purchase.OnStatus("NOT ENOUGH GEMS");
     }
 
     private void OnPurchaseConfirmed(Order order)
@@ -232,11 +252,11 @@ public sealed class TreadShredStore : MonoBehaviour
     private void OnPurchaseFailed(FailedOrder order)
     {
         Debug.LogWarning("[Store] Purchase failed: " + order.FailureReason + " " + order.Details);
-        if (pendingOffer == null)
+        if (pendingPurchase == null)
             return;
 
-        var onStatus = pendingOffer.OnStatus;
-        pendingOffer = null;
+        var onStatus = pendingPurchase.OnStatus;
+        pendingPurchase = null;
         onStatus(order.FailureReason == PurchaseFailureReason.UserCancelled
             ? "PURCHASE CANCELLED"
             : "PURCHASE FAILED // TRY AGAIN");
@@ -245,11 +265,11 @@ public sealed class TreadShredStore : MonoBehaviour
     private void OnPurchaseDeferred(DeferredOrder order)
     {
         Debug.Log("[Store] Purchase awaiting approval.");
-        if (pendingOffer == null)
+        if (pendingPurchase == null)
             return;
 
-        var onStatus = pendingOffer.OnStatus;
-        pendingOffer = null;
+        var onStatus = pendingPurchase.OnStatus;
+        pendingPurchase = null;
         onStatus("WAITING FOR APPROVAL // GEMS ARRIVE WHEN APPROVED");
     }
 }

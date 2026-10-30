@@ -94,8 +94,7 @@ public class ManagerScore : MonoBehaviour
     private bool rewardUsedThisScreen;
     private GemOffer activeOffer;
     private string activeOfferAction;
-    private string activeOfferDetail;
-    private Text rewardDetailText;
+    private Text rewardBalanceText;
     private Button rewardButton;
     private Font rewardFont;
     private static int activeRunScore;
@@ -322,115 +321,55 @@ public class ManagerScore : MonoBehaviour
 
     private void BuildFailureRewardActions()
     {
-        if (rewardedActionPanel != null || VictoryofFail == null)
-            return;
-
-        rewardUsedThisScreen = false;
-        var existingTexts = VictoryofFail.GetComponentsInChildren<Text>(true);
-        for (var i = 0; i < existingTexts.Length; i++)
-        {
-            if (existingTexts[i].font != null)
-            {
-                rewardFont = existingTexts[i].font;
-                break;
-            }
-        }
-        rewardedActionPanel = new GameObject("TreadShredRewardActions", typeof(RectTransform), typeof(Image), typeof(Outline));
-        rewardedActionPanel.transform.SetParent(VictoryofFail.transform, false);
-        var rootRect = rewardedActionPanel.GetComponent<RectTransform>();
-        rootRect.anchorMin = new Vector2(0.5f, 0.5f);
-        rootRect.anchorMax = new Vector2(0.5f, 0.5f);
-        rootRect.pivot = new Vector2(0.5f, 0.5f);
-        rootRect.anchoredPosition = new Vector2(0f, -18f);
-        rootRect.sizeDelta = new Vector2(700f, 150f);
-        StyleRewardPanel(rewardedActionPanel);
-
-        var title = CreateRewardText(
-            "ARMORED REDEPLOY // +1 HIT",
-            rootRect,
-            new Vector2(0f, 48f),
-            new Vector2(680f, 34f),
-            24);
-        title.color = new Color(1f, 0.72f, 0.28f, 1f);
-
-        CreateOfferControls(
-            rootRect,
+        BuildOfferPanel(
             GemOffer.ArmoredRedeploy,
+            "ARMORED REDEPLOY",
+            "REPLAY THIS MISSION WITH 1 EXTRA HIT",
             "REDEPLOY",
-            "REPLAY IS FREE // GEMS BUY AN EXTRA HIT",
-            680f,
             RedeemArmoredRedeploy);
     }
 
     private void BuildVictoryRewardActions()
     {
+        BuildOfferPanel(
+            GemOffer.Overdrive,
+            "OVERDRIVE",
+            "NEXT MISSION: 2 SHOTS PER TAP",
+            "ACTIVATE",
+            RedeemOverdrive);
+    }
+
+    private void BuildOfferPanel(GemOffer offer, string title, string detail, string action,
+        UnityEngine.Events.UnityAction onTap)
+    {
         if (rewardedActionPanel != null || VictoryofFail == null)
             return;
 
         rewardUsedThisScreen = false;
-        var existingTexts = VictoryofFail.GetComponentsInChildren<Text>(true);
-        for (var i = 0; i < existingTexts.Length; i++)
-        {
-            if (existingTexts[i].font != null)
-            {
-                rewardFont = existingTexts[i].font;
-                break;
-            }
-        }
-
-        rewardedActionPanel = new GameObject("TreadShredVictoryReward", typeof(RectTransform), typeof(Image), typeof(Outline));
-        rewardedActionPanel.transform.SetParent(VictoryofFail.transform, false);
-        var rootRect = rewardedActionPanel.GetComponent<RectTransform>();
-        rootRect.anchorMin = new Vector2(0.5f, 0.5f);
-        rootRect.anchorMax = new Vector2(0.5f, 0.5f);
-        rootRect.pivot = new Vector2(0.5f, 0.5f);
-        rootRect.anchoredPosition = new Vector2(0f, -18f);
-        rootRect.sizeDelta = new Vector2(720f, 150f);
-        StyleRewardPanel(rewardedActionPanel);
-
-        var title = CreateRewardText(
-            "OVERDRIVE LOADOUT // DOUBLE FIRE",
-            rootRect,
-            new Vector2(0f, 48f),
-            new Vector2(700f, 34f),
-            24);
-        title.color = new Color(1f, 0.72f, 0.28f, 1f);
-
-        CreateOfferControls(
-            rootRect,
-            GemOffer.Overdrive,
-            "OVERDRIVE",
-            "NEXT MISSION // TWO ROUNDS PER TAP",
-            700f,
-            RedeemOverdrive);
-    }
-
-    private void CreateOfferControls(
-        RectTransform rootRect,
-        GemOffer offer,
-        string action,
-        string detail,
-        float width,
-        UnityEngine.Events.UnityAction onTap)
-    {
+        rewardFont = TreadShredUi.FindFont(VictoryofFail);
         activeOffer = offer;
         activeOfferAction = action;
-        activeOfferDetail = detail;
 
-        rewardDetailText = CreateRewardText(
-            string.Empty,
-            rootRect,
-            new Vector2(0f, 18f),
-            new Vector2(width, 24f),
-            15);
-        rewardDetailText.color = new Color(0.78f, 0.86f, 0.88f, 1f);
+        var rootRect = TreadShredUi.CreateRect("TreadShredOffer", (RectTransform)VictoryofFail.transform,
+            new Vector2(0f, -18f), new Vector2(720f, 196f),
+            typeof(RectTransform), typeof(Image), typeof(Outline));
+        rewardedActionPanel = rootRect.gameObject;
+        TreadShredUi.StylePanel(rewardedActionPanel);
 
-        rewardButton = CreateRewardButton(action, rootRect, new Vector2(0f, -28f), onTap);
+        TreadShredUi.CreateText(title, rootRect, new Vector2(0f, 70f), new Vector2(700f, 34f), 26, rewardFont)
+            .color = TreadShredUi.TitleColor;
+        TreadShredUi.CreateText(detail, rootRect, new Vector2(0f, 36f), new Vector2(700f, 24f), 17, rewardFont)
+            .color = Color.white;
+        rewardBalanceText = TreadShredUi.CreateText(string.Empty, rootRect, new Vector2(0f, 8f),
+            new Vector2(700f, 22f), 15, rewardFont);
+        rewardBalanceText.color = TreadShredUi.DetailColor;
+
+        rewardButton = TreadShredUi.CreateButton(action, rootRect, new Vector2(0f, -50f), new Vector2(520f, 72f), 22,
+            rewardFont, onTap);
         RefreshOfferControls(null);
     }
 
-    // Pass a status to replace the detail line, or null for the default
-    // detail with the current gem balance.
+    // Pass a status to replace the balance line, or null to show the balance.
     private void RefreshOfferControls(string status)
     {
         if (rewardButton == null)
@@ -439,74 +378,8 @@ public class ManagerScore : MonoBehaviour
         var store = TreadShredStore.Ensure();
         var plan = store.PlanFor(activeOffer);
         var price = plan.CanSpendNow ? null : store.PriceFor(plan.PackToBuy);
-        rewardButton.GetComponentInChildren<Text>().text = OfferLabels.Button(activeOfferAction, plan, price);
-        rewardDetailText.text = status ?? activeOfferDetail + "     " + OfferLabels.Balance(store.Wallet.Balance);
-    }
-
-    private Text CreateRewardText(string value, RectTransform parent, Vector2 position, Vector2 size, int fontSize)
-    {
-        var textObject = new GameObject("RewardLabel", typeof(RectTransform));
-        textObject.transform.SetParent(parent, false);
-        var rect = textObject.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, 0.5f);
-        rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.anchoredPosition = position;
-        rect.sizeDelta = size;
-
-        var text = textObject.AddComponent<Text>();
-        text.text = value;
-        text.font = rewardFont != null ? rewardFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
-        text.fontSize = fontSize;
-        text.fontStyle = FontStyle.Bold;
-        text.alignment = TextAnchor.MiddleCenter;
-        text.horizontalOverflow = HorizontalWrapMode.Overflow;
-        text.verticalOverflow = VerticalWrapMode.Overflow;
-        text.raycastTarget = false;
-        return text;
-    }
-
-    private void StyleRewardPanel(GameObject panel)
-    {
-        var image = panel.GetComponent<Image>();
-        image.color = new Color(0.015f, 0.035f, 0.045f, 0.94f);
-        image.raycastTarget = false;
-
-        var outline = panel.GetComponent<Outline>();
-        outline.effectColor = new Color(1f, 0.34f, 0.08f, 0.92f);
-        outline.effectDistance = new Vector2(3f, 3f);
-        outline.useGraphicAlpha = true;
-    }
-
-    private Button CreateRewardButton(string label, RectTransform parent, Vector2 position, UnityEngine.Events.UnityAction action)
-    {
-        var buttonObject = new GameObject(label, typeof(RectTransform), typeof(Image), typeof(Button), typeof(Outline));
-        buttonObject.transform.SetParent(parent, false);
-        var rect = buttonObject.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, 0.5f);
-        rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.anchoredPosition = position;
-        rect.sizeDelta = new Vector2(480f, 72f);
-
-        var image = buttonObject.GetComponent<Image>();
-        image.color = new Color(0.08f, 0.14f, 0.16f, 0.98f);
-        var outline = buttonObject.GetComponent<Outline>();
-        outline.effectColor = new Color(1f, 0.36f, 0.08f, 1f);
-        outline.effectDistance = new Vector2(3f, 3f);
-
-        var button = buttonObject.GetComponent<Button>();
-        button.targetGraphic = image;
-        var colors = button.colors;
-        colors.normalColor = new Color(0.08f, 0.14f, 0.16f, 0.98f);
-        colors.highlightedColor = new Color(0.18f, 0.32f, 0.35f, 1f);
-        colors.pressedColor = new Color(0.4f, 0.16f, 0.06f, 1f);
-        button.colors = colors;
-        button.onClick.AddListener(action);
-
-        var text = CreateRewardText(label, rect, Vector2.zero, rect.sizeDelta - new Vector2(18f, 10f), 22);
-        text.color = Color.white;
-        return button;
+        TreadShredUi.SetLabel(rewardButton, OfferLabels.ActionButton(activeOfferAction, plan, price));
+        rewardBalanceText.text = status ?? OfferLabels.BalanceLine(store.Wallet.Balance, plan);
     }
 
     private void RedeemArmoredRedeploy()
@@ -534,7 +407,7 @@ public class ManagerScore : MonoBehaviour
             PlayerPrefs.SetInt("TreadShredOverdrive", 1);
             PlayerPrefs.Save();
             rewardButton.interactable = false;
-            RefreshOfferControls("OVERDRIVE ARMED // NEXT MISSION");
+            RefreshOfferControls("OVERDRIVE READY FOR YOUR NEXT MISSION");
         }, RefreshOfferControls);
     }
 
