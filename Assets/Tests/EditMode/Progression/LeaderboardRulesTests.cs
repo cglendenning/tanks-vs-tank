@@ -36,7 +36,7 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual("LEADERBOARD RANK // #1,284", LeaderboardRules.RankLine(1284));
             Assert.AreEqual("LEADERBOARD RANK // #7", LeaderboardRules.RankLine(7));
             StringAssert.Contains("CreateButton(\"LEADERBOARD\"", Script("LoadLv.cs"));
-            StringAssert.Contains("TreadShredLeaderboard.Open", Script("LoadLv.cs"));
+            StringAssert.Contains("TreadShredLeaderboardPanel.OpenFrom(", Script("LoadLv.cs"));
             StringAssert.Contains("TreadShredLeaderboard.RequestRank(", Script("ManagerScore/ManagerScore.cs"));
         }
 

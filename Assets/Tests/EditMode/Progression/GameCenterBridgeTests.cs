@@ -27,15 +27,7 @@ namespace TreadShred.Progression.Tests
             StringAssert.DoesNotContain("UnityPause", Read("Plugins/iOS/TreadShredGameCenter.m"));
 
             Assert.AreEqual("SIGN IN TO GAME CENTER IN SETTINGS", LeaderboardRules.SignInFromSettings);
-            StringAssert.Contains("LeaderboardRules.SignInFromSettings", Read("Script/LoadLv.cs"));
-        }
-
-        [Test(Description = "D-032-AC-02: the leaderboard opens in Apple's current Games overlay on iOS 18 and later")]
-        public void BoardOpensThroughTheAccessPoint()
-        {
-            var plugin = Read("Plugins/iOS/TreadShredGameCenter.m");
-            StringAssert.Contains("triggerAccessPointWithLeaderboardID:boardId", plugin);
-            StringAssert.Contains("@available(iOS 18.0, *)", plugin);
+            StringAssert.Contains("LeaderboardRules.SignInFromSettings", Read("Script/Game/TreadShredLeaderboardPanel.cs"));
         }
     }
 }

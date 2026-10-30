@@ -378,6 +378,12 @@ public class ManagerScore : MonoBehaviour
             TreadShredUi.CreateText(ProgressionLabels.Reward(reward.Value), (RectTransform)VictoryofFail.transform,
                 new Vector2(0f, 104f), new Vector2(900f, 32f), 22, rewardFont).color = TreadShredUi.TitleColor;
 
+        // Where the player stands right after the mission (D-032-AC-02).
+        if (TreadShredLeaderboard.Available)
+            TreadShredUi.CreateButton(LeaderboardRules.Title, (RectTransform)VictoryofFail.transform,
+                new Vector2(530f, -18f), new Vector2(280f, 80f), 24, rewardFont,
+                () => TreadShredLeaderboardPanel.OpenFrom(rewardFont));
+
         // Where the player stands on the platform leaderboard, once it reports (D-032).
         var rankText = TreadShredUi.CreateText(string.Empty, (RectTransform)VictoryofFail.transform,
             new Vector2(0f, 136f), new Vector2(900f, 32f), 22, rewardFont);

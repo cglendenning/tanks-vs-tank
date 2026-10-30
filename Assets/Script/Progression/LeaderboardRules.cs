@@ -24,6 +24,17 @@ namespace TreadShred.Progression
             return total;
         }
 
+        /// <summary>
+        /// The score Game Center already holds for the player, or null until it has reported after
+        /// sign-in. What it accepted this session wins over a report that has not caught up yet.
+        /// </summary>
+        public static int? Baseline(long? gameCenterScore, int acceptedThisSession)
+        {
+            if (!gameCenterScore.HasValue)
+                return null;
+            return (int)System.Math.Max(gameCenterScore.Value, acceptedThisSession);
+        }
+
         /// <summary>Submit only a total that went up and that the game could really produce.</summary>
         public static bool ShouldSubmit(int total, int lastSubmitted)
         {
@@ -43,6 +54,14 @@ namespace TreadShred.Progression
 
         // Shown when Game Center is signed out and iOS only allows signing in from Settings (D-032-AC-03).
         public const string SignInFromSettings = "SIGN IN TO GAME CENTER IN SETTINGS";
+
+        // The in-game leaderboard screen (D-032-AC-02).
+        public const string Title = "LEADERBOARD";
+        public const string Subtitle = "TOTAL SCORE // TOP 25";
+        public const string Loading = "LOADING SCORES";
+        public const string Empty = "NO SCORES YET // FINISH A MISSION TO RANK";
+        public const string Unavailable = "LEADERBOARD UNAVAILABLE // TRY AGAIN SOON";
+        public const string Back = "BACK";
 
         public static string RankLine(int rank)
         {

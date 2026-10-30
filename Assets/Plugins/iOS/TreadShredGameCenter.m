@@ -13,22 +13,6 @@ static const char *Receiver = "TreadShredGameCenter";
 static UIViewController *signInController;
 static BOOL handlerInstalled;
 
-// iOS 15-17 only: closes the legacy leaderboard screen.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-@interface TreadShredGameCenterDismisser : NSObject <GKGameCenterControllerDelegate>
-@end
-
-@implementation TreadShredGameCenterDismisser
-- (void)gameCenterViewControllerDidFinish:(GKGameCenterViewController *)controller
-{
-    [controller dismissViewControllerAnimated:YES completion:nil];
-}
-@end
-#pragma clang diagnostic pop
-
-static TreadShredGameCenterDismisser *dismisser;
-
 static void Send(const char *method, NSString *message)
 {
     UnitySendMessage(Receiver, method, message.UTF8String);
@@ -83,10 +67,13 @@ int TreadShredGameCenterOfferSignIn(void)
 void TreadShredGameCenterSubmit(long long score, const char *board)
 {
     NSString *boardId = [NSString stringWithUTF8String:board];
+    NSLog(@"[TreadShred] Game Center submitting %lld to %@", score, boardId);
     [GKLeaderboard submitScore:(NSInteger)score context:0 player:GKLocalPlayer.localPlayer
                 leaderboardIDs:@[boardId] completionHandler:^(NSError *error) {
         if (error != nil)
             NSLog(@"[TreadShred] Game Center score submit failed: %@", error.localizedDescription);
+        else
+            NSLog(@"[TreadShred] Game Center accepted %lld", score);
         Send("OnSubmitted", error == nil ? @"1" : @"0");
     }];
 }
@@ -99,38 +86,64 @@ void TreadShredGameCenterLoadRank(const char *board)
         if (leaderboard == nil)
         {
             NSLog(@"[TreadShred] Game Center leaderboard not loaded: %@", error.localizedDescription);
-            Send("OnRank", @"0");
+            Send("OnRank", @"0:0");
             return;
         }
         [leaderboard loadEntriesForPlayerScope:GKLeaderboardPlayerScopeGlobal timeScope:GKLeaderboardTimeScopeAllTime
                                          range:NSMakeRange(1, 1)
                              completionHandler:^(GKLeaderboardEntry *local, NSArray<GKLeaderboardEntry *> *entries,
                                                  NSInteger total, NSError *loadError) {
-            Send("OnRank", [NSString stringWithFormat:@"%ld", (long)(local != nil ? local.rank : 0)]);
+            if (loadError != nil)
+                NSLog(@"[TreadShred] Game Center player entry not loaded: %@", loadError.localizedDescription);
+            // "rank:score" of the player's own entry; "0:0" when Game Center holds no score for them.
+            Send("OnRank", local != nil
+                ? [NSString stringWithFormat:@"%ld:%ld", (long)local.rank, (long)local.score]
+                : @"0:0");
         }];
     }];
 }
 
-// iOS 18+: Apple's Games overlay through the access point (GKGameCenterViewController
-// is deprecated from iOS 26). The overlay and its navigation belong to Apple; the
-// player closes it to return to the game.
-void TreadShredGameCenterShowBoard(const char *board)
+static NSDictionary *Row(GKLeaderboardEntry *entry)
+{
+    return @{
+        @"rank": @(entry.rank),
+        @"name": entry.player.displayName ?: @"",
+        @"score": @(entry.score),
+        @"isPlayer": @([entry.player.gamePlayerID isEqualToString:GKLocalPlayer.localPlayer.gamePlayerID]),
+    };
+}
+
+// The top `count` all-time entries and the player's own entry, as JSON to OnTop
+// ({"ok":false} when Game Center cannot load the board).
+void TreadShredGameCenterLoadTop(const char *board, int count)
 {
     NSString *boardId = [NSString stringWithUTF8String:board];
-    if (@available(iOS 18.0, *))
-    {
-        [GKAccessPoint.shared triggerAccessPointWithLeaderboardID:boardId playerScope:GKLeaderboardPlayerScopeGlobal
-                                                        timeScope:GKLeaderboardTimeScopeAllTime handler:nil];
-        return;
-    }
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    GKGameCenterViewController *controller =
-        [[GKGameCenterViewController alloc] initWithLeaderboardID:boardId playerScope:GKLeaderboardPlayerScopeGlobal
-                                                        timeScope:GKLeaderboardTimeScopeAllTime];
-    if (dismisser == nil)
-        dismisser = [TreadShredGameCenterDismisser new];
-    controller.gameCenterDelegate = dismisser;
-#pragma clang diagnostic pop
-    Present(controller);
+    [GKLeaderboard loadLeaderboardsWithIDs:@[boardId] completionHandler:^(NSArray<GKLeaderboard *> *boards, NSError *error) {
+        GKLeaderboard *leaderboard = boards.firstObject;
+        if (leaderboard == nil)
+        {
+            NSLog(@"[TreadShred] Game Center leaderboard not loaded: %@", error.localizedDescription);
+            Send("OnTop", @"{\"ok\":false}");
+            return;
+        }
+        [leaderboard loadEntriesForPlayerScope:GKLeaderboardPlayerScopeGlobal timeScope:GKLeaderboardTimeScopeAllTime
+                                         range:NSMakeRange(1, (NSUInteger)count)
+                             completionHandler:^(GKLeaderboardEntry *local, NSArray<GKLeaderboardEntry *> *entries,
+                                                 NSInteger total, NSError *loadError) {
+            if (loadError != nil)
+            {
+                NSLog(@"[TreadShred] Game Center entries not loaded: %@", loadError.localizedDescription);
+                Send("OnTop", @"{\"ok\":false}");
+                return;
+            }
+            NSMutableArray *rows = [NSMutableArray array];
+            for (GKLeaderboardEntry *entry in entries)
+                [rows addObject:Row(entry)];
+            NSMutableDictionary *page = [@{@"ok": @YES, @"total": @(total), @"entries": rows} mutableCopy];
+            if (local != nil)
+                page[@"player"] = Row(local);
+            NSData *json = [NSJSONSerialization dataWithJSONObject:page options:0 error:nil];
+            Send("OnTop", [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding]);
+        }];
+    }];
 }

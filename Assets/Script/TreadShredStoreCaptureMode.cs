@@ -1,3 +1,4 @@
+using TreadShred.Progression;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
@@ -26,6 +27,8 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private const int OverdriveActive = 14;
     // D-032: taps LEADERBOARD on the start screen through its real handler.
     private const int LeaderboardTap = 15;
+    // D-032: the leaderboard screen filled with a sample page, for layout review only.
+    private const int LeaderboardLayout = 16;
 
     private PlayerMoverment player;
     private ManagerScore score;
@@ -45,7 +48,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private static void InstallIfEnabled()
     {
         var mode = PlayerPrefs.GetInt(CaptureModeKey, 0);
-        if (mode < CombatSingle || mode > LeaderboardTap)
+        if (mode < CombatSingle || mode > LeaderboardLayout)
             return;
 
         Debug.Log($"[STORE_CAPTURE] installing capture driver mode={mode}");
@@ -87,6 +90,8 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
                 Invoke(nameof(ShowUpgrades), 0.8f);
             else if (mode == LeaderboardTap)
                 StartCoroutine(TapLeaderboard());
+            else if (mode == LeaderboardLayout)
+                Invoke(nameof(ShowSampleLeaderboard), 1.5f);
             else
                 Invoke(nameof(LoadCombatScene), 0.8f);
             return;
@@ -447,6 +452,20 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
             menu.OpenLeaderboard();
         yield return new WaitForSecondsRealtime(4f);
         Debug.Log($"[STORE_CAPTURE] four seconds after tap frame={Time.frameCount} timeScale={Time.timeScale}");
+    }
+
+    // Sample rows exercise the layout: long names, big scores, and the player below the top 25.
+    private void ShowSampleLeaderboard()
+    {
+        string[] first = { "IRON", "GHOST", "STEEL", "RAPID", "NIGHT", "STORM", "BRAVO", "DELTA" };
+        string[] second = { "VIPER", "HAMMER", "FALCON", "ANVIL", "RAZOR", "TALON", "SABER" };
+        var rows = new System.Collections.Generic.List<LeaderboardEntry>();
+        for (var i = 0; i < LeaderboardPage.TopCount; i++)
+            rows.Add(new LeaderboardEntry(i + 1, first[i % first.Length] + " " + second[i % second.Length] + " " + (10 + i * 3),
+                155000 - i * 4100, false));
+        rows[3] = new LeaderboardEntry(4, "averyveryverylongnickname", rows[3].Score, false);
+        var page = new LeaderboardPage(rows, new LeaderboardEntry(1284, "craig", 23400, true));
+        TreadShredLeaderboardPanel.OpenWithPage(TreadShredUi.FindFont(GameObject.Find("Canvas")), page);
     }
 
     private bool ShowsOverdriveOffer => mode == OverdriveConfirm || mode == OverdriveActive;
