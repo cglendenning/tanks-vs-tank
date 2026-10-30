@@ -371,65 +371,7 @@ public class PlayerMoverment : MonoBehaviour {
                             if (groundPlane.Raycast(ray, out raydistane))
                             {
 
-                                switch (typeplayer)
-                                {
-                                    case PlayerType.banthang:
-                                        Vector3 point = ray.GetPoint(raydistane);
-                                        //  Debug.DrawRay(ray.origin, point, Color.red);
-                                        Vector3 heightcorrect = new Vector3(point.x, transform.GetChild(0).gameObject.transform.position.y, point.z);
-                                        transform.GetChild(0).gameObject.transform.LookAt(heightcorrect);
-
-                                        GameObject obj = Instantiate(Bullet, pointbullet.position, pointbullet.rotation) as GameObject;
-                                        Vector3 dir = point - pointbullet.position;
-
-                                        GameObject ExP = Instantiate(Ex, pointbullet.position, Quaternion.Euler(-90, 0, 0)) as GameObject;
-                                        ExP.transform.SetParent(transform);
-                                        MusicManager.instance.GunTank();
-                                        obj.GetComponent<Rigidbody>().linearVelocity = dir.normalized * 15f;
-                                        FireOverdrive(point);
-                                        break;
-                                    case PlayerType.banvong:
-                                        Vector3 point1 = ray.GetPoint(raydistane);
-                                        Vector3 heightcorrect1 = new Vector3(point1.x, transform.GetChild(0).gameObject.transform.position.y, point1.z);
-                                        transform.GetChild(0).gameObject.transform.LookAt(heightcorrect1);
-                                        GameObject ExP1 = Instantiate(Ex, pointbullet.position, Quaternion.Euler(-90, 0, 0)) as GameObject;
-                                        ExP1.transform.SetParent(transform);
-                                        MusicManager.instance.GunTank();
-                                        gameObject.GetComponent<ThrowSimulation>().CallFromPlayer(point1);
-                                        FireOverdrive(point1);
-                                        break;
-                                    case PlayerType.bandan3:
-
-                                        Vector3 point3 = ray.GetPoint(raydistane);
-                                        Vector3 heightcorrect3 = new Vector3(point3.x, transform.GetChild(0).gameObject.transform.position.y, point3.z);
-                                        transform.GetChild(0).gameObject.transform.LookAt(heightcorrect3);
-                                        GameObject ExP3 = Instantiate(Ex, pointbullet.position, Quaternion.Euler(-90, 0, 0)) as GameObject;
-                                        ExP3.transform.SetParent(transform);
-                                        MusicManager.instance.GunTank();
-                                        GameObject obj3 = Instantiate(Bullet3, pointbullet.position, pointbullet.rotation) as GameObject;
-                                        FireOverdrive(point3);
-
-                                        break;
-                                    case PlayerType.bandanduoi:
-                                        Vector3 point4 = ray.GetPoint(raydistane);
-                                        //  Debug.DrawRay(ray.origin, point, Color.red);
-                                        Vector3 heightcorrect4 = new Vector3(point4.x, transform.GetChild(0).gameObject.transform.position.y, point4.z);
-                                        transform.GetChild(0).gameObject.transform.LookAt(heightcorrect4);
-
-                                        GameObject obj4 = Instantiate(BulletFind, pointbullet.position, pointbullet.rotation) as GameObject;
-
-                                        Vector3 dir4 = point4 - pointbullet.position;
-
-                                        GameObject ExP4 = Instantiate(Ex, pointbullet.position, Quaternion.Euler(-90, 0, 0)) as GameObject;
-                                        ExP4.transform.SetParent(transform);
-                                        MusicManager.instance.GunTank();
-                                        obj4.GetComponent<Rigidbody>().linearVelocity = dir4.normalized * 10f;
-                                        FireOverdrive(point4);
-
-                                        break;
-                                    default:
-                                        break;
-                                }
+                                FireAt(ray.GetPoint(raydistane));
 
                             }
                         }
@@ -549,6 +491,72 @@ public class PlayerMoverment : MonoBehaviour {
         }
 
         arenaBoundsCached = foundCollider;
+    }
+
+
+    // Fires the current weapon at a ground point. Used by mouse input and the
+    // store ad-reel capture mode, so both go through the same weapon code.
+    public void FireAt(Vector3 target)
+    {
+        switch (typeplayer)
+        {
+            case PlayerType.banthang:
+                Vector3 point = target;
+                //  Debug.DrawRay(ray.origin, point, Color.red);
+                Vector3 heightcorrect = new Vector3(point.x, transform.GetChild(0).gameObject.transform.position.y, point.z);
+                transform.GetChild(0).gameObject.transform.LookAt(heightcorrect);
+
+                GameObject obj = Instantiate(Bullet, pointbullet.position, pointbullet.rotation) as GameObject;
+                Vector3 dir = point - pointbullet.position;
+
+                GameObject ExP = Instantiate(Ex, pointbullet.position, Quaternion.Euler(-90, 0, 0)) as GameObject;
+                ExP.transform.SetParent(transform);
+                MusicManager.instance.GunTank();
+                obj.GetComponent<Rigidbody>().linearVelocity = dir.normalized * 15f;
+                FireOverdrive(point);
+                break;
+            case PlayerType.banvong:
+                Vector3 point1 = target;
+                Vector3 heightcorrect1 = new Vector3(point1.x, transform.GetChild(0).gameObject.transform.position.y, point1.z);
+                transform.GetChild(0).gameObject.transform.LookAt(heightcorrect1);
+                GameObject ExP1 = Instantiate(Ex, pointbullet.position, Quaternion.Euler(-90, 0, 0)) as GameObject;
+                ExP1.transform.SetParent(transform);
+                MusicManager.instance.GunTank();
+                gameObject.GetComponent<ThrowSimulation>().CallFromPlayer(point1);
+                FireOverdrive(point1);
+                break;
+            case PlayerType.bandan3:
+
+                Vector3 point3 = target;
+                Vector3 heightcorrect3 = new Vector3(point3.x, transform.GetChild(0).gameObject.transform.position.y, point3.z);
+                transform.GetChild(0).gameObject.transform.LookAt(heightcorrect3);
+                GameObject ExP3 = Instantiate(Ex, pointbullet.position, Quaternion.Euler(-90, 0, 0)) as GameObject;
+                ExP3.transform.SetParent(transform);
+                MusicManager.instance.GunTank();
+                GameObject obj3 = Instantiate(Bullet3, pointbullet.position, pointbullet.rotation) as GameObject;
+                FireOverdrive(point3);
+
+                break;
+            case PlayerType.bandanduoi:
+                Vector3 point4 = target;
+                //  Debug.DrawRay(ray.origin, point, Color.red);
+                Vector3 heightcorrect4 = new Vector3(point4.x, transform.GetChild(0).gameObject.transform.position.y, point4.z);
+                transform.GetChild(0).gameObject.transform.LookAt(heightcorrect4);
+
+                GameObject obj4 = Instantiate(BulletFind, pointbullet.position, pointbullet.rotation) as GameObject;
+
+                Vector3 dir4 = point4 - pointbullet.position;
+
+                GameObject ExP4 = Instantiate(Ex, pointbullet.position, Quaternion.Euler(-90, 0, 0)) as GameObject;
+                ExP4.transform.SetParent(transform);
+                MusicManager.instance.GunTank();
+                obj4.GetComponent<Rigidbody>().linearVelocity = dir4.normalized * 10f;
+                FireOverdrive(point4);
+
+                break;
+            default:
+                break;
+        }
     }
 
     private void FireOverdrive(Vector3 target)
