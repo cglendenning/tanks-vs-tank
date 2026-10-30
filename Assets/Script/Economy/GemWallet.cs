@@ -78,6 +78,16 @@ namespace TreadShred.Economy
             return CreditResult.Credited;
         }
 
+        // Gems earned in play (milestones); the caller guarantees each reward is paid once.
+        public void CreditReward(int gems)
+        {
+            if (gems <= 0)
+                throw new ArgumentOutOfRangeException(nameof(gems), gems, "Reward must be positive.");
+
+            state.balance += gems;
+            Commit();
+        }
+
         public bool TrySpend(int amount)
         {
             if (amount <= 0)

@@ -1,0 +1,16 @@
+{
+    "name": "TreadShred.Progression",
+    "rootNamespace": "TreadShred.Progression",
+    "references": [
+        "TreadShred.Economy"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}
