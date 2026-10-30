@@ -24,6 +24,8 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     // D-009: the Overdrive confirmation dialog, and the panel once Overdrive is active.
     private const int OverdriveConfirm = 13;
     private const int OverdriveActive = 14;
+    // D-032: taps LEADERBOARD on the start screen through its real handler.
+    private const int LeaderboardTap = 15;
 
     private PlayerMoverment player;
     private ManagerScore score;
@@ -43,7 +45,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private static void InstallIfEnabled()
     {
         var mode = PlayerPrefs.GetInt(CaptureModeKey, 0);
-        if (mode < CombatSingle || mode > OverdriveActive)
+        if (mode < CombatSingle || mode > LeaderboardTap)
             return;
 
         Debug.Log($"[STORE_CAPTURE] installing capture driver mode={mode}");
@@ -83,6 +85,8 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
                 Invoke(nameof(ShowStatistics), 0.8f);
             else if (mode == Upgrades)
                 Invoke(nameof(ShowUpgrades), 0.8f);
+            else if (mode == LeaderboardTap)
+                StartCoroutine(TapLeaderboard());
             else
                 Invoke(nameof(LoadCombatScene), 0.8f);
             return;
@@ -431,6 +435,18 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
             score.Failure();
             StartCoroutine(EnsureResultPanel(score, false));
         }
+    }
+
+    // Logs frames before and after the tap, so a frozen game shows up in the capture log.
+    private System.Collections.IEnumerator TapLeaderboard()
+    {
+        yield return new WaitForSeconds(3f);
+        var menu = FindObjectOfType<LoadLv>();
+        Debug.Log($"[STORE_CAPTURE] leaderboard tap frame={Time.frameCount} menu={(menu != null)}");
+        if (menu != null)
+            menu.OpenLeaderboard();
+        yield return new WaitForSecondsRealtime(4f);
+        Debug.Log($"[STORE_CAPTURE] four seconds after tap frame={Time.frameCount} timeScale={Time.timeScale}");
     }
 
     private bool ShowsOverdriveOffer => mode == OverdriveConfirm || mode == OverdriveActive;

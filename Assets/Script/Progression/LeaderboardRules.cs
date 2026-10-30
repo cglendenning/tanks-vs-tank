@@ -41,6 +41,9 @@ namespace TreadShred.Progression
                 : "Lvs" + mission + "_" + tier.ToString().ToLowerInvariant();
         }
 
+        // Shown when Game Center is signed out and iOS only allows signing in from Settings (D-032-AC-03).
+        public const string SignInFromSettings = "SIGN IN TO GAME CENTER IN SETTINGS";
+
         public static string RankLine(int rank)
         {
             return "LEADERBOARD RANK // #" + rank.ToString("N0", CultureInfo.InvariantCulture);

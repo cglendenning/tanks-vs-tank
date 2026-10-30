@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
+using TreadShred.Progression;
 
 public class LoadLv : MonoBehaviour {
 
@@ -138,12 +139,25 @@ public class LoadLv : MonoBehaviour {
             if (TreadShredLeaderboard.Available)
             {
                 var leaderboard = TreadShredUi.CreateButton("LEADERBOARD", (RectTransform)PanelStart.transform, Vector2.zero,
-                    new Vector2(360f, 96f), 34, font, TreadShredLeaderboard.Open);
+                    new Vector2(360f, 96f), 34, font, OpenLeaderboard);
                 var boardRect = (RectTransform)leaderboard.transform;
                 boardRect.anchorMin = boardRect.anchorMax = new Vector2(0.86f, 0.64f);
             }
         }
         TreadShredTierSelector.Attach(PanelMenu, font);
+    }
+
+    // D-032: the leaderboard, Apple's sign-in, or a note on where to sign in.
+    public void OpenLeaderboard()
+    {
+        if (TreadShredLeaderboard.Open() != LeaderboardOpenResult.SignInFromSettings || PanelStart == null)
+            return;
+        var note = TreadShredUi.CreateText(LeaderboardRules.SignInFromSettings, (RectTransform)PanelStart.transform,
+            Vector2.zero, new Vector2(760f, 40f), 24, TreadShredUi.FindFont(PanelStart));
+        note.color = TreadShredUi.TitleColor;
+        var rect = note.rectTransform;
+        rect.anchorMin = rect.anchorMax = new Vector2(0.80f, 0.74f);
+        Destroy(note.gameObject, 4f);
     }
 
     public void Upgrades()

@@ -44,10 +44,10 @@ namespace TreadShred.Progression.Tests
         public void SignInIsOptional()
         {
             var bridge = Script("Game/TreadShredLeaderboard.cs");
-            StringAssert.Contains("if (!Available || !Social.localUser.authenticated || submitting)", bridge);
-            StringAssert.Contains("if (!Available || !Social.localUser.authenticated)", bridge);
-            var open = bridge.Substring(bridge.IndexOf("public static void Open()"));
-            StringAssert.Contains("Social.localUser.Authenticate(", open, "the button offers sign-in");
+            StringAssert.Contains("if (!Available || !SignedIn || submitting)", bridge);
+            StringAssert.Contains("if (!Available || !SignedIn)", bridge);
+            var open = bridge.Substring(bridge.IndexOf("public static LeaderboardOpenResult Open()"));
+            StringAssert.Contains("TreadShredGameCenterOfferSignIn()", open, "the button offers sign-in");
             Assert.IsFalse(bridge.Contains("Time.timeScale"), "the leaderboard never pauses play");
         }
 
