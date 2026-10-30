@@ -20,6 +20,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private const int ActionCapture = 9;
     private const int RealActionCapture = 10;
     private const int Upgrades = 11;
+    private const int ReviveOffer = 12;
 
     private PlayerMoverment player;
     private ManagerScore score;
@@ -39,7 +40,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private static void InstallIfEnabled()
     {
         var mode = PlayerPrefs.GetInt(CaptureModeKey, 0);
-        if (mode < CombatSingle || mode > Upgrades)
+        if (mode < CombatSingle || mode > ReviveOffer)
             return;
 
         Debug.Log($"[STORE_CAPTURE] installing capture driver mode={mode}");
@@ -123,6 +124,12 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
             menu.Option();
     }
 
+    private void ShowReviveOffer()
+    {
+        if (player != null)
+            TreadShredRevivePanel.TryOffer(player);
+    }
+
     private void ShowUpgrades()
     {
         var menu = FindObjectOfType<LoadLv>();
@@ -142,6 +149,11 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
         player = FindObjectOfType<PlayerMoverment>();
         score = FindObjectOfType<ManagerScore>();
         Debug.Log($"[STORE_CAPTURE] attach player={(player != null)} score={(score != null)} mode={mode}");
+        if (mode == ReviveOffer && player != null)
+        {
+            Invoke(nameof(ShowReviveOffer), 2.5f);
+            return;
+        }
         if (IsRealActionCapture)
         {
             // Keep the authentic player fire/explosion sequence alive long

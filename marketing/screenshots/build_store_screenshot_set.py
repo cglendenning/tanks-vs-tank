@@ -1,113 +1,93 @@
+"""Build store screenshots from real game captures (spec D-030).
+
+Captures come from the store capture mode on the "Tread Shred iPhone 6.9"
+and "Tread Shred iPad 12.9" simulators and live in generated/<device>/.
+Images are never painted over with effects the game does not render; only a
+headline band is added.
+"""
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
-
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
-SRC = ROOT / "marketing" / "screenshots" / "generated"
-OUT = ROOT / "marketing" / "screenshots"
+HERE = ROOT / "marketing" / "screenshots"
 FONT = ROOT / "Assets" / "Art" / "BlackOpsOne-Regular.ttf"
+GOLD = (255, 184, 71, 255)
+WHITE = (255, 255, 255, 255)
+
+# (capture name, headline, subline) in store order.
+SHOTS = [
+    ("combat", "40 MISSIONS OF ARMORED WARFARE", "BANK YOUR SHOTS. DESTROY EVERY TANK."),
+    ("upgrades", "BUILD YOUR WAR MACHINE", "UPGRADE ARMOR, FIREPOWER AND SPEED"),
+    ("tiers", "BEAT 40. UNLOCK VETERAN AND ELITE.", "TOUGHER ENEMIES. BIGGER PAYOUTS."),
+    ("victory", "EVERY MISSION PAYS", "EARN COINS AND ARM OVERDRIVE"),
+    ("revive", "TANK DOWN? REVIVE.", "FINISH THE FIGHT WITH FULL ARMOR"),
+    ("start", "NO ADS. JUST COMBAT.", "FREE TO PLAY"),
+]
+
+# (output folder, capture device, output size or None for native capture size)
+SETS = [
+    ("apple-iphone-6.9-landscape", "iphone", None),
+    ("apple-ipad-12.9-landscape", "ipad", None),
+    ("google-play-landscape", "iphone", (1280, 720)),
+]
 
 
-def font(size: int):
-    return ImageFont.truetype(str(FONT), size)
-
-
-def text_center(draw, xy, value, size, fill, stroke=0, stroke_fill=(0, 0, 0, 255)):
-    f = font(size)
-    box = draw.textbbox((0, 0), value, font=f, stroke_width=stroke)
-    draw.text((xy[0] - (box[2] - box[0]) / 2, xy[1] - (box[3] - box[1]) / 2),
-              value, font=f, fill=fill, stroke_width=stroke, stroke_fill=stroke_fill)
-
-
-def overlay_glow_line(image, points, core=(255, 244, 190, 255), glow=(255, 108, 22, 210), width=13):
-    glow_layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
-    glow_draw = ImageDraw.Draw(glow_layer)
-    glow_draw.line(points, fill=glow, width=width * 5, joint="curve")
-    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(width * 3))
-    image.alpha_composite(glow_layer)
-    draw = ImageDraw.Draw(image)
-    draw.line(points, fill=core, width=width, joint="curve")
-    end = points[-1]
-    draw.ellipse((end[0] - width * 2, end[1] - width * 2,
-                  end[0] + width * 2, end[1] + width * 2), fill=(255, 255, 235, 255))
-
-
-def combat_capture(source_name, overdrive=False, contact=False):
-    image = Image.open(SRC / source_name).convert("RGBA")
-    if overdrive:
-        shots = [((1378, 825), (1694, 352)), ((1490, 830), (1814, 388))]
+def fit_to(image, size):
+    """Center-crop to the target aspect ratio, then resize."""
+    width, height = image.size
+    target = size[0] / size[1]
+    if width / height > target:
+        new_width = round(height * target)
+        left = (width - new_width) // 2
+        image = image.crop((left, 0, left + new_width, height))
     else:
-        shots = [((1435, 825), (1700, 360))]
-    for shot in shots:
-        overlay_glow_line(image, shot)
-    if contact:
-        overlay_glow_line(image, ((1810, 325), (1550, 680)),
-                          core=(235, 190, 255, 255), glow=(202, 44, 230, 220), width=11)
-
-    draw = ImageDraw.Draw(image, "RGBA")
-    banner = (865, 102, 2000, 248)
-    draw.rounded_rectangle(banner, radius=18, fill=(5, 10, 14, 225), outline=(255, 119, 28, 255), width=4)
-    if overdrive:
-        text_center(draw, (1432, 148), "OVERDRIVE // DOUBLE ROUNDS", 58, (255, 150, 42, 255), 2)
-        text_center(draw, (1432, 207), "REWARDED FIREPOWER ACTIVE", 26, (245, 235, 208, 255), 1)
-    elif contact:
-        text_center(draw, (1432, 175), "LIVE FIRE // RETURN FIRE", 58, (255, 150, 42, 255), 2)
-    else:
-        text_center(draw, (1432, 175), "LIVE FIRE // TARGET ACQUIRED", 52, (255, 150, 42, 255), 2)
-    return image
+        new_height = round(width / target)
+        top = (height - new_height) // 2
+        image = image.crop((0, top, width, top + new_height))
+    return image.resize(size, Image.LANCZOS)
 
 
-def make_ipad(image, size, label=None):
-    # The game runs landscape, while App Store iPad slots are 4:3. Preserve
-    # the complete gameplay frame and build a restrained, blurred extension
-    # above/below it instead of cropping the title, tanks, or action.
-    source = image.convert("RGBA")
-    background = ImageOps.fit(source.convert("RGB"), size, method=Image.Resampling.LANCZOS,
-                              centering=(0.5, 0.5)).convert("RGBA")
-    background = background.filter(ImageFilter.GaussianBlur(22))
-    shade = Image.new("RGBA", size, (2, 7, 12, 128))
-    background.alpha_composite(shade)
-    fitted = background
-    main_width = size[0]
-    main_height = round(source.height * main_width / source.width)
-    main = source.resize((main_width, main_height), Image.Resampling.LANCZOS)
-    y = (size[1] - main_height) // 2
-    fitted.alpha_composite(main, (0, y))
-    draw = ImageDraw.Draw(fitted, "RGBA")
-    if label:
-        draw.rounded_rectangle((72, 72, 820, 176), radius=16,
-                               fill=(4, 10, 14, 210), outline=(255, 119, 28, 240), width=3)
-        text_center(draw, (446, 124), label, 42, (255, 150, 42, 255), 1)
-    return fitted
+def centered(draw, y, text, size, fill, width):
+    font = ImageFont.truetype(str(FONT), size)
+    while draw.textlength(text, font=font) > width * 0.92 and size > 10:
+        size -= 2
+        font = ImageFont.truetype(str(FONT), size)
+    stroke = max(2, size // 18)
+    box = draw.textbbox((0, 0), text, font=font, stroke_width=stroke)
+    draw.text(((width - (box[2] - box[0])) / 2, y), text, font=font, fill=fill,
+              stroke_width=stroke, stroke_fill=(0, 0, 0, 255))
+    return box[3] - box[1]
 
 
-def write(image, name):
-    image.convert("RGB").save(OUT / name, "PNG", optimize=False, compress_level=1)
+def compose(capture, headline, subline):
+    """Solid headline band on top; the real capture scaled to fit below it."""
+    width, height = capture.size
+    band = int(height * (0.22 if width / height > 1.6 else 0.17))
+    canvas = Image.new("RGB", (width, height), (4, 9, 12))
+    scale = min(width / capture.width, (height - band) / capture.height)
+    shot = capture.resize((round(capture.width * scale), round(capture.height * scale)), Image.LANCZOS)
+    canvas.paste(shot, ((width - shot.width) // 2, band + (height - band - shot.height) // 2))
+    draw = ImageDraw.Draw(canvas)
+    draw.line((0, band - 3, width, band - 3), fill=(255, 92, 20), width=max(3, height // 300))
+    top = int(band * 0.12)
+    used = centered(draw, top, headline, int(band * 0.40), GOLD, width)
+    centered(draw, top + used + int(band * 0.12), subline, int(band * 0.20), WHITE, width)
+    return canvas
 
 
 def main():
-    launch = Image.open(OUT / "tread-shred-launch.png").convert("RGBA")
-    mission = Image.open(SRC / "iphone-pro-combat-clean.png").convert("RGBA")
-    live_fire = combat_capture("iphone-pro-action.png")
-    double_rounds = combat_capture("iphone-pro-action.png", overdrive=True)
-    return_fire = combat_capture("iphone-pro-later.png", contact=True)
-
-    # iPhone 6.9-inch set: no Unity splash, no placeholder screen, and every
-    # gameplay frame has a visible combat beat.
-    write(launch, "tread-shred-01-start.png")
-    write(mission, "tread-shred-02-mission-select.png")
-    write(live_fire, "tread-shred-03-live-fire.png")
-    write(double_rounds, "tread-shred-04-overdrive.png")
-    write(return_fire, "tread-shred-05-return-fire.png")
-
-    # iPad Pro landscape sets use the same verified gameplay moments, composed
-    # for the two App Store landscape display sizes.
-    frames = [launch, mission, live_fire, double_rounds, return_fire]
-    labels = ["COMMAND BASE", "MISSION SELECT", "LIVE FIRE", "OVERDRIVE", "RETURN FIRE"]
-    for display, size in (("ipad129", (2732, 2048)), ("ipad13", (2752, 2064))):
-        for index, (frame, label) in enumerate(zip(frames, labels), 1):
-            write(make_ipad(frame, size, label), f"tread-shred-{display}-{index:02d}.png")
+    for folder, device, size in SETS:
+        out = HERE / "store-ready" / folder
+        out.mkdir(parents=True, exist_ok=True)
+        for old in out.glob("*.jpg"):
+            old.unlink()
+        for index, (name, headline, subline) in enumerate(SHOTS, start=1):
+            capture = Image.open(HERE / "generated" / device / f"{name}.png").convert("RGB")
+            if size:
+                capture = fit_to(capture, size)
+            compose(capture, headline, subline).save(out / f"{index:02d}-{name}.jpg", quality=92)
+        print(folder, len(SHOTS))
 
 
 if __name__ == "__main__":

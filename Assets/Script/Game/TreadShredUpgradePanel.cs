@@ -59,17 +59,18 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
         for (var i = 0; i < Tracks.Length; i++)
         {
             var track = Tracks[i];
-            var name = TreadShredUi.CreateText(ProgressionLabels.Track(track), backdrop, new Vector2(-560f, RowY[i] + 20f),
-                new Vector2(420f, 60f), 46, font);
+            var name = TreadShredUi.CreateText(ProgressionLabels.Track(track), backdrop, new Vector2(-480f, RowY[i] + 20f),
+                new Vector2(360f, 60f), 42, font);
             name.alignment = TextAnchor.MiddleLeft;
-            levelTexts[track] = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(-560f, RowY[i] - 34f),
-                new Vector2(420f, 36f), 24, font);
+            levelTexts[track] = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(-480f, RowY[i] - 34f),
+                new Vector2(360f, 36f), 24, font);
             levelTexts[track].alignment = TextAnchor.MiddleLeft;
             levelTexts[track].color = TreadShredUi.DetailColor;
-            effectTexts[track] = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(-120f, RowY[i]),
-                new Vector2(460f, 60f), 28, font);
-            buttons[track] = TreadShredUi.CreateButton(string.Empty, backdrop, new Vector2(470f, RowY[i]),
-                new Vector2(620f, 100f), 28, font, () => Upgrade(track));
+            effectTexts[track] = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(-70f, RowY[i]),
+                new Vector2(420f, 60f), 26, font);
+            // Columns stay within +/-700 reference units so a 4:3 iPad shows all of them.
+            buttons[track] = TreadShredUi.CreateButton(string.Empty, backdrop, new Vector2(420f, RowY[i]),
+                new Vector2(540f, 100f), 26, font, () => Upgrade(track));
         }
 
         statusText = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(0f, -240f), new Vector2(1200f, 36f), 26, font);
