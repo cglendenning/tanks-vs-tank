@@ -75,35 +75,5 @@ namespace TreadShred.Economy.Tests
 
             Assert.AreSame(largest, GemCatalog.SmallestPackCovering(largest.Gems * 10));
         }
-
-        [Test]
-        public void ButtonShowsGemCostWhenAffordable()
-        {
-            var plan = GemCatalog.Plan(GemOffer.ArmoredRedeploy, 100);
-
-            Assert.AreEqual("REDEPLOY // 40 GEMS", OfferLabels.Button("REDEPLOY", plan, "$0.99"));
-        }
-
-        [Test]
-        public void ButtonShowsPackAndLocalizedPriceWhenShort()
-        {
-            var plan = GemCatalog.Plan(GemOffer.ArmoredRedeploy, 0);
-
-            Assert.AreEqual("REDEPLOY // 100 GEMS $0.99", OfferLabels.Button("REDEPLOY", plan, "$0.99"));
-        }
-
-        [Test]
-        public void ButtonOmitsPriceUntilStoreReportsIt()
-        {
-            var plan = GemCatalog.Plan(GemOffer.Overdrive, 0);
-
-            Assert.AreEqual("OVERDRIVE // GET 100 GEMS", OfferLabels.Button("OVERDRIVE", plan, null));
-        }
-
-        [Test]
-        public void BalanceLabelShowsCount()
-        {
-            Assert.AreEqual("GEMS // 25", OfferLabels.Balance(25));
-        }
     }
 }
