@@ -2,6 +2,7 @@
 using System.Collections;
 using TreadShred.Economy;
 using TreadShred.Progression;
+using TreadShred.Analytics;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -44,6 +45,7 @@ public class ManagerScore : MonoBehaviour
 
         instance = this;
         SumEmnemy = CountEmnemy;
+        LogMissionStart();
         if (!activeRunStarted)
         {
             activeRunStarted = true;
@@ -276,7 +278,7 @@ public class ManagerScore : MonoBehaviour
                 }
 
                 wf = true;
-                TreadShredProgress.Ensure().CompleteCurrentMission(true);
+                LogMissionEnd(TreadShredProgress.Ensure().CompleteCurrentMission(true), true);
                 VictoryObj.SetActive(true);
                 StartCoroutine(DelayVictotory());
 
@@ -312,7 +314,7 @@ public class ManagerScore : MonoBehaviour
         if (wf == false)
         {
             wf = true;
-            TreadShredProgress.Ensure().CompleteCurrentMission(false);
+            LogMissionEnd(TreadShredProgress.Ensure().CompleteCurrentMission(false), false);
             BeginNewRun();
             campaignScore = 0;
             FailureObj.SetActive(true);
@@ -370,6 +372,7 @@ public class ManagerScore : MonoBehaviour
         rewardButton = TreadShredUi.CreateButton(action, rootRect, new Vector2(0f, -50f), new Vector2(520f, 72f), 22,
             rewardFont, onTap);
         RefreshOfferControls(null);
+        TreadShredAnalytics.Log(GameEvents.OfferShown(OfferName(offer), TreadShredStore.Ensure().Wallet.Balance));
 
         // Coins, milestone gems and tier unlocks earned by this mission (D-018, D-026, D-019).
         var reward = TreadShredProgress.Ensure().LastReward;
@@ -396,9 +399,11 @@ public class ManagerScore : MonoBehaviour
         if (rewardUsedThisScreen)
             return;
 
+        var packBought = !TreadShredStore.Ensure().PlanFor(GemOffer.ArmoredRedeploy).CanSpendNow;
         TreadShredStore.Ensure().RedeemOffer(GemOffer.ArmoredRedeploy, () =>
         {
             rewardUsedThisScreen = true;
+            TreadShredAnalytics.Log(GameEvents.OfferAccepted(OfferName(GemOffer.ArmoredRedeploy), GemCatalog.Cost(GemOffer.ArmoredRedeploy), packBought));
             PlayerPrefs.SetInt("TreadShredArmorCache", 1);
             PlayerPrefs.Save();
             ReloadCurrentMission();
@@ -410,14 +415,37 @@ public class ManagerScore : MonoBehaviour
         if (rewardUsedThisScreen)
             return;
 
+        var packBought = !TreadShredStore.Ensure().PlanFor(GemOffer.Overdrive).CanSpendNow;
         TreadShredStore.Ensure().RedeemOffer(GemOffer.Overdrive, () =>
         {
             rewardUsedThisScreen = true;
+            TreadShredAnalytics.Log(GameEvents.OfferAccepted(OfferName(GemOffer.Overdrive), GemCatalog.Cost(GemOffer.Overdrive), packBought));
             PlayerPrefs.SetInt("TreadShredOverdrive", 1);
             PlayerPrefs.Save();
             rewardButton.interactable = false;
             RefreshOfferControls("OVERDRIVE READY FOR YOUR NEXT MISSION");
         }, RefreshOfferControls);
+    }
+
+    private static string OfferName(GemOffer offer)
+    {
+        return offer == GemOffer.ArmoredRedeploy ? "armored_redeploy" : "overdrive";
+    }
+
+    // D-021: mission analytics.
+    private static void LogMissionStart()
+    {
+        var mission = TreadShredProgress.CurrentMission();
+        if (mission > 0)
+            TreadShredAnalytics.Log(GameEvents.MissionStart(mission, TreadShredProgress.Ensure().SelectedTier.ToString().ToLowerInvariant()));
+    }
+
+    private static void LogMissionEnd(MissionReward? reward, bool won)
+    {
+        var mission = TreadShredProgress.CurrentMission();
+        if (mission > 0)
+            TreadShredAnalytics.Log(GameEvents.MissionEnd(mission, TreadShredProgress.Ensure().SelectedTier.ToString().ToLowerInvariant(),
+                won, Time.timeSinceLevelLoad, reward.HasValue ? reward.Value.Coins : 0));
     }
 
     private void ReloadCurrentMission()

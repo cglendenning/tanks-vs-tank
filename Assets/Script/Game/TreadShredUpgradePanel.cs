@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TreadShred.Analytics;
 using TreadShred.Economy;
 using TreadShred.Progression;
 using UnityEngine;
@@ -84,9 +85,12 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     private void Upgrade(UpgradeTrack track)
     {
         statusText.text = string.Empty;
+        var quote = Progression.Quote(track);
         var result = Progression.TryUpgrade(track);
         if (result == UpgradeResult.Upgraded)
         {
+            TreadShredAnalytics.Log(GameEvents.UpgradePurchased(track.ToString().ToLowerInvariant(), Progression.Level(track),
+                quote.CostCoins - quote.CoinShortfall, quote.AffordableWithCoins ? 0 : quote.GemsNeeded));
             statusText.text = ProgressionLabels.Track(track) + " UPGRADED TO LEVEL " + Progression.Level(track);
             return;
         }

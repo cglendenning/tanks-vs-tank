@@ -1,3 +1,4 @@
+using TreadShred.Analytics;
 using TreadShred.Economy;
 using TreadShred.Progression;
 using UnityEngine;
@@ -78,6 +79,7 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
 
         remaining = ProgressionRules.ReviveOfferSeconds;
         Refresh(null);
+        TreadShredAnalytics.Log(GameEvents.OfferShown("revive", TreadShredStore.Ensure().Wallet.Balance));
     }
 
     private void Refresh(string status)
@@ -107,8 +109,11 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
         if (finished)
             return;
 
-        TreadShredStore.Ensure().SpendOrBuy(Cost, () =>
+        var cost = Cost;
+        var packBought = !GemCatalog.PlanFor(cost, TreadShredStore.Ensure().Wallet.Balance).CanSpendNow;
+        TreadShredStore.Ensure().SpendOrBuy(cost, () =>
         {
+            TreadShredAnalytics.Log(GameEvents.OfferAccepted("revive", cost, packBought));
             revivesThisMission++;
             Finish();
             if (player != null)

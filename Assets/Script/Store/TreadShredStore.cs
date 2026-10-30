@@ -233,6 +233,9 @@ public sealed class TreadShredStore : MonoBehaviour
         }
 
         Debug.Log("[Store] " + result + " " + product.definition.id + "; balance " + Wallet.Balance);
+        if (result == CreditResult.Credited)
+            TreadShredAnalytics.Log(TreadShred.Analytics.GameEvents.GemPackPurchased(product.definition.id,
+                (double)product.metadata.localizedPrice, product.metadata.isoCurrencyCode, order.Info.TransactionID));
         storeController.ConfirmPurchase(order);
         FulfillPendingPurchase();
     }

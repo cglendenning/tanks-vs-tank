@@ -22,3 +22,11 @@
 Pods/
 Podfile.lock
 .DS_Store
+
+# Firebase client config: regenerate locally (see README), never published
+Assets/GoogleService-Info.plist
+Assets/GoogleService-Info.plist.meta
+Assets/google-services.json
+Assets/google-services.json.meta
+Assets/StreamingAssets/google-services-desktop.json
+Assets/StreamingAssets/google-services-desktop.json.meta

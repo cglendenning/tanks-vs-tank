@@ -10,6 +10,15 @@ Modern Unity 6 rebuild of the original tank game for iOS and Android from one so
 - iOS bundle ID: `com.tgts.tanksvstank`
 - Android application ID: `com.tgts.tankkvstank`
 
+## Analytics (Firebase)
+
+Firebase Analytics (project `tread-shred-20261030`) records the events that drive LTV (spec D-021). The Firebase packages are vendored in `Packages/GooglePackages`. The client config files are not committed; regenerate them before building:
+
+```sh
+firebase apps:sdkconfig IOS 1:156147767939:ios:4c8da85fb37091fdd4d9b6 --project tread-shred-20261030 --out Assets/GoogleService-Info.plist
+firebase apps:sdkconfig ANDROID 1:156147767939:android:a01c6cd896257b5ad4d9b6 --project tread-shred-20261030 --out Assets/google-services.json
+```
+
 ## In-app purchases
 
 The game has no ads. Revenue comes from consumable gem packs sold through Unity IAP (`com.unity.purchasing`), which uses StoreKit on iOS and Google Play Billing on Android. Gems are spent on the result-screen boosts: Armored Redeploy after a loss and Overdrive after a win. When the balance is short, the same button buys the smallest covering pack and applies the boost once the purchase is delivered.
