@@ -80,7 +80,9 @@ public class ManagerScore : MonoBehaviour
             return;
 
         // SCORE: the run so far plus this mission's kills, or the run as the mission ended (D-032-AC-01).
-        KillScore.text = ScoreRules.ScoreLine(scoreCommitted ? lastMission.RunScore : TreadShredScores.Run.Live(CurDieEmnemy));
+        KillScore.text = ScoreRules.ScoreLine(scoreCommitted
+            ? lastMission.RunScore
+            : TreadShredScores.Run.Live(CurDieEmnemy, TreadShredProgress.Ensure().SelectedTier));
     }
 
     public float test;
@@ -120,11 +122,13 @@ public class ManagerScore : MonoBehaviour
 
         int LevelS = (int)(CurDieEmnemy * 100);
 
-        // A won mission banks kills and bonuses into SCORE; a lost one ends the run (D-032-AC-01).
+        // A won mission banks its kills and its clear into SCORE; a lost one ends the run (D-032-AC-01).
         if (!scoreCommitted)
         {
             scoreCommitted = true;
-            lastMission = TreadShredScores.Run.Complete(won, CurDieEmnemy, CurCountbullet, CurHeath);
+            lastMission = TreadShredScores.Run.Complete(won, CurDieEmnemy, TreadShredProgress.Ensure().SelectedTier);
+            if (lastMission.Won)
+                TreadShredImpact.MissionClear(lastMission.ClearPoints);
             newHighScore = TreadShredScores.RecordScore(lastMission.RunScore);
             TreadShredLeaderboard.SubmitIfRaised();
         }
@@ -361,7 +365,8 @@ public class ManagerScore : MonoBehaviour
         // Coins, milestone gems and tier unlocks earned by this mission (D-018, D-026, D-019).
         var reward = TreadShredProgress.Ensure().LastReward;
         if (reward.HasValue)
-            TreadShredUi.CreateText(ProgressionLabels.Reward(reward.Value), (RectTransform)VictoryofFail.transform,
+            // Currency, labelled apart from SCORE.
+            TreadShredUi.CreateText("EARNED // " + ProgressionLabels.Reward(reward.Value), (RectTransform)VictoryofFail.transform,
                 new Vector2(0f, 104f), new Vector2(900f, 32f), 22, rewardFont).color = TreadShredUi.TitleColor;
 
         // Where the player stands right after the mission (D-032-AC-02).
@@ -371,16 +376,15 @@ public class ManagerScore : MonoBehaviour
                 () => TreadShredLeaderboardPanel.OpenFrom(rewardFont));
 
         // Where the player stands on the platform leaderboard, once it reports (D-032).
-        // SCORE and HIGH SCORE (D-032-AC-01), this mission's bonuses when won, and the rank once reported.
+        // SCORE and HIGH SCORE (D-032-AC-01), what this mission added, and the rank once reported.
         var results = (RectTransform)VictoryofFail.transform;
         TreadShredUi.CreateText(ScoreRules.ScoreLine(lastMission.RunScore), results, new Vector2(-240f, 172f),
             new Vector2(460f, 32f), 22, rewardFont).color = Color.white;
         TreadShredUi.CreateText(ScoreRules.HighScoreLine(TreadShredScores.HighScore, newHighScore), results,
             new Vector2(240f, 172f), new Vector2(460f, 32f), 22, rewardFont).color =
             newHighScore ? TreadShredUi.TitleColor : Color.white;
-        if (lastMission.Won)
-            TreadShredUi.CreateText(ScoreRules.BonusLine(lastMission), results, new Vector2(0f, 138f),
-                new Vector2(900f, 30f), 20, rewardFont).color = TreadShredUi.DetailColor;
+        TreadShredUi.CreateText(ScoreRules.MissionLine(lastMission), results, new Vector2(0f, 138f),
+            new Vector2(1000f, 30f), 20, rewardFont).color = TreadShredUi.DetailColor;
         var rankText = TreadShredUi.CreateText(string.Empty, results, new Vector2(0f, 206f), new Vector2(900f, 32f), 22,
             rewardFont);
         rankText.color = Color.white;

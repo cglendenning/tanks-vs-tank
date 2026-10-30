@@ -19,8 +19,11 @@ public sealed class TreadShredImpact : MonoBehaviour
     private float shakeDuration;
     private Vector3 appliedOffset;
     private Transform shakenCamera;
+    private RectTransform calloutOverlay;
     private Text callout;
+    private Text clearCallout;
     private Coroutine calloutRoutine;
+    private Coroutine clearRoutine;
     private bool frozen;
 
     private static TreadShredImpact Ensure()
@@ -43,7 +46,8 @@ public sealed class TreadShredImpact : MonoBehaviour
         var impact = Ensure();
         impact.Shake(ImpactRules.ShakeOnKill);
         impact.SpawnDebris(position);
-        impact.ShowCallout();
+        // The kill's points appear with it (D-032-AC-01).
+        impact.ShowCallout(ScoreRules.KillCallout(ScoreRules.KillValue(TreadShredProgress.Ensure().SelectedTier)));
         if (!impact.frozen)
             impact.StartCoroutine(impact.FreezeFrame());
     }
@@ -101,34 +105,51 @@ public sealed class TreadShredImpact : MonoBehaviour
         }
     }
 
-    private void ShowCallout()
+    /// <summary>D-032-AC-01: the clear points appear the moment the last enemy falls.</summary>
+    public static void MissionClear(int points)
     {
-        if (callout == null)
-        {
-            var overlay = TreadShredUi.CreateOverlay("Impact Callout", 90, receivesTaps: false, parent: transform);
-            callout = TreadShredUi.CreateText("TARGET DESTROYED", overlay,
-                new Vector2(0f, 300f), new Vector2(1200f, 110f), 84, TreadShredUi.FindFont(GameObject.Find("Canvas")));
-            var outline = callout.gameObject.AddComponent<Outline>();
-            outline.effectColor = Color.black;
-            outline.effectDistance = new Vector2(4f, -4f);
-        }
-        if (calloutRoutine != null)
-            StopCoroutine(calloutRoutine);
-        calloutRoutine = StartCoroutine(FadeCallout());
+        var impact = Ensure();
+        impact.clearCallout = impact.CalloutLine(impact.clearCallout, 190f, 64);
+        if (impact.clearRoutine != null)
+            impact.StopCoroutine(impact.clearRoutine);
+        impact.clearRoutine = impact.StartCoroutine(impact.FadeCallout(impact.clearCallout, ScoreRules.ClearCallout(points)));
     }
 
-    private IEnumerator FadeCallout()
+    private void ShowCallout(string message)
     {
+        callout = CalloutLine(callout, 300f, 84);
+        if (calloutRoutine != null)
+            StopCoroutine(calloutRoutine);
+        calloutRoutine = StartCoroutine(FadeCallout(callout, message));
+    }
+
+    private Text CalloutLine(Text existing, float y, int size)
+    {
+        if (existing != null)
+            return existing;
+        if (calloutOverlay == null)
+            calloutOverlay = TreadShredUi.CreateOverlay("Impact Callout", 90, receivesTaps: false, parent: transform);
+        var line = TreadShredUi.CreateText(string.Empty, calloutOverlay, new Vector2(0f, y), new Vector2(1500f, 110f), size,
+            TreadShredUi.FindFont(GameObject.Find("Canvas")));
+        var outline = line.gameObject.AddComponent<Outline>();
+        outline.effectColor = Color.black;
+        outline.effectDistance = new Vector2(4f, -4f);
+        return line;
+    }
+
+    private IEnumerator FadeCallout(Text line, string message)
+    {
+        line.text = message;
         var elapsed = 0f;
         while (elapsed < ImpactRules.KillCallout)
         {
             var color = TreadShredUi.TitleColor;
             color.a = 1f - elapsed / ImpactRules.KillCallout;
-            callout.color = color;
-            callout.transform.localScale = Vector3.one * (1.15f - 0.15f * Mathf.Min(1f, elapsed * 6f));
+            line.color = color;
+            line.transform.localScale = Vector3.one * (1.15f - 0.15f * Mathf.Min(1f, elapsed * 6f));
             elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
-        callout.color = Color.clear;
+        line.color = Color.clear;
     }
 }

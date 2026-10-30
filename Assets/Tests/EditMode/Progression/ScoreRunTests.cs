@@ -4,21 +4,20 @@ namespace TreadShred.Progression.Tests
 {
     public sealed class ScoreRunTests
     {
-        [Test(Description = "D-032-AC-01: SCORE builds across won missions from kills plus accuracy and armor bonuses")]
+        [Test(Description = "D-032-AC-01: SCORE builds across won missions from 100 per kill plus 500 per mission clear")]
         public void WonMissionsBuildTheRun()
         {
             var run = new ScoreRun();
             run.Start();
-            Assert.AreEqual(300, run.Live(3), "100 per kill during a mission");
+            Assert.AreEqual(300, run.Live(3, DifficultyTier.Recruit), "100 per kill, shown as it is earned");
 
-            var first = run.Complete(won: true, kills: 3, shots: 3, hitsTaken: 0);
-            Assert.AreEqual((300, 300, 1000), (first.KillPoints, first.AccuracyBonus, first.ArmorBonus));
-            Assert.AreEqual(1600, first.RunScore);
+            var first = run.Complete(won: true, kills: 3, DifficultyTier.Recruit);
+            Assert.AreEqual((300, 500), (first.KillPoints, first.ClearPoints));
+            Assert.AreEqual(800, first.RunScore);
 
-            var second = run.Complete(won: true, kills: 2, shots: 4, hitsTaken: 1);
-            Assert.AreEqual((200, 150, 666), (second.KillPoints, second.AccuracyBonus, second.ArmorBonus));
-            Assert.AreEqual(1600 + 200 + 150 + 666, second.RunScore);
-            Assert.AreEqual(second.RunScore, run.Banked, "the next mission starts from the run so far");
+            var second = run.Complete(won: true, kills: 2, DifficultyTier.Recruit);
+            Assert.AreEqual(1500, second.RunScore);
+            Assert.AreEqual(1500, run.Banked, "the next mission starts from the run so far");
         }
 
         [Test(Description = "D-032-AC-01: losing the tank ends the run with its kills counted, and SCORE starts again from zero")]
@@ -26,12 +25,12 @@ namespace TreadShred.Progression.Tests
         {
             var run = new ScoreRun();
             run.Start();
-            run.Complete(true, 3, 3, 0);
-            var lost = run.Complete(won: false, kills: 2, shots: 5, hitsTaken: 3);
+            run.Complete(true, 3, DifficultyTier.Recruit);
+            var lost = run.Complete(won: false, kills: 2, DifficultyTier.Recruit);
 
             Assert.IsFalse(lost.Won);
-            Assert.AreEqual(1600 + 200, lost.RunScore, "the final SCORE that HIGH SCORE is checked against");
-            Assert.AreEqual((0, 0), (lost.AccuracyBonus, lost.ArmorBonus), "no bonuses for a lost mission");
+            Assert.AreEqual(800 + 200, lost.RunScore, "the final SCORE that HIGH SCORE is checked against");
+            Assert.AreEqual(0, lost.ClearPoints, "no clear for a lost mission");
             Assert.AreEqual(0, run.Banked);
         }
 
@@ -40,28 +39,30 @@ namespace TreadShred.Progression.Tests
         {
             var run = new ScoreRun();
             run.Start();
-            run.Complete(true, 3, 3, 0);
-            run.Complete(false, 2, 5, 3);
+            run.Complete(true, 3, DifficultyTier.Recruit);
+            run.Complete(false, 2, DifficultyTier.Recruit);
             run.ResumeAfterRedeploy();
 
-            Assert.AreEqual(1600, run.Banked);
-            Assert.AreEqual(1600 + 100, run.Live(1));
+            Assert.AreEqual(800, run.Banked);
+            Assert.AreEqual(900, run.Live(1, DifficultyTier.Recruit));
         }
 
-        [Test(Description = "D-032-AC-01: bonuses stay within their caps and SCORE and HIGH SCORE read plainly")]
-        public void BonusesAndLabels()
+        [Test(Description = "D-032-AC-01: Veteran doubles and Elite triples every point, and each point reads plainly where it is earned")]
+        public void TierValuesAndLabels()
         {
-            Assert.AreEqual(300, ScoreRules.AccuracyBonus(kills: 4, shots: 2), "Overdrive's extra rounds cannot beat 300");
-            Assert.AreEqual(0, ScoreRules.AccuracyBonus(0, 0));
-            Assert.AreEqual(1000, ScoreRules.ArmorBonus(0));
-            Assert.AreEqual(333, ScoreRules.ArmorBonus(2));
-            Assert.AreEqual(0, ScoreRules.ArmorBonus(5), "upgraded armor still measures against three hits");
+            Assert.AreEqual((100, 500), (ScoreRules.KillValue(DifficultyTier.Recruit), ScoreRules.ClearValue(DifficultyTier.Recruit)));
+            Assert.AreEqual((200, 1000), (ScoreRules.KillValue(DifficultyTier.Veteran), ScoreRules.ClearValue(DifficultyTier.Veteran)));
+            Assert.AreEqual((300, 1500), (ScoreRules.KillValue(DifficultyTier.Elite), ScoreRules.ClearValue(DifficultyTier.Elite)));
 
+            Assert.AreEqual("TARGET DESTROYED +100", ScoreRules.KillCallout(100));
+            Assert.AreEqual("MISSION CLEAR +500", ScoreRules.ClearCallout(500));
+            Assert.AreEqual("THIS MISSION +800 // 3 KILLS +300 // CLEAR +500",
+                ScoreRules.MissionLine(new MissionScore(true, 3, 300, 500, 800)));
+            Assert.AreEqual("THIS MISSION +600 // 1 KILL +100 // CLEAR +500",
+                ScoreRules.MissionLine(new MissionScore(true, 1, 100, 500, 600)));
+            Assert.AreEqual("THIS MISSION +200 // 2 KILLS +200", ScoreRules.MissionLine(new MissionScore(false, 2, 200, 0, 1000)));
             Assert.AreEqual("SCORE // 3,520", ScoreRules.ScoreLine(3520));
-            Assert.AreEqual("HIGH SCORE // 3,520", ScoreRules.HighScoreLine(3520, false));
             Assert.AreEqual("NEW HIGH SCORE // 3,520", ScoreRules.HighScoreLine(3520, true));
-            Assert.AreEqual("ACCURACY +300 // ARMOR +1,000",
-                ScoreRules.BonusLine(new MissionScore(true, 300, 300, 1000, 1600)));
         }
     }
 }

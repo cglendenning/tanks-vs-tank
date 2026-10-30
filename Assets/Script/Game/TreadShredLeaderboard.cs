@@ -22,7 +22,7 @@ public enum LeaderboardOpenResult
 public sealed class TreadShredLeaderboard : MonoBehaviour
 {
     // Created in App Store Connect by scripts/app-store-connect.py with score limits 0 to ScoreRules.MaxRunScore.
-    public const string GameCenterId = "treadshred.high_score";
+    public const string GameCenterId = "treadshred.best_run";
     private const string ReceiverName = "TreadShredGameCenter";
 
 #if UNITY_IOS && !UNITY_EDITOR

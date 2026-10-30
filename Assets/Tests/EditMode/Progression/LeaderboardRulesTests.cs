@@ -50,9 +50,9 @@ namespace TreadShred.Progression.Tests
         public void ScoreCeilingMatchesWhatTheGameCanProduce()
         {
             Assert.AreEqual(3, ScoreRules.TierCount);
-            Assert.AreEqual(221400, ScoreRules.MaxRunScore);
-            Assert.IsTrue(LeaderboardRules.ShouldSubmit(221400, 0));
-            Assert.IsFalse(LeaderboardRules.ShouldSubmit(221401, 0));
+            Assert.AreEqual(250800, ScoreRules.MaxRunScore);
+            Assert.IsTrue(LeaderboardRules.ShouldSubmit(250800, 0));
+            Assert.IsFalse(LeaderboardRules.ShouldSubmit(250801, 0));
         }
 
         [Test(Description = "D-032-AC-05: the leaderboard code inherited from the original game is gone")]

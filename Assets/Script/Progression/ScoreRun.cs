@@ -3,37 +3,49 @@ using System.Globalization;
 
 namespace TreadShred.Progression
 {
-    /// <summary>D-032-AC-01: how SCORE is earned, its ceiling, and how it is shown.</summary>
+    /// <summary>
+    /// D-032-AC-01: SCORE is earned only during play and shown the moment it is
+    /// earned: 100 per enemy destroyed and 500 for clearing a mission, doubled on
+    /// Veteran and tripled on Elite. Nothing is added after a mission ends.
+    /// </summary>
     public static class ScoreRules
     {
         public const int KillPoints = 100;
-        public const int MaxAccuracyBonus = 300;
-        public const int MaxArmorBonus = 1000;
-        // Armor bonus is measured against the base three hits, whatever armor upgrades add.
-        public const int ArmorBonusHits = 3;
+        public const int ClearPoints = 500;
 
         // Enemies across missions 1-40, read from each Lv scene's ManagerScore.CountEmnemy (2026-10-30).
         // Update with the scenes: the leaderboard's score limit comes from it.
         public const int EnemiesPerPass = 218;
         public const int TierCount = (int)DifficultyTier.Elite + 1;
 
-        /// <summary>The most a run can score: every enemy and full bonuses on every mission of every tier.</summary>
-        public static int MaxRunScore =>
-            TierCount * (EnemiesPerPass * KillPoints + ProgressionRules.MissionCount * (MaxAccuracyBonus + MaxArmorBonus));
-
-        /// <summary>Kills per shot fired, as a share of 300; Overdrive's extra rounds cannot push it higher.</summary>
-        public static int AccuracyBonus(int kills, int shots)
+        public static int TierMultiplier(DifficultyTier tier)
         {
-            if (shots <= 0 || kills <= 0)
-                return 0;
-            return (int)(Math.Min(1f, (float)kills / shots) * MaxAccuracyBonus);
+            switch (tier)
+            {
+                case DifficultyTier.Veteran:
+                    return 2;
+                case DifficultyTier.Elite:
+                    return 3;
+                default:
+                    return 1;
+            }
         }
 
-        /// <summary>A third of 1,000 for each of the first three hits the tank did not take.</summary>
-        public static int ArmorBonus(int hitsTaken)
+        public static int KillValue(DifficultyTier tier) => KillPoints * TierMultiplier(tier);
+
+        public static int ClearValue(DifficultyTier tier) => ClearPoints * TierMultiplier(tier);
+
+        /// <summary>The most a run can score: every enemy and every mission clear on every tier.</summary>
+        public static int MaxRunScore
         {
-            var kept = ArmorBonusHits - Math.Min(Math.Max(hitsTaken, 0), ArmorBonusHits);
-            return (int)((float)kept / ArmorBonusHits * MaxArmorBonus);
+            get
+            {
+                var perPass = EnemiesPerPass * KillPoints + ProgressionRules.MissionCount * ClearPoints;
+                var total = 0;
+                for (var tier = 0; tier < TierCount; tier++)
+                    total += perPass * TierMultiplier((DifficultyTier)tier);
+                return total;
+            }
         }
 
         public static string ScoreLine(int score) => "SCORE // " + Format(score);
@@ -41,8 +53,17 @@ namespace TreadShred.Progression
         public static string HighScoreLine(int highScore, bool isNew) =>
             (isNew ? "NEW HIGH SCORE // " : "HIGH SCORE // ") + Format(highScore);
 
-        public static string BonusLine(MissionScore mission) =>
-            "ACCURACY +" + Format(mission.AccuracyBonus) + " // ARMOR +" + Format(mission.ArmorBonus);
+        public static string KillCallout(int points) => "TARGET DESTROYED +" + Format(points);
+
+        public static string ClearCallout(int points) => "MISSION CLEAR +" + Format(points);
+
+        /// <summary>What this mission added, in parts that add up: "THIS MISSION +800 // 3 KILLS +300 // CLEAR +500".</summary>
+        public static string MissionLine(MissionScore mission)
+        {
+            var line = "THIS MISSION +" + Format(mission.MissionPoints) + " // " + mission.Kills +
+                       (mission.Kills == 1 ? " KILL +" : " KILLS +") + Format(mission.KillPoints);
+            return mission.ClearPoints > 0 ? line + " // CLEAR +" + Format(mission.ClearPoints) : line;
+        }
 
         private static string Format(int value) => value.ToString("N0", CultureInfo.InvariantCulture);
     }
@@ -50,19 +71,20 @@ namespace TreadShred.Progression
     /// <summary>What one finished mission added to the run.</summary>
     public readonly struct MissionScore
     {
-        public MissionScore(bool won, int killPoints, int accuracyBonus, int armorBonus, int runScore)
+        public MissionScore(bool won, int kills, int killPoints, int clearPoints, int runScore)
         {
             Won = won;
+            Kills = kills;
             KillPoints = killPoints;
-            AccuracyBonus = accuracyBonus;
-            ArmorBonus = armorBonus;
+            ClearPoints = clearPoints;
             RunScore = runScore;
         }
 
         public bool Won { get; }
+        public int Kills { get; }
         public int KillPoints { get; }
-        public int AccuracyBonus { get; }
-        public int ArmorBonus { get; }
+        public int ClearPoints { get; }
+        public int MissionPoints => KillPoints + ClearPoints;
 
         /// <summary>SCORE when the mission ended: the run's final score if the tank was lost.</summary>
         public int RunScore { get; }
@@ -70,9 +92,9 @@ namespace TreadShred.Progression
 
     /// <summary>
     /// D-032-AC-01: SCORE builds across a run of missions and resets when the tank
-    /// is lost. A won mission banks its kills plus accuracy and armor bonuses. A
-    /// lost mission ends the run with its kills counted; Armored Redeploy resumes
-    /// the run from where it stood before that mission. (A revive never ends a mission.)
+    /// is lost. A won mission banks its kills and its clear; a lost mission ends the
+    /// run with its kills counted, and Armored Redeploy resumes the run from where it
+    /// stood before that mission. (A revive never ends a mission.)
     /// </summary>
     public sealed class ScoreRun
     {
@@ -82,7 +104,7 @@ namespace TreadShred.Progression
         public int Banked { get; private set; }
 
         /// <summary>SCORE as it stands mid-mission.</summary>
-        public int Live(int kills) => Banked + Math.Max(kills, 0) * ScoreRules.KillPoints;
+        public int Live(int kills, DifficultyTier tier) => Banked + Math.Max(kills, 0) * ScoreRules.KillValue(tier);
 
         public void Start()
         {
@@ -90,21 +112,21 @@ namespace TreadShred.Progression
             resumeFrom = 0;
         }
 
-        public MissionScore Complete(bool won, int kills, int shots, int hitsTaken)
+        public MissionScore Complete(bool won, int kills, DifficultyTier tier)
         {
-            var killPoints = Math.Max(kills, 0) * ScoreRules.KillPoints;
+            kills = Math.Max(kills, 0);
+            var killPoints = kills * ScoreRules.KillValue(tier);
             if (!won)
             {
                 var final = Banked + killPoints;
                 resumeFrom = Banked;
                 Banked = 0;
-                return new MissionScore(false, killPoints, 0, 0, final);
+                return new MissionScore(false, kills, killPoints, 0, final);
             }
-            var accuracy = ScoreRules.AccuracyBonus(kills, shots);
-            var armor = ScoreRules.ArmorBonus(hitsTaken);
-            Banked += killPoints + accuracy + armor;
+            var clear = ScoreRules.ClearValue(tier);
+            Banked += killPoints + clear;
             resumeFrom = Banked;
-            return new MissionScore(true, killPoints, accuracy, armor, Banked);
+            return new MissionScore(true, kills, killPoints, clear, Banked);
         }
 
         /// <summary>Armored Redeploy replays the lost mission with the run as it stood before it.</summary>

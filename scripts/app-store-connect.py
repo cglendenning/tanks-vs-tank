@@ -21,17 +21,17 @@ import jwt
 
 BUNDLE_ID = "com.tgts.tanksvstank"
 LEADERBOARD = {
-    "vendorIdentifier": "treadshred.high_score",  # TreadShredLeaderboard.GameCenterId
+    "vendorIdentifier": "treadshred.best_run",  # TreadShredLeaderboard.GameCenterId
     "referenceName": "High Score",
     "defaultFormatter": "INTEGER",
     "submissionType": "BEST_SCORE",
     "scoreSortType": "DESC",
     "scoreRangeStart": "0",
-    "scoreRangeEnd": "221400",  # ScoreRules.MaxRunScore: 3 tiers x (218 enemies x 100 + 40 missions x 1300)
+    "scoreRangeEnd": "250800",  # ScoreRules.MaxRunScore: (218 kills x 100 + 40 clears x 500) x (1 + 2 + 3)
 }
 LEADERBOARD_NAME = {"locale": "en-US", "name": "HIGH SCORE"}
 # Boards the game no longer submits to; archived (reversible), never deleted.
-RETIRED = ["treadshred.total_score"]
+RETIRED = ["treadshred.total_score", "treadshred.high_score"]
 
 
 class AppStoreConnect:
@@ -78,6 +78,19 @@ def game_center(api):
         print("Game Center already enabled:", detail["id"])
 
     boards = api.call("GET", f"/v1/gameCenterDetails/{detail['id']}/gameCenterLeaderboards")["data"]
+    # Retire old boards first: archived (reversible), and renamed so their names can be reused.
+    for retired in boards:
+        attributes = retired["attributes"]
+        if attributes["vendorIdentifier"] not in RETIRED:
+            continue
+        name = attributes["referenceName"]
+        update = {"archived": True}
+        if not name.endswith("(retired)"):
+            update["referenceName"] = name + " (retired)"
+        if not attributes.get("archived") or "referenceName" in update:
+            api.call("PATCH", f"/v1/gameCenterLeaderboards/{retired['id']}", {"data": {
+                "type": "gameCenterLeaderboards", "id": retired["id"], "attributes": update}})
+            print("Retired leaderboard archived:", attributes["vendorIdentifier"])
     board = next((b for b in boards if b["attributes"]["vendorIdentifier"] == LEADERBOARD["vendorIdentifier"]), None)
     if board is None:
         board = api.create("gameCenterLeaderboards", LEADERBOARD,
@@ -85,12 +98,6 @@ def game_center(api):
         print("Leaderboard created:", board["id"])
     else:
         print("Leaderboard already exists:", board["id"])
-
-    for retired in boards:
-        if retired["attributes"]["vendorIdentifier"] in RETIRED and not retired["attributes"].get("archived"):
-            api.call("PATCH", f"/v1/gameCenterLeaderboards/{retired['id']}", {"data": {
-                "type": "gameCenterLeaderboards", "id": retired["id"], "attributes": {"archived": True}}})
-            print("Retired leaderboard archived:", retired["attributes"]["vendorIdentifier"])
 
     names = api.call("GET", f"/v1/gameCenterLeaderboards/{board['id']}/localizations")["data"]
     if not any(n["attributes"]["locale"] == LEADERBOARD_NAME["locale"] for n in names):
