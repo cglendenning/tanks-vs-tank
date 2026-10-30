@@ -19,6 +19,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private const int Statistics = 8;
     private const int ActionCapture = 9;
     private const int RealActionCapture = 10;
+    private const int Upgrades = 11;
 
     private PlayerMoverment player;
     private ManagerScore score;
@@ -38,7 +39,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private static void InstallIfEnabled()
     {
         var mode = PlayerPrefs.GetInt(CaptureModeKey, 0);
-        if (mode < CombatSingle || mode > RealActionCapture)
+        if (mode < CombatSingle || mode > Upgrades)
             return;
 
         Debug.Log($"[STORE_CAPTURE] installing capture driver mode={mode}");
@@ -76,6 +77,8 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
                 Invoke(nameof(ShowSettings), 0.8f);
             else if (mode == Statistics)
                 Invoke(nameof(ShowStatistics), 0.8f);
+            else if (mode == Upgrades)
+                Invoke(nameof(ShowUpgrades), 0.8f);
             else
                 Invoke(nameof(LoadCombatScene), 0.8f);
             return;
@@ -118,6 +121,13 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
         var menu = FindObjectOfType<LoadLv>();
         if (menu != null)
             menu.Option();
+    }
+
+    private void ShowUpgrades()
+    {
+        var menu = FindObjectOfType<LoadLv>();
+        if (menu != null)
+            menu.Upgrades();
     }
 
     private void ShowStatistics()

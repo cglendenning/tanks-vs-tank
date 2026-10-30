@@ -76,7 +76,13 @@ namespace TreadShred.Economy
 
         public static OfferPlan Plan(GemOffer offer, int balance)
         {
-            var cost = Cost(offer);
+            return PlanFor(Cost(offer), balance);
+        }
+
+        // Spend directly when the balance covers the gem cost, otherwise buy
+        // the smallest pack that covers the shortfall.
+        public static OfferPlan PlanFor(int cost, int balance)
+        {
             return balance >= cost
                 ? new OfferPlan(cost, null)
                 : new OfferPlan(cost, SmallestPackCovering(cost - balance));

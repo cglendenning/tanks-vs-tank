@@ -124,6 +124,22 @@ public class LoadLv : MonoBehaviour {
         // never collapse onto one another.
         RestoreStartScreenLayout();
         RestoreSettingsInteractivity();
+
+        // Upgrade shop entry (D-017) and tier choice on mission select (D-019).
+        var font = TreadShredUi.FindFont(PanelStart);
+        if (PanelStart != null)
+        {
+            var upgrades = TreadShredUi.CreateButton("UPGRADES", (RectTransform)PanelStart.transform, Vector2.zero,
+                new Vector2(320f, 96f), 34, font, Upgrades);
+            var rect = (RectTransform)upgrades.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0.86f, 0.50f);
+        }
+        TreadShredTierSelector.Attach(PanelMenu, font);
+    }
+
+    public void Upgrades()
+    {
+        TreadShredUpgradePanel.Show(TreadShredUi.FindFont(PanelStart));
     }
 
     public void StopMS()

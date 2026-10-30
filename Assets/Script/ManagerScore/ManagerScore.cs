@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using TreadShred.Economy;
+using TreadShred.Progression;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -125,7 +126,7 @@ public class ManagerScore : MonoBehaviour
         string level = Application.loadedLevelName;
         int currentLevel = int.Parse(level.Substring(2));
 
-        int T1 = ((int)(CurDieEmnemy * 100)) + ((int)((float)CurDieEmnemy / (float)CurCountbullet) * 300) + (((int)((3 - (float)CurHeath) / 3)) * 1000) + (CurDieEmnemy * 100);
+        int T1 = ((int)(CurDieEmnemy * 100)) + ((int)((float)CurDieEmnemy / (float)CurCountbullet) * 300) + (((int)((3 - (float)Mathf.Min(CurHeath, 3)) / 3)) * 1000) + (CurDieEmnemy * 100);
         int T2 = (SumEmnemy * 100) + 1300 + (SumEmnemy * 100);
 
         int LevelS = (int)(CurDieEmnemy * 100);
@@ -140,7 +141,7 @@ public class ManagerScore : MonoBehaviour
 
         int AccurasyR = (CurCountbullet > 0) ? (int)(((float)CurDieEmnemy / (float)CurCountbullet) * 300) : 0;
 
-        int HealthR = (int)(((3 - (float)CurHeath) / 3) * 1000);
+        int HealthR = (int)(((3 - (float)Mathf.Min(CurHeath, 3)) / 3) * 1000);
         int KillR = CurDieEmnemy * 100;
         int SumForMedel = AccurasyR + HealthR;
         if (CountEmnemy < 1)
@@ -275,6 +276,7 @@ public class ManagerScore : MonoBehaviour
                 }
 
                 wf = true;
+                TreadShredProgress.Ensure().CompleteCurrentMission(true);
                 VictoryObj.SetActive(true);
                 StartCoroutine(DelayVictotory());
 
@@ -310,6 +312,7 @@ public class ManagerScore : MonoBehaviour
         if (wf == false)
         {
             wf = true;
+            TreadShredProgress.Ensure().CompleteCurrentMission(false);
             BeginNewRun();
             campaignScore = 0;
             FailureObj.SetActive(true);
@@ -367,6 +370,12 @@ public class ManagerScore : MonoBehaviour
         rewardButton = TreadShredUi.CreateButton(action, rootRect, new Vector2(0f, -50f), new Vector2(520f, 72f), 22,
             rewardFont, onTap);
         RefreshOfferControls(null);
+
+        // Coins, milestone gems and tier unlocks earned by this mission (D-018, D-026, D-019).
+        var reward = TreadShredProgress.Ensure().LastReward;
+        if (reward.HasValue)
+            TreadShredUi.CreateText(ProgressionLabels.Reward(reward.Value), (RectTransform)VictoryofFail.transform,
+                new Vector2(0f, 104f), new Vector2(900f, 32f), 22, rewardFont).color = TreadShredUi.TitleColor;
     }
 
     // Pass a status to replace the balance line, or null to show the balance.

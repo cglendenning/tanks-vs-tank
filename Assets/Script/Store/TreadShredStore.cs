@@ -14,8 +14,8 @@ public sealed class TreadShredStore : MonoBehaviour
 {
     private sealed class PendingPurchase
     {
-        // Null when the player is only buying gems, not redeeming an offer.
-        public GemOffer? Offer;
+        // Gems to spend once the pack is credited; 0 when only buying gems.
+        public int SpendCost;
         public Action OnApplied;
         public Action<string> OnStatus;
     }
@@ -84,13 +84,22 @@ public sealed class TreadShredStore : MonoBehaviour
     /// </summary>
     public void RedeemOffer(GemOffer offer, Action onApplied, Action<string> onStatus)
     {
+        SpendOrBuy(GemCatalog.Cost(offer), onApplied, onStatus);
+    }
+
+    /// <summary>
+    /// Spends a gem cost, or buys the smallest covering pack and then spends,
+    /// so any gem purchase (boost, revive, upgrade top-up) is one tap.
+    /// </summary>
+    public void SpendOrBuy(int cost, Action onApplied, Action<string> onStatus)
+    {
         if (pendingPurchase != null)
         {
             onStatus("PURCHASE IN PROGRESS");
             return;
         }
 
-        var plan = PlanFor(offer);
+        var plan = GemCatalog.PlanFor(cost, Wallet.Balance);
         if (plan.CanSpendNow)
         {
             if (Wallet.TrySpend(plan.Cost))
@@ -100,8 +109,10 @@ public sealed class TreadShredStore : MonoBehaviour
             return;
         }
 
-        StartPurchase(plan.PackToBuy, new PendingPurchase { Offer = offer, OnApplied = onApplied, OnStatus = onStatus });
+        StartPurchase(plan.PackToBuy, new PendingPurchase { SpendCost = cost, OnApplied = onApplied, OnStatus = onStatus });
     }
+
+    public bool PurchaseInProgress => pendingPurchase != null;
 
     /// <summary>
     /// Buys a gem pack outright; onCredited runs once the gems are in the wallet.
@@ -233,7 +244,7 @@ public sealed class TreadShredStore : MonoBehaviour
 
         var purchase = pendingPurchase;
         pendingPurchase = null;
-        if (!purchase.Offer.HasValue || Wallet.TrySpend(GemCatalog.Cost(purchase.Offer.Value)))
+        if (purchase.SpendCost == 0 || Wallet.TrySpend(purchase.SpendCost))
             purchase.OnApplied();
         else
             purchase.OnStatus("NOT ENOUGH GEMS");

@@ -1,6 +1,4 @@
-using System;
 using TreadShred.Economy;
-using UnityEngine;
 
 public sealed class PlayerPrefsWalletStore : IWalletStore
 {
@@ -8,24 +6,11 @@ public sealed class PlayerPrefsWalletStore : IWalletStore
 
     public WalletState Load()
     {
-        var json = PlayerPrefs.GetString(Key, string.Empty);
-        if (string.IsNullOrEmpty(json))
-            return new WalletState();
-
-        try
-        {
-            return JsonUtility.FromJson<WalletState>(json) ?? new WalletState();
-        }
-        catch (ArgumentException error)
-        {
-            Debug.LogError("[Store] Saved gem wallet is unreadable; starting from an empty wallet. " + error.Message);
-            return new WalletState();
-        }
+        return PlayerPrefsJson.Load<WalletState>(Key);
     }
 
     public void Save(WalletState state)
     {
-        PlayerPrefs.SetString(Key, JsonUtility.ToJson(state));
-        PlayerPrefs.Save();
+        PlayerPrefsJson.Save(Key, state);
     }
 }

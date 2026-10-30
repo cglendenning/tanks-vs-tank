@@ -58,9 +58,13 @@ public class PlayerMoverment : MonoBehaviour {
         CacheArenaBounds();
         viewCamera = Camera.main;
         canbullet = true;
+        // Armor and speed upgrades (D-017); Armored Redeploy adds one hit (D-009).
+        var progress = TreadShredProgress.Ensure();
+        countdie = progress.ArmorHits;
+        Speed *= progress.SpeedMultiplier;
         if (PlayerPrefs.GetInt("TreadShredArmorCache", 0) > 0)
         {
-            countdie = 4;
+            countdie += 1;
             PlayerPrefs.DeleteKey("TreadShredArmorCache");
             PlayerPrefs.Save();
         }
@@ -592,6 +596,34 @@ public class PlayerMoverment : MonoBehaviour {
         StartCoroutine(DelayHeath());
 
         if (countdie < 1 && countdie > -1)
+        {
+            // D-020: offer a revive before the tank is lost.
+            if (!TreadShredRevivePanel.TryOffer(this))
+                Die();
+        }
+    }
+
+    // D-020: restore the tank in place at full armor after a paid revive.
+    public void Revive()
+    {
+        countdie = TreadShredProgress.Ensure().ArmorHits;
+        foreach (var heart in Heart)
+        {
+            if (heart == null)
+                continue;
+            heart.transform.localScale = Vector3.one;
+            var image = heart.GetComponent<Image>();
+            if (image != null)
+            {
+                var color = image.color;
+                color.a = 1f;
+                image.color = color;
+            }
+        }
+    }
+
+    public void Die()
+    {
         {
             MusicManager.instance.ExplosionTank();
             ManagerScore.instance.Rung();

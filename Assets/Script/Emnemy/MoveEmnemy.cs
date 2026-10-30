@@ -30,6 +30,11 @@ public class MoveEmnemy : MonoBehaviour {
         player = GameObject.FindGameObjectWithTag("player");
         agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
         agent.enabled = false;
+        // Tougher tiers field faster enemies (D-019).
+        var speed = TreadShredProgress.Ensure().TierModifiers.EnemySpeed;
+        speedvelocity *= speed;
+        speedtuantra *= speed;
+        agent.speed *= speed;
        
     }
     public float speedtuantra;
