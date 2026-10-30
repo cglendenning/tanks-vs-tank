@@ -8,14 +8,12 @@ using TreadShred.Analytics;
 using UnityEngine;
 
 /// <summary>
-/// D-021: sends game events to Firebase Analytics. Events wait in a short
-/// queue until Firebase is ready; analytics never blocks or breaks gameplay.
+/// D-021: sends game events to Firebase Analytics through AnalyticsDispatcher,
+/// which queues until Firebase is ready and never lets a failure reach gameplay.
 /// </summary>
 public static class TreadShredAnalytics
 {
-    private const int MaxQueued = 100;
-    private static readonly Queue<AnalyticsEvent> queued = new Queue<AnalyticsEvent>();
-    private static bool ready;
+    private static readonly AnalyticsDispatcher dispatcher = new AnalyticsDispatcher(Send, Debug.LogWarning);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Initialize()
@@ -27,27 +25,19 @@ public static class TreadShredAnalytics
                 Debug.LogWarning("[Analytics] Firebase unavailable: " + (task.Exception?.Message ?? task.Result.ToString()));
                 return;
             }
-            ready = true;
-            Debug.Log("[Analytics] Firebase ready; sending " + queued.Count + " queued events");
-            while (queued.Count > 0)
-                Send(queued.Dequeue());
+            Debug.Log("[Analytics] Firebase ready; sending " + dispatcher.Queued + " queued events");
+            dispatcher.MarkReady();
         });
     }
 
     public static void Log(AnalyticsEvent analyticsEvent)
     {
-        if (!ready)
-        {
-            if (queued.Count < MaxQueued)
-                queued.Enqueue(analyticsEvent);
-            return;
-        }
-        Send(analyticsEvent);
+        dispatcher.Log(analyticsEvent);
     }
 
     public static void SetUserProperty(string name, string value)
     {
-        if (!ready)
+        if (!dispatcher.Ready)
             return;
         try
         {
@@ -61,15 +51,7 @@ public static class TreadShredAnalytics
 
     private static void Send(AnalyticsEvent analyticsEvent)
     {
-        try
-        {
-            var parameters = analyticsEvent.Parameters.Select(ToParameter).ToArray();
-            FirebaseAnalytics.LogEvent(analyticsEvent.Name, parameters);
-        }
-        catch (Exception error)
-        {
-            Debug.LogWarning("[Analytics] " + analyticsEvent.Name + " failed: " + error.Message);
-        }
+        FirebaseAnalytics.LogEvent(analyticsEvent.Name, analyticsEvent.Parameters.Select(ToParameter).ToArray());
     }
 
     private static Parameter ToParameter(KeyValuePair<string, object> entry)

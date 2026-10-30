@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using TreadShred.BuildPolicy;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -74,6 +75,7 @@ public static class TankBuildAutomation
         AssertBuildSucceeded(report, "iOS");
         PatchIosInfoPlist(output);
         PatchIosEntitlements(output);
+        EnforceNoAdvertisingId(output);
         // Simulator apps are not provisioned; only device exports need the
         // distribution identity and profile.
         if (!simulator)
@@ -211,6 +213,19 @@ public static class TankBuildAutomation
         PlayerSettings.Android.keystorePass = keystorePassword;
         PlayerSettings.Android.keyaliasName = alias;
         PlayerSettings.Android.keyaliasPass = aliasPassword;
+    }
+
+    // D-005, D-021-AC-01: swap in Firebase Analytics without ad-ID support,
+    // then fail the build if anything could still collect the ad ID.
+    private static void EnforceNoAdvertisingId(string buildPath)
+    {
+        var projectPath = Path.Combine(buildPath, "Unity-iPhone.xcodeproj", "project.pbxproj");
+        var project = XcodeProjectPolicy.UseAnalyticsWithoutAdvertisingId(File.ReadAllText(projectPath));
+        File.WriteAllText(projectPath, project);
+        var violations = XcodeProjectPolicy.AdvertisingIdViolations(project,
+            File.ReadAllText(Path.Combine(buildPath, "Info.plist")));
+        if (violations.Count > 0)
+            throw new BuildFailedException("iOS export can collect the advertising ID: " + string.Join(", ", violations));
     }
 
     private static void PatchIosInfoPlist(string buildPath)

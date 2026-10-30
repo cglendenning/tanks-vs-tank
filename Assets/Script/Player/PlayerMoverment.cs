@@ -60,20 +60,11 @@ public class PlayerMoverment : MonoBehaviour {
         canbullet = true;
         // Armor and speed upgrades (D-017); Armored Redeploy adds one hit (D-009).
         var progress = TreadShredProgress.Ensure();
-        countdie = progress.ArmorHits;
+        var loadout = TreadShredBoosts.Current.ConsumeForMission(progress.ArmorHits);
+        countdie = loadout.ArmorHits;
+        missionArmorHits = loadout.ArmorHits;
+        overdriveActive = loadout.RoundsPerTap > 1;
         Speed *= progress.SpeedMultiplier;
-        if (PlayerPrefs.GetInt("TreadShredArmorCache", 0) > 0)
-        {
-            countdie += 1;
-            PlayerPrefs.DeleteKey("TreadShredArmorCache");
-            PlayerPrefs.Save();
-        }
-        if (PlayerPrefs.GetInt("TreadShredOverdrive", 0) > 0)
-        {
-            overdriveActive = true;
-            PlayerPrefs.DeleteKey("TreadShredOverdrive");
-            PlayerPrefs.Save();
-        }
        if (StyteBullet == null)
         {
             StyteBullet = GameObject.Find("Canvas");
@@ -125,6 +116,8 @@ public class PlayerMoverment : MonoBehaviour {
   public int countbullet = 0;
     bool canbullet;
     private bool overdriveActive;
+    // Full armor for this mission, including an Armored Redeploy hit (D-009, D-020).
+    private int missionArmorHits;
     //Biến kiểm tra dùng trên điện thoại khi không có touch nào trên object
     bool isnotoverobject;
     void Update()
@@ -615,7 +608,7 @@ public class PlayerMoverment : MonoBehaviour {
     // D-020: restore the tank in place at full armor after a paid revive.
     public void Revive()
     {
-        countdie = TreadShredProgress.Ensure().ArmorHits;
+        countdie = missionArmorHits;
         foreach (var heart in Heart)
         {
             if (heart == null)

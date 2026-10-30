@@ -100,9 +100,8 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
             // one-screen overdrive state awarded by the rewarded-ad callback.
             // The simulator will supply real taps through the normal input
             // path; this driver does not synthesize projectiles or impacts.
-            PlayerPrefs.SetInt("TreadShredOverdrive", 1);
-            PlayerPrefs.SetInt("TreadShredArmorCache", 1);
-            PlayerPrefs.Save();
+            TreadShredBoosts.Current.ArmOverdrive();
+            TreadShredBoosts.Current.ArmRedeploy();
             SceneManager.LoadScene("Lv26", LoadSceneMode.Single);
             return;
         }

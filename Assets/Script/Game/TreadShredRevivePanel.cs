@@ -18,8 +18,7 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
     private Text countdownText;
     private Text balanceText;
     private Button reviveButton;
-    private float remaining;
-    private bool finished;
+    private ReviveOffer offer;
 
     /// <summary>Shows the offer and returns true, or returns false when no revive is allowed.</summary>
     public static bool TryOffer(PlayerMoverment player)
@@ -45,12 +44,11 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
 
         var panel = root.AddComponent<TreadShredRevivePanel>();
         panel.player = player;
+        panel.offer = new ReviveOffer(revivesThisMission);
         panel.Build((RectTransform)root.transform, TreadShredUi.FindFont(GameObject.Find("Canvas")));
         Time.timeScale = 0f;
         return true;
     }
-
-    private int Cost => ReviveRules.CostGems(revivesThisMission);
 
     private void Build(RectTransform root, Font font)
     {
@@ -77,7 +75,6 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
         countdownText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(330f, 170f), new Vector2(160f, 70f), 56, font);
         countdownText.color = TreadShredUi.AccentColor;
 
-        remaining = ProgressionRules.ReviveOfferSeconds;
         Refresh(null);
         TreadShredAnalytics.Log(GameEvents.OfferShown("revive", TreadShredStore.Ensure().Wallet.Balance));
     }
@@ -85,7 +82,7 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
     private void Refresh(string status)
     {
         var store = TreadShredStore.Ensure();
-        var plan = GemCatalog.PlanFor(Cost, store.Wallet.Balance);
+        var plan = GemCatalog.PlanFor(offer.Cost, store.Wallet.Balance);
         var price = plan.CanSpendNow ? null : store.PriceFor(plan.PackToBuy);
         TreadShredUi.SetLabel(reviveButton, OfferLabels.ActionButton("REVIVE", plan, price));
         balanceText.text = status ?? OfferLabels.BalanceLine(store.Wallet.Balance, plan);
@@ -93,26 +90,26 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
 
     private void Update()
     {
-        if (finished)
+        if (offer.Outcome != ReviveOutcome.Pending)
             return;
 
-        // The countdown waits while the store's purchase sheet is open.
-        if (!TreadShredStore.Ensure().PurchaseInProgress)
-            remaining -= Time.unscaledDeltaTime;
-        countdownText.text = Mathf.CeilToInt(Mathf.Max(0f, remaining)).ToString();
-        if (remaining <= 0f)
-            Decline();
+        var expired = offer.Tick(Time.unscaledDeltaTime, TreadShredStore.Ensure().PurchaseInProgress);
+        countdownText.text = offer.SecondsShown.ToString();
+        if (expired)
+            Lose();
     }
 
     private void Accept()
     {
-        if (finished)
+        if (offer.Outcome != ReviveOutcome.Pending)
             return;
 
-        var cost = Cost;
+        var cost = offer.Cost;
         var packBought = !GemCatalog.PlanFor(cost, TreadShredStore.Ensure().Wallet.Balance).CanSpendNow;
         TreadShredStore.Ensure().SpendOrBuy(cost, () =>
         {
+            if (!offer.Accept())
+                return;
             TreadShredAnalytics.Log(GameEvents.OfferAccepted("revive", cost, packBought));
             revivesThisMission++;
             Finish();
@@ -123,9 +120,12 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
 
     private void Decline()
     {
-        if (finished)
-            return;
+        if (offer.Decline())
+            Lose();
+    }
 
+    private void Lose()
+    {
         Finish();
         if (player != null)
             player.Die();
@@ -133,7 +133,6 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
 
     private void Finish()
     {
-        finished = true;
         Time.timeScale = 1f;
         Destroy(gameObject);
     }

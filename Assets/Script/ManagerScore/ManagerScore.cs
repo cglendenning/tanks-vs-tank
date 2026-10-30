@@ -404,8 +404,7 @@ public class ManagerScore : MonoBehaviour
         {
             rewardUsedThisScreen = true;
             TreadShredAnalytics.Log(GameEvents.OfferAccepted(OfferName(GemOffer.ArmoredRedeploy), GemCatalog.Cost(GemOffer.ArmoredRedeploy), packBought));
-            PlayerPrefs.SetInt("TreadShredArmorCache", 1);
-            PlayerPrefs.Save();
+            TreadShredBoosts.Current.ArmRedeploy();
             ReloadCurrentMission();
         }, RefreshOfferControls);
     }
@@ -420,8 +419,7 @@ public class ManagerScore : MonoBehaviour
         {
             rewardUsedThisScreen = true;
             TreadShredAnalytics.Log(GameEvents.OfferAccepted(OfferName(GemOffer.Overdrive), GemCatalog.Cost(GemOffer.Overdrive), packBought));
-            PlayerPrefs.SetInt("TreadShredOverdrive", 1);
-            PlayerPrefs.Save();
+            TreadShredBoosts.Current.ArmOverdrive();
             rewardButton.interactable = false;
             RefreshOfferControls("OVERDRIVE READY FOR YOUR NEXT MISSION");
         }, RefreshOfferControls);
