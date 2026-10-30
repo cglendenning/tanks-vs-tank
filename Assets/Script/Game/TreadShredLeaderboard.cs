@@ -15,14 +15,14 @@ public enum LeaderboardOpenResult
 /// <summary>
 /// D-032: the platform leaderboard (Game Center on iOS, through the
 /// TreadShredGameCenter plugin). The platform owns the player's identity and
-/// nickname; the game submits TOTAL SCORE and reads back the top entries and
+/// nickname; the game submits HIGH SCORE and reads back the top entries and
 /// the player's rank for its own leaderboard screen. Sign-in is offered when
 /// the player taps LEADERBOARD, never forced, and nothing here pauses play.
 /// </summary>
 public sealed class TreadShredLeaderboard : MonoBehaviour
 {
-    // Created in App Store Connect by scripts/app-store-connect.py with score limits 0 to LeaderboardRules.MaxTotalScore.
-    public const string GameCenterId = "treadshred.total_score";
+    // Created in App Store Connect by scripts/app-store-connect.py with score limits 0 to ScoreRules.MaxRunScore.
+    public const string GameCenterId = "treadshred.high_score";
     private const string ReceiverName = "TreadShredGameCenter";
 
 #if UNITY_IOS && !UNITY_EDITOR
@@ -72,7 +72,7 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
         TreadShredGameCenterSignIn();
     }
 
-    /// <summary>Submits TOTAL SCORE when it beats what Game Center holds for the player.</summary>
+    /// <summary>Submits HIGH SCORE when it beats what Game Center holds for the player.</summary>
     public static void SubmitIfRaised()
     {
         if (!Available || !SignedIn || submitting)
@@ -81,12 +81,12 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
         var onGameCenter = LeaderboardRules.Baseline(gameCenterScore, acceptedThisSession);
         if (!onGameCenter.HasValue)
             return;
-        var total = TreadShredScores.TotalScore();
-        if (!LeaderboardRules.ShouldSubmit(total, onGameCenter.Value))
+        var highScore = TreadShredScores.HighScore;
+        if (!LeaderboardRules.ShouldSubmit(highScore, onGameCenter.Value))
             return;
         submitting = true;
-        submittingTotal = total;
-        TreadShredGameCenterSubmit(total, GameCenterId);
+        submittingTotal = highScore;
+        TreadShredGameCenterSubmit(highScore, GameCenterId);
     }
 
     /// <summary>Calls back with the player's all-time rank, after any submission in flight.</summary>

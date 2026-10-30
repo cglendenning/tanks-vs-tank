@@ -14,7 +14,7 @@ namespace TreadShred.Progression.Tests
             var setup = File.ReadAllText(Path.Combine(root, "scripts/app-store-connect.py"));
             var rangeEnd = Regex.Match(setup, "\"scoreRangeEnd\":\\s*\"(\\d+)\"");
             Assert.IsTrue(rangeEnd.Success, "the setup script sets an upper score limit");
-            Assert.AreEqual(LeaderboardRules.MaxTotalScore, int.Parse(rangeEnd.Groups[1].Value));
+            Assert.AreEqual(ScoreRules.MaxRunScore, int.Parse(rangeEnd.Groups[1].Value));
             StringAssert.Contains("\"scoreRangeStart\": \"0\"", setup);
 
             var bridge = File.ReadAllText(Path.Combine(Application.dataPath, "Script/Game/TreadShredLeaderboard.cs"));

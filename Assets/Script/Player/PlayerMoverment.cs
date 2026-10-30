@@ -630,7 +630,7 @@ public class PlayerMoverment : MonoBehaviour {
             MusicManager.instance.ExplosionTank();
             ManagerScore.instance.Rung();
             Instantiate(ExTank, pointbullet.position, Quaternion.Euler(-90, 0, 0));
-            ManagerScore.instance.CaculaterScore();
+            ManagerScore.instance.CaculaterScore(false);
             ManagerScore.instance.Failure();
          
             GetComponent<BoxCollider>().enabled = false;

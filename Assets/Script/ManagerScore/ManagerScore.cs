@@ -46,12 +46,6 @@ public class ManagerScore : MonoBehaviour
         instance = this;
         SumEmnemy = CountEmnemy;
         LogMissionStart();
-        if (!activeRunStarted)
-        {
-            activeRunStarted = true;
-            activeRunScore = 0;
-        }
-        campaignScore = activeRunScore;
         if (CanvasGame == null)
         {
             CanvasGame = GameObject.Find("Canvas");
@@ -85,9 +79,8 @@ public class ManagerScore : MonoBehaviour
         if (KillScore == null)
             return;
 
-        campaignScore = activeRunScore;
-        var liveMissionScore = scoreCommitted ? 0 : CurDieEmnemy * 100;
-        KillScore.text = "SCORE // " + (campaignScore + liveMissionScore).ToString();
+        // SCORE: the run so far plus this mission's kills, or the run as the mission ended (D-032-AC-01).
+        KillScore.text = ScoreRules.ScoreLine(scoreCommitted ? lastMission.RunScore : TreadShredScores.Run.Live(CurDieEmnemy));
     }
 
     public float test;
@@ -100,29 +93,23 @@ public class ManagerScore : MonoBehaviour
     private Text rewardBalanceText;
     private Button rewardButton;
     private Font rewardFont;
-    private static int activeRunScore;
-    private static bool activeRunStarted;
-    private int campaignScore;
     private bool scoreCommitted;
+    // How this mission ended for SCORE, and whether it set a new HIGH SCORE (D-032-AC-01).
+    private MissionScore lastMission;
+    private bool newHighScore;
 
     public static void BeginNewRun()
     {
-        activeRunStarted = true;
-        activeRunScore = 0;
-        PlayerPrefs.DeleteKey("TreadShredCampaignScore");
-        PlayerPrefs.Save();
+        TreadShredScores.Run.Start();
     }
 
     public static void EndRun()
     {
-        activeRunStarted = false;
-        activeRunScore = 0;
-        PlayerPrefs.DeleteKey("TreadShredCampaignScore");
-        PlayerPrefs.Save();
+        TreadShredScores.Run.Start();
     }
 
 
-    public void CaculaterScore()
+    public void CaculaterScore(bool won)
     {
 
         string level = Application.loadedLevelName;
@@ -133,12 +120,13 @@ public class ManagerScore : MonoBehaviour
 
         int LevelS = (int)(CurDieEmnemy * 100);
 
-        var missionWon = FailureObj == null || !FailureObj.activeSelf;
-        if (!scoreCommitted && missionWon)
+        // A won mission banks kills and bonuses into SCORE; a lost one ends the run (D-032-AC-01).
+        if (!scoreCommitted)
         {
-            activeRunScore += LevelS;
-            campaignScore = activeRunScore;
             scoreCommitted = true;
+            lastMission = TreadShredScores.Run.Complete(won, CurDieEmnemy, CurCountbullet, CurHeath);
+            newHighScore = TreadShredScores.RecordScore(lastMission.RunScore);
+            TreadShredLeaderboard.SubmitIfRaised();
         }
 
         int AccurasyR = (CurCountbullet > 0) ? (int)(((float)CurDieEmnemy / (float)CurCountbullet) * 300) : 0;
@@ -146,7 +134,6 @@ public class ManagerScore : MonoBehaviour
         int HealthR = (int)(((3 - (float)Mathf.Min(CurHeath, 3)) / 3) * 1000);
         int KillR = CurDieEmnemy * 100;
         int SumForMedel = AccurasyR + HealthR;
-        lastMissionScore = SumForMedel;
         if (CountEmnemy < 1)
         {
             if (SumForMedel >= 1200)
@@ -176,9 +163,6 @@ public class ManagerScore : MonoBehaviour
         }
 
 
-        // Each tier keeps its own best, so replaying on Veteran and Elite adds to TOTAL SCORE (D-019, D-032).
-        TreadShredScores.SaveIfBest(TreadShredProgress.Ensure().SelectedTier, currentLevel, SumForMedel);
-        TreadShredLeaderboard.SubmitIfRaised();
 
 
         StartCoroutine(DelayScore(LevelS));
@@ -298,7 +282,7 @@ public class ManagerScore : MonoBehaviour
         CanvasGame.transform.GetChild(2).gameObject.SetActive(false);
         CanvasGame.transform.GetChild(10).gameObject.SetActive(false);
         MusicManager.instance.Victory();
-        CaculaterScore();
+        CaculaterScore(true);
         VictoryofFail.SetActive(true);
         if (FailureObj != null && FailureObj.activeSelf)
             BuildFailureRewardActions();
@@ -314,8 +298,9 @@ public class ManagerScore : MonoBehaviour
         {
             wf = true;
             LogMissionEnd(TreadShredProgress.Ensure().CompleteCurrentMission(false), false);
-            BeginNewRun();
-            campaignScore = 0;
+            // The tank was lost: SCORE's run ends here unless Armored Redeploy resumes it.
+            if (!scoreCommitted)
+                CaculaterScore(false);
             FailureObj.SetActive(true);
             StartCoroutine(DelayVictotory());
             Debug.Log("thua");
@@ -386,14 +371,18 @@ public class ManagerScore : MonoBehaviour
                 () => TreadShredLeaderboardPanel.OpenFrom(rewardFont));
 
         // Where the player stands on the platform leaderboard, once it reports (D-032).
-        // This mission's rating and the TOTAL SCORE the leaderboard ranks, with the rank beneath once reported.
-        TreadShredUi.CreateText(LeaderboardRules.MissionLine(lastMissionScore), (RectTransform)VictoryofFail.transform,
-            new Vector2(-240f, 172f), new Vector2(460f, 32f), 22, rewardFont).color = Color.white;
-        TreadShredUi.CreateText(LeaderboardRules.TotalLine(TreadShredScores.TotalScore()),
-            (RectTransform)VictoryofFail.transform, new Vector2(240f, 172f), new Vector2(460f, 32f), 22, rewardFont)
-            .color = Color.white;
-        var rankText = TreadShredUi.CreateText(string.Empty, (RectTransform)VictoryofFail.transform,
-            new Vector2(0f, 138f), new Vector2(900f, 32f), 22, rewardFont);
+        // SCORE and HIGH SCORE (D-032-AC-01), this mission's bonuses when won, and the rank once reported.
+        var results = (RectTransform)VictoryofFail.transform;
+        TreadShredUi.CreateText(ScoreRules.ScoreLine(lastMission.RunScore), results, new Vector2(-240f, 172f),
+            new Vector2(460f, 32f), 22, rewardFont).color = Color.white;
+        TreadShredUi.CreateText(ScoreRules.HighScoreLine(TreadShredScores.HighScore, newHighScore), results,
+            new Vector2(240f, 172f), new Vector2(460f, 32f), 22, rewardFont).color =
+            newHighScore ? TreadShredUi.TitleColor : Color.white;
+        if (lastMission.Won)
+            TreadShredUi.CreateText(ScoreRules.BonusLine(lastMission), results, new Vector2(0f, 138f),
+                new Vector2(900f, 30f), 20, rewardFont).color = TreadShredUi.DetailColor;
+        var rankText = TreadShredUi.CreateText(string.Empty, results, new Vector2(0f, 206f), new Vector2(900f, 32f), 22,
+            rewardFont);
         rankText.color = Color.white;
         TreadShredLeaderboard.RequestRank(rank =>
         {
@@ -446,6 +435,7 @@ public class ManagerScore : MonoBehaviour
             rewardUsedThisScreen = true;
             TreadShredAnalytics.Log(GameEvents.OfferAccepted(OfferName(GemOffer.ArmoredRedeploy), GemCatalog.Cost(GemOffer.ArmoredRedeploy), packBought));
             TreadShredBoosts.Current.ArmRedeploy();
+            TreadShredScores.Run.ResumeAfterRedeploy();
             ReloadCurrentMission();
         }, RefreshOfferControls);
     }
@@ -464,9 +454,6 @@ public class ManagerScore : MonoBehaviour
             ShowOverdriveActive();
         }, RefreshOfferControls);
     }
-
-    // The rating CaculaterScore gave this mission; the result screen shows it beside TOTAL SCORE (D-032).
-    private int lastMissionScore;
 
     private void ShowOverdriveActive()
     {
@@ -506,7 +493,6 @@ public class ManagerScore : MonoBehaviour
 
     private void ReloadCurrentMission()
     {
-        BeginNewRun();
         Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }

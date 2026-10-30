@@ -1,32 +1,22 @@
-using System.Collections.Generic;
 using TreadShred.Progression;
 using UnityEngine;
 
-/// <summary>Best mission scores per tier, as ManagerScore saves them (D-019, D-032).</summary>
+/// <summary>D-032-AC-01: SCORE (the current run) and HIGH SCORE (the best SCORE ever).</summary>
 public static class TreadShredScores
 {
-    public static int TotalScore()
-    {
-        return LeaderboardRules.TotalScore(BestMissionScores());
-    }
+    private const string HighScoreKey = "TreadShredHighScore";
 
-    public static float Best(DifficultyTier tier, int mission)
-    {
-        return PlayerPrefs.GetFloat(LeaderboardRules.BestScoreKey(tier, mission));
-    }
+    public static ScoreRun Run { get; } = new ScoreRun();
 
-    public static void SaveIfBest(DifficultyTier tier, int mission, int score)
+    public static int HighScore => PlayerPrefs.GetInt(HighScoreKey, 0);
+
+    /// <summary>Saves a run score as HIGH SCORE when it beats it; true when it did.</summary>
+    public static bool RecordScore(int score)
     {
-        if (score <= Best(tier, mission))
-            return;
-        PlayerPrefs.SetFloat(LeaderboardRules.BestScoreKey(tier, mission), score);
+        if (score <= HighScore)
+            return false;
+        PlayerPrefs.SetInt(HighScoreKey, score);
         PlayerPrefs.Save();
-    }
-
-    private static IEnumerable<int> BestMissionScores()
-    {
-        for (var tier = 0; tier < LeaderboardRules.TierCount; tier++)
-        for (var mission = 1; mission <= ProgressionRules.MissionCount; mission++)
-            yield return (int)Best((DifficultyTier)tier, mission);
+        return true;
     }
 }

@@ -16,15 +16,15 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual(2f, LeaderboardRules.CatchUpSeconds);
         }
 
-        [Test(Description = "D-032-AC-02: the result screen shows this mission's score and the TOTAL SCORE the leaderboard ranks")]
+        [Test(Description = "D-032-AC-02: the result screen shows SCORE and the HIGH SCORE the leaderboard ranks")]
         public void ResultScreenShowsTheRankedTotal()
         {
-            Assert.AreEqual("MISSION SCORE // 1,100", LeaderboardRules.MissionLine(1100));
-            Assert.AreEqual("TOTAL SCORE // 1,100", LeaderboardRules.TotalLine(1100));
-            Assert.AreEqual("TOTAL SCORE // 156,000", LeaderboardRules.TotalLine(156000));
+            Assert.AreEqual("SCORE // 1,100", ScoreRules.ScoreLine(1100));
+            Assert.AreEqual("HIGH SCORE // 2,195", ScoreRules.HighScoreLine(2195, false));
+            Assert.AreEqual("NEW HIGH SCORE // 221,400", ScoreRules.HighScoreLine(221400, true));
             var score = System.IO.File.ReadAllText(System.IO.Path.Combine(UnityEngine.Application.dataPath,
                 "Script/ManagerScore/ManagerScore.cs"));
-            StringAssert.Contains("LeaderboardRules.TotalLine(TreadShredScores.TotalScore())", score);
+            StringAssert.Contains("ScoreRules.HighScoreLine(TreadShredScores.HighScore, newHighScore)", score);
         }
     }
 }

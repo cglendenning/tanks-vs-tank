@@ -28,7 +28,7 @@ public class Memory : MonoBehaviour {
             ListButton.Add(item.gameObject);
         }
 
-        HightScoreTextButton.text = "BEST SCORE // " + TreadShredScores.Best(TreadShredProgress.Ensure().SelectedTier, 1);
+        HightScoreTextButton.text = TreadShred.Progression.ScoreRules.HighScoreLine(TreadShredScores.HighScore, false);
         LevelTextButton.text = "MISSION: " + 1.ToString();
         switch ((int)(PlayerPrefs.GetFloat("Lv" + 1.ToString())))
         {
@@ -146,7 +146,7 @@ public class Memory : MonoBehaviour {
         if (!ListButton[LevelChoosed - 1 ].gameObject.transform.GetChild(3).gameObject.transform.GetChild(0).gameObject.activeInHierarchy)
         {
             indexsence = LevelChoosed;
-            HightScoreTextButton.text = "BEST SCORE // " + TreadShredScores.Best(TreadShredProgress.Ensure().SelectedTier, LevelChoosed);
+            HightScoreTextButton.text = TreadShred.Progression.ScoreRules.HighScoreLine(TreadShredScores.HighScore, false);
             LevelTextButton.text = "MISSION: " + LevelChoosed.ToString();
 
             switch ((int)(PlayerPrefs.GetFloat("Lv" + LevelChoosed.ToString())))

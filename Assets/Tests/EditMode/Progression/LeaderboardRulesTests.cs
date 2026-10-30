@@ -10,24 +10,19 @@ namespace TreadShred.Progression.Tests
         private static string Script(string relative) =>
             File.ReadAllText(Path.Combine(Application.dataPath, "Script", relative));
 
-        [Test(Description = "D-032-AC-01: TOTAL SCORE adds every mission's best on every tier, and is submitted only when it rises")]
+        [Test(Description = "D-032-AC-01: HIGH SCORE is the run's best SCORE, and is submitted only when it rises")]
         public void TotalScoreCountsEveryTierAndSubmitsOnlyWhenHigher()
         {
-            Assert.AreEqual(1300 + 900 + 1200, LeaderboardRules.TotalScore(new[] { 1300, 900, 0, 1200 }));
-            Assert.AreEqual("Lvs7", LeaderboardRules.BestScoreKey(DifficultyTier.Recruit, 7), "Recruit keeps existing saves");
-            Assert.AreEqual("Lvs7_veteran", LeaderboardRules.BestScoreKey(DifficultyTier.Veteran, 7));
-            Assert.AreEqual("Lvs7_elite", LeaderboardRules.BestScoreKey(DifficultyTier.Elite, 7));
-
             Assert.IsTrue(LeaderboardRules.ShouldSubmit(5200, 5100));
-            Assert.IsFalse(LeaderboardRules.ShouldSubmit(5100, 5100), "an unchanged total is not resubmitted");
+            Assert.IsFalse(LeaderboardRules.ShouldSubmit(5100, 5100), "an unchanged HIGH SCORE is not resubmitted");
             Assert.IsFalse(LeaderboardRules.ShouldSubmit(4000, 5100));
             Assert.IsFalse(LeaderboardRules.ShouldSubmit(0, 0));
 
             var score = Script("ManagerScore/ManagerScore.cs");
-            var save = score.IndexOf("TreadShredScores.SaveIfBest(TreadShredProgress.Ensure().SelectedTier");
-            Assert.Greater(save, 0, "mission scores are saved per tier");
-            Assert.Greater(score.IndexOf("TreadShredLeaderboard.SubmitIfRaised();", save), save, "and submitted after saving");
-            StringAssert.Contains("TreadShredScores.TotalScore()", Script("LoadLv.cs"), "the stats screen shows the same total");
+            var record = score.IndexOf("TreadShredScores.RecordScore(lastMission.RunScore)");
+            Assert.Greater(record, 0, "each finished mission checks the run's SCORE against HIGH SCORE");
+            Assert.Greater(score.IndexOf("TreadShredLeaderboard.SubmitIfRaised();", record), record, "and submits after recording");
+            StringAssert.Contains("TreadShredScores.HighScore", Script("LoadLv.cs"), "the stats screen shows HIGH SCORE");
         }
 
         [Test(Description = "D-032-AC-02: the start screen has a LEADERBOARD button and the result screen shows the player's rank")]
@@ -51,13 +46,13 @@ namespace TreadShred.Progression.Tests
             Assert.IsFalse(bridge.Contains("Time.timeScale"), "the leaderboard never pauses play");
         }
 
-        [Test(Description = "D-032-AC-04: no score above what three tiers of 40 missions can produce is submitted")]
+        [Test(Description = "D-032-AC-04: no score above what a run through three tiers of 40 missions can produce is submitted")]
         public void ScoreCeilingMatchesWhatTheGameCanProduce()
         {
-            Assert.AreEqual(3, LeaderboardRules.TierCount);
-            Assert.AreEqual(156000, LeaderboardRules.MaxTotalScore);
-            Assert.IsTrue(LeaderboardRules.ShouldSubmit(156000, 0));
-            Assert.IsFalse(LeaderboardRules.ShouldSubmit(156001, 0));
+            Assert.AreEqual(3, ScoreRules.TierCount);
+            Assert.AreEqual(221400, ScoreRules.MaxRunScore);
+            Assert.IsTrue(LeaderboardRules.ShouldSubmit(221400, 0));
+            Assert.IsFalse(LeaderboardRules.ShouldSubmit(221401, 0));
         }
 
         [Test(Description = "D-032-AC-05: the leaderboard code inherited from the original game is gone")]

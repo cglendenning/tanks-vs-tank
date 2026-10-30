@@ -3,9 +3,9 @@
 
     ASC_ISSUER_ID=<issuer> ASC_KEY_ID=<key> python3 scripts/app-store-connect.py game-center
 
-game-center: enables Game Center for the app and creates the TOTAL SCORE
-leaderboard with its score limits (D-032). Safe to rerun: existing items are
-left as they are. The private key is read from
+game-center: enables Game Center for the app, creates the HIGH SCORE
+leaderboard with its score limits (D-032) and archives retired boards. Safe to
+rerun: existing items are left as they are. The private key is read from
 ~/.appstoreconnect/private_keys/AuthKey_<ASC_KEY_ID>.p8; only statuses and IDs
 are printed, never the key or the signed token.
 """
@@ -21,15 +21,17 @@ import jwt
 
 BUNDLE_ID = "com.tgts.tanksvstank"
 LEADERBOARD = {
-    "vendorIdentifier": "treadshred.total_score",  # TreadShredLeaderboard.GameCenterId
-    "referenceName": "Total Score",
+    "vendorIdentifier": "treadshred.high_score",  # TreadShredLeaderboard.GameCenterId
+    "referenceName": "High Score",
     "defaultFormatter": "INTEGER",
     "submissionType": "BEST_SCORE",
     "scoreSortType": "DESC",
     "scoreRangeStart": "0",
-    "scoreRangeEnd": "156000",  # LeaderboardRules.MaxTotalScore: 3 tiers x 40 missions x 1300
+    "scoreRangeEnd": "221400",  # ScoreRules.MaxRunScore: 3 tiers x (218 enemies x 100 + 40 missions x 1300)
 }
-LEADERBOARD_NAME = {"locale": "en-US", "name": "TOTAL SCORE"}
+LEADERBOARD_NAME = {"locale": "en-US", "name": "HIGH SCORE"}
+# Boards the game no longer submits to; archived (reversible), never deleted.
+RETIRED = ["treadshred.total_score"]
 
 
 class AppStoreConnect:
@@ -83,6 +85,12 @@ def game_center(api):
         print("Leaderboard created:", board["id"])
     else:
         print("Leaderboard already exists:", board["id"])
+
+    for retired in boards:
+        if retired["attributes"]["vendorIdentifier"] in RETIRED and not retired["attributes"].get("archived"):
+            api.call("PATCH", f"/v1/gameCenterLeaderboards/{retired['id']}", {"data": {
+                "type": "gameCenterLeaderboards", "id": retired["id"], "attributes": {"archived": True}}})
+            print("Retired leaderboard archived:", retired["attributes"]["vendorIdentifier"])
 
     names = api.call("GET", f"/v1/gameCenterLeaderboards/{board['id']}/localizations")["data"]
     if not any(n["attributes"]["locale"] == LEADERBOARD_NAME["locale"] for n in names):

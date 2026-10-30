@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
+using TreadShred.Progression;
 
 public class LoadLv : MonoBehaviour {
 
@@ -131,6 +132,7 @@ public class LoadLv : MonoBehaviour {
         {
             var upgrades = TreadShredUi.CreateButton("UPGRADES", (RectTransform)PanelStart.transform, Vector2.zero,
                 new Vector2(320f, 96f), 34, font, Upgrades);
+            commandButtons.Add(upgrades.gameObject);
             var rect = (RectTransform)upgrades.transform;
             rect.anchorMin = rect.anchorMax = new Vector2(0.86f, 0.50f);
 
@@ -139,11 +141,24 @@ public class LoadLv : MonoBehaviour {
             {
                 var leaderboard = TreadShredUi.CreateButton("LEADERBOARD", (RectTransform)PanelStart.transform, Vector2.zero,
                     new Vector2(360f, 96f), 34, font, OpenLeaderboard);
+                commandButtons.Add(leaderboard.gameObject);
                 var boardRect = (RectTransform)leaderboard.transform;
                 boardRect.anchorMin = boardRect.anchorMax = new Vector2(0.86f, 0.64f);
             }
         }
         TreadShredTierSelector.Attach(PanelMenu, font);
+    }
+
+    // UPGRADES and LEADERBOARD; hidden while the stats view is open so they never cover its lines.
+    private readonly System.Collections.Generic.List<GameObject> commandButtons = new System.Collections.Generic.List<GameObject>();
+
+    private void ShowCommandButtons(bool visible)
+    {
+        foreach (var button in commandButtons)
+        {
+            if (button != null)
+                button.SetActive(visible);
+        }
     }
 
     // D-032: the in-game leaderboard screen (or Apple's sign-in first).
@@ -383,11 +398,13 @@ public class LoadLv : MonoBehaviour {
 
     public void Static()
     {
+        ShowCommandButtons(false);
         anim.SetTrigger("Static");
 
-        int TotalHighScore = TreadShredScores.TotalScore();
+        // HIGH SCORE, the best SCORE ever (D-032-AC-01); the service rank follows it.
+        int TotalHighScore = TreadShredScores.HighScore;
 
-        ScoreStatic.text = "TOTAL SCORE // " + TotalHighScore.ToString();
+        ScoreStatic.text = ScoreRules.HighScoreLine(TotalHighScore, false);
         KillStatic.text = "CONFIRMED KILLS // " + PlayerPrefs.GetFloat("CountKill").ToString();
 
         if (TotalHighScore > 10000 && TotalHighScore < 23000)
@@ -414,6 +431,7 @@ public class LoadLv : MonoBehaviour {
 
     public void StaticBack()
     {
+        ShowCommandButtons(true);
         anim.SetTrigger("StaticBack");
     }
 
