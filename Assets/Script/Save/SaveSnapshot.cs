@@ -31,6 +31,18 @@ namespace TreadShred.Save
         /// </summary>
         public static SaveSource Choose(SaveSnapshot local, SaveSnapshot cloud)
         {
+            return Choose(local, cloud, localSynced: true);
+        }
+
+        /// <summary>
+        /// As Choose, but a device that has never synced with the cloud (a reinstall whose first iCloud
+        /// sync has not arrived) does not hold an authoritative save yet: a cloud save with progress
+        /// replaces it even if it is newer, so a few seconds of play cannot overwrite a player's history.
+        /// </summary>
+        public static SaveSource Choose(SaveSnapshot local, SaveSnapshot cloud, bool localSynced)
+        {
+            if (!localSynced && HasProgress(cloud))
+                return SaveSource.Cloud;
             if (!HasProgress(cloud))
                 return SaveSource.Local;
             if (!HasProgress(local))
