@@ -146,6 +146,7 @@ public class ManagerScore : MonoBehaviour
         int HealthR = (int)(((3 - (float)Mathf.Min(CurHeath, 3)) / 3) * 1000);
         int KillR = CurDieEmnemy * 100;
         int SumForMedel = AccurasyR + HealthR;
+        lastMissionScore = SumForMedel;
         if (CountEmnemy < 1)
         {
             if (SumForMedel >= 1200)
@@ -385,8 +386,14 @@ public class ManagerScore : MonoBehaviour
                 () => TreadShredLeaderboardPanel.OpenFrom(rewardFont));
 
         // Where the player stands on the platform leaderboard, once it reports (D-032).
+        // This mission's rating and the TOTAL SCORE the leaderboard ranks, with the rank beneath once reported.
+        TreadShredUi.CreateText(LeaderboardRules.MissionLine(lastMissionScore), (RectTransform)VictoryofFail.transform,
+            new Vector2(-240f, 172f), new Vector2(460f, 32f), 22, rewardFont).color = Color.white;
+        TreadShredUi.CreateText(LeaderboardRules.TotalLine(TreadShredScores.TotalScore()),
+            (RectTransform)VictoryofFail.transform, new Vector2(240f, 172f), new Vector2(460f, 32f), 22, rewardFont)
+            .color = Color.white;
         var rankText = TreadShredUi.CreateText(string.Empty, (RectTransform)VictoryofFail.transform,
-            new Vector2(0f, 136f), new Vector2(900f, 32f), 22, rewardFont);
+            new Vector2(0f, 138f), new Vector2(900f, 32f), 22, rewardFont);
         rankText.color = Color.white;
         TreadShredLeaderboard.RequestRank(rank =>
         {
@@ -457,6 +464,9 @@ public class ManagerScore : MonoBehaviour
             ShowOverdriveActive();
         }, RefreshOfferControls);
     }
+
+    // The rating CaculaterScore gave this mission; the result screen shows it beside TOTAL SCORE (D-032).
+    private int lastMissionScore;
 
     private void ShowOverdriveActive()
     {

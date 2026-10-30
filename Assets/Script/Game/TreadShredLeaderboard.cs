@@ -47,8 +47,9 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
     // against these (not a local "last submitted" marker) means a stale marker can never block a score.
     private static long? gameCenterScore;
     private static int acceptedThisSession;
+    private static TreadShredLeaderboard instance;
     private static readonly List<Action<int>> afterSubmit = new List<Action<int>>();
-    private static readonly List<Action<int>> awaitingRank = new List<Action<int>>();
+    private static readonly List<Action<int, long>> awaitingRank = new List<Action<int, long>>();
     private static readonly List<Action<LeaderboardPage>> afterSubmitTop = new List<Action<LeaderboardPage>>();
     private static readonly List<Action<LeaderboardPage>> awaitingTop = new List<Action<LeaderboardPage>>();
 
@@ -67,7 +68,7 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
             return;
         var host = new GameObject(ReceiverName);
         DontDestroyOnLoad(host);
-        host.AddComponent<TreadShredLeaderboard>();
+        instance = host.AddComponent<TreadShredLeaderboard>();
         TreadShredGameCenterSignIn();
     }
 
@@ -96,7 +97,7 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
         if (submitting)
             afterSubmit.Add(onRank);
         else
-            LoadRank(onRank);
+            CatchUpRank(onRank, 0);
     }
 
     /// <summary>Calls back with the top entries and the player's own, after any submission in flight; null when unavailable.</summary>
@@ -110,7 +111,7 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
         if (submitting)
             afterSubmitTop.Add(onPage);
         else
-            LoadTop(onPage);
+            CatchUpTop(onPage, 0);
     }
 
     /// <summary>Ready when signed in; otherwise offers Apple's sign-in, or says to sign in from Settings.</summary>
@@ -123,6 +124,42 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
             : LeaderboardOpenResult.SignInFromSettings;
     }
 
+    // Re-reads until the board shows the score accepted this session (Game Center uploads it a few seconds later).
+    private static void CatchUpTop(Action<LeaderboardPage> onPage, int reads)
+    {
+        LoadTop(page =>
+        {
+            var onBoard = page != null && page.Player.HasValue ? page.Player.Value.Score : 0;
+            if (page != null && LeaderboardRules.BoardBehind(onBoard, acceptedThisSession, reads + 1))
+                RetryLater(() => CatchUpTop(onPage, reads + 1));
+            else
+                onPage(page);
+        });
+    }
+
+    private static void CatchUpRank(Action<int> onRank, int reads)
+    {
+        LoadRank((rank, score) =>
+        {
+            if (LeaderboardRules.BoardBehind(score, acceptedThisSession, reads + 1))
+                RetryLater(() => CatchUpRank(onRank, reads + 1));
+            else if (rank > 0)
+                onRank(rank);
+        });
+    }
+
+    private static void RetryLater(Action read)
+    {
+        if (instance != null)
+            instance.StartCoroutine(After(LeaderboardRules.CatchUpSeconds, read));
+    }
+
+    private static System.Collections.IEnumerator After(float seconds, Action read)
+    {
+        yield return new WaitForSecondsRealtime(seconds);
+        read();
+    }
+
     private static void LoadTop(Action<LeaderboardPage> onPage)
     {
         awaitingTop.Add(onPage);
@@ -130,7 +167,7 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
             TreadShredGameCenterLoadTop(GameCenterId, LeaderboardPage.TopCount);
     }
 
-    private static void LoadRank(Action<int> onRank)
+    private static void LoadRank(Action<int, long> onRank)
     {
         if (onRank != null)
             awaitingRank.Add(onRank);
@@ -164,11 +201,11 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
         var waiting = afterSubmit.ToArray();
         afterSubmit.Clear();
         foreach (var onRank in waiting)
-            LoadRank(onRank);
+            CatchUpRank(onRank, 0);
         var waitingTop = afterSubmitTop.ToArray();
         afterSubmitTop.Clear();
         foreach (var onPage in waitingTop)
-            LoadTop(onPage);
+            CatchUpTop(onPage, 0);
     }
 
     [Serializable]
@@ -228,9 +265,7 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
         gameCenterScore = score;
         Debug.Log("[Leaderboard] Game Center holds rank " + rank + ", score " + score);
         SubmitIfRaised();
-        if (rank <= 0)
-            return;
         foreach (var onRank in waiting)
-            onRank(rank);
+            onRank(rank, score);
     }
 }

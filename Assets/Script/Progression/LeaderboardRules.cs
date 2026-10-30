@@ -63,6 +63,28 @@ namespace TreadShred.Progression
         public const string Unavailable = "LEADERBOARD UNAVAILABLE // TRY AGAIN SOON";
         public const string Back = "BACK";
 
+        // Game Center queues a score and uploads it a few seconds later, so a board read right
+        // after a submission can miss it. Re-read a few times, two seconds apart, until it shows.
+        public const int CatchUpReads = 4;
+        public const float CatchUpSeconds = 2f;
+
+        /// <summary>True while the board has not yet caught up with a score accepted this session.</summary>
+        public static bool BoardBehind(long playerScoreOnBoard, int acceptedThisSession, int readsSoFar)
+        {
+            return acceptedThisSession > 0 && playerScoreOnBoard < acceptedThisSession && readsSoFar < CatchUpReads;
+        }
+
+        // A mission's rating (accuracy bonus plus armor kept): what it adds to TOTAL SCORE when it beats the best.
+        public static string MissionLine(int missionScore)
+        {
+            return "MISSION SCORE // " + missionScore.ToString("N0", CultureInfo.InvariantCulture);
+        }
+
+        public static string TotalLine(int total)
+        {
+            return "TOTAL SCORE // " + total.ToString("N0", CultureInfo.InvariantCulture);
+        }
+
         public static string RankLine(int rank)
         {
             return "LEADERBOARD RANK // #" + rank.ToString("N0", CultureInfo.InvariantCulture);
