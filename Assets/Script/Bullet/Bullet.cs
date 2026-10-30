@@ -101,6 +101,7 @@ public class Bullet : MonoBehaviour {
                 PlayerPrefs.Save();
 
                 ManagerScore.instance.CurDieEmnemy += 1;
+                TreadShredImpact.Kill(other.transform.position);
                 ManagerScore.instance.Victory();
                                                    
                 MusicManager.instance.ExplosionTank();

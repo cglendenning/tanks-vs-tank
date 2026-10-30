@@ -33,6 +33,7 @@ public class BulletVong : MonoBehaviour {
             MusicManager.instance.ExplosionTank();
 
             ManagerScore.instance.CurDieEmnemy += 1;
+            TreadShredImpact.Kill(other.transform.position);
             ManagerScore.instance.Victory();
             ManagerScore.instance.Rung();
             MusicManager.instance.ExplosionTank();
@@ -53,6 +54,7 @@ public class BulletVong : MonoBehaviour {
             MusicManager.instance.ExplosionTank();
 
             ManagerScore.instance.CurDieEmnemy += 1;
+            TreadShredImpact.Kill(other.transform.position);
             ManagerScore.instance.Victory();
             ManagerScore.instance.Rung();
             MusicManager.instance.ExplosionTank();

@@ -33,6 +33,9 @@ public sealed class TreadShredImpact : MonoBehaviour
     public static void HitTaken()
     {
         Ensure().Shake(ImpactRules.ShakeOnHitTaken);
+        // Kill paths already pulse through Rung; hits taken did not (D-027-AC-03).
+        if (ManagerScore.instance != null)
+            ManagerScore.instance.Rung();
     }
 
     public static void Kill(Vector3 position)

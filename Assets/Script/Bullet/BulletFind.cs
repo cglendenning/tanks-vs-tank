@@ -112,6 +112,7 @@ public class BulletFind : MonoBehaviour {
                 PlayerPrefs.Save();
 
                 ManagerScore.instance.CurDieEmnemy += 1;
+                TreadShredImpact.Kill(other.transform.position);
                 ManagerScore.instance.Victory();
 
                 ManagerScore.instance.Rung();
