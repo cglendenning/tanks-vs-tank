@@ -12,9 +12,9 @@ against the build before every submission. Lines marked (iOS) appear only on the
 - **App Store promotional text (170):** Forty missions. Three tiers. Every win upgrades your tank for good. Clear Recruit, then prove it on Veteran and Elite.
 - **App Store keywords (100):** tank,combat,shooter,missions,armor,upgrade,arcade,action,war,battle,tactical,tiers
 
-## What's new (1.9.1)
+## What's new (1.9.2)
 
-- **App Store What's New:** Tread Shred 1.9.1: permanent armor, firepower and speed upgrades, Veteran and Elite tiers, a Game Center high score leaderboard, iCloud progress backup, and no more ads. Watch every boost and upgrade in action before you buy, and Overdrive now lasts until your tank goes down.
+- **App Store What's New:** Tread Shred 1.9.2: permanent armor, firepower and speed upgrades, Veteran and Elite tiers, a Game Center high score leaderboard, iCloud progress backup, and no more ads. Watch every boost and upgrade in action before you buy, and Overdrive now lasts until your tank goes down.
 - **Google Play release notes:** Permanent armor, firepower and speed upgrades. Veteran and Elite tiers. A high score to chase on Google Play Games, with your progress saved there too. Watch every boost and upgrade in action before you buy. Overdrive lasts until your tank goes down. No more ads.
 
 ## Description
