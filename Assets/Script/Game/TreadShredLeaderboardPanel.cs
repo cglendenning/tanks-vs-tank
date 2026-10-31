@@ -128,6 +128,8 @@ public sealed class TreadShredLeaderboardPanel : MonoBehaviour
             font);
         text.alignment = alignment;
         text.color = color;
+        // Nicknames run to 18 characters of any width; a cell never spills into the next column.
+        TreadShredUi.ShrinkToFit(text, 14);
     }
 
     private void Close()

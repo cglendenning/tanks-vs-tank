@@ -122,7 +122,42 @@ public static class TreadShredUi
 
         var text = CreateText(label, rect, Vector2.zero, size - new Vector2(18f, 10f), fontSize, font);
         text.color = Color.white;
+        ShrinkToFit(text, fontSize / 2);
         return button;
+    }
+
+    // Text that could outgrow its box (button labels, nicknames, device-dependent values) shrinks
+    // to fit, down to minSize, instead of spilling past it.
+    public static void ShrinkToFit(Text text, int minSize)
+    {
+        text.horizontalOverflow = HorizontalWrapMode.Wrap;
+        text.verticalOverflow = VerticalWrapMode.Truncate;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMaxSize = text.fontSize;
+        text.resizeTextMinSize = Mathf.Max(1, minSize);
+    }
+
+    // Keeps a label reading right side up when its parent is rotated or mirrored (an icon reused
+    // for the opposite direction, for example).
+    public static void KeepUpright(Transform label)
+    {
+        var canvas = label.GetComponentInParent<Canvas>();
+        label.rotation = canvas != null ? canvas.rootCanvas.transform.rotation : Quaternion.identity;
+        var lossy = label.lossyScale;
+        var local = label.localScale;
+        label.localScale = new Vector3(lossy.x < 0f ? -local.x : local.x, lossy.y < 0f ? -local.y : local.y, local.z);
+    }
+
+    // Turns every flipped label under root right side up.
+    public static void KeepLabelsUpright(Transform root)
+    {
+        var canvas = root.GetComponentInParent<Canvas>();
+        var up = canvas != null ? canvas.rootCanvas.transform : root;
+        foreach (var text in root.GetComponentsInChildren<Text>(true))
+        {
+            if (Vector3.Dot(text.transform.up, up.up) < 0f || Vector3.Dot(text.transform.right, up.right) < 0f)
+                KeepUpright(text.transform);
+        }
     }
 
     public static void SetLabel(Button button, string value)

@@ -125,6 +125,8 @@ public class LoadLv : MonoBehaviour {
         // never collapse onto one another.
         RestoreStartScreenLayout();
         RestoreSettingsInteractivity();
+        if (PanelStart != null)
+            TreadShredUi.KeepLabelsUpright(PanelStart.GetComponentInParent<Canvas>().rootCanvas.transform);
 
         // Upgrade shop entry (D-017) and tier choice on mission select (D-019).
         var font = TreadShredUi.FindFont(PanelStart);

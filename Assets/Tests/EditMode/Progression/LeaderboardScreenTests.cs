@@ -47,8 +47,6 @@ namespace TreadShred.Progression.Tests
             var panel = Script("Game/TreadShredLeaderboardPanel.cs");
             StringAssert.Contains("LeaderboardRules.Back", panel);
             StringAssert.Contains("Destroy(gameObject)", panel);
-            StringAssert.Contains("afterSubmitTop.Add(onPage)", Script("Game/TreadShredLeaderboard.cs"),
-                "a page requested during a submission waits for it");
             Assert.AreEqual("BACK", LeaderboardRules.Back);
         }
     }

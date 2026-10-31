@@ -19,6 +19,48 @@ public class Memory : MonoBehaviour {
 
     public int LevelChoosed;
 
+    private const float LabelInset = 40f;
+    private const float IconGap = 20f;
+    private const float LevelLabelWidth = 720f;
+
+    // The medal or lock sits at the right end of each mission button; the label fills the rest and
+    // shrinks to fit, so the icon never covers it and it never runs past the button.
+    private static void KeepLabelClearOfMedal(Transform button)
+    {
+        var label = button.Find("Text") as RectTransform;
+        var medal = button.Find("Medel");
+        if (label == null || medal == null)
+            return;
+        var iconLeft = float.MaxValue;
+        foreach (RectTransform icon in medal)
+            iconLeft = Mathf.Min(iconLeft, icon.anchoredPosition.x - icon.rect.width * icon.pivot.x);
+        if (iconLeft == float.MaxValue)
+            return;
+        // Medel is centred on the button, so icon positions are measured from the button's centre.
+        var halfWidth = ((RectTransform)button).rect.width / 2f;
+        label.anchorMin = Vector2.zero;
+        label.anchorMax = Vector2.one;
+        label.offsetMin = new Vector2(LabelInset, 0f);
+        label.offsetMax = new Vector2(iconLeft - halfWidth - IconGap, 0f);
+        var text = label.GetComponent<Text>();
+        TreadShredUi.ShrinkToFit(text, text.fontSize / 3);
+    }
+
+    // MISSION: n sits just left of the play button, right-aligned, so the button never covers its digits.
+    private void KeepLevelLabelClearOfPlay()
+    {
+        var play = LevelTextButton.transform.parent.Find("Play") as RectTransform;
+        if (play == null)
+            return;
+        var label = LevelTextButton.rectTransform;
+        label.anchorMin = label.anchorMax = play.anchorMin;
+        label.pivot = new Vector2(1f, 0.5f);
+        label.anchoredPosition = play.anchoredPosition - new Vector2(play.rect.width * play.pivot.x + IconGap * 2f, 0f);
+        label.sizeDelta = new Vector2(LevelLabelWidth, play.rect.height);
+        LevelTextButton.alignment = TextAnchor.MiddleRight;
+        TreadShredUi.ShrinkToFit(LevelTextButton, LevelTextButton.fontSize / 3);
+    }
+
 	// Use this for initialization
 	void Start () {
      
@@ -26,7 +68,9 @@ public class Memory : MonoBehaviour {
         foreach (Transform item in GetButtonLev.transform)
         {
             ListButton.Add(item.gameObject);
+            KeepLabelClearOfMedal(item);
         }
+        KeepLevelLabelClearOfPlay();
 
         HightScoreTextButton.text = TreadShred.Progression.ScoreRules.HighScoreLine(TreadShredScores.HighScore, false);
         LevelTextButton.text = "MISSION: " + 1.ToString();

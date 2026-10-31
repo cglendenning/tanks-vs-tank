@@ -597,6 +597,8 @@ public static class ApplyTreadShredStartScreen
         var outline = textTransform.GetComponent<Outline>() ?? textTransform.gameObject.AddComponent<Outline>();
         outline.effectColor = new Color(0f, 0f, 0f, 0.95f);
         outline.effectDistance = new Vector2(1.5f, -1.5f);
+        // The back control is the advance icon turned 180 degrees; its label must not turn with it.
+        TreadShredUi.KeepUpright(label);
         EditorUtility.SetDirty(label.gameObject);
         EditorUtility.SetDirty(textTransform.gameObject);
     }

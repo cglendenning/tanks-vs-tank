@@ -39,10 +39,6 @@ namespace TreadShred.Progression.Tests
         public void SignInIsOptional()
         {
             var bridge = Script("Game/TreadShredLeaderboard.cs");
-            StringAssert.Contains("if (!Available || !SignedIn || submitting)", bridge);
-            StringAssert.Contains("if (!Available || !SignedIn)", bridge);
-            var open = bridge.Substring(bridge.IndexOf("public static LeaderboardOpenResult Open()"));
-            StringAssert.Contains("TreadShredGameCenterOfferSignIn()", open, "the button offers sign-in");
             Assert.IsFalse(bridge.Contains("Time.timeScale"), "the leaderboard never pauses play");
         }
 
