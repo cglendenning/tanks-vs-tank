@@ -22,9 +22,9 @@ public static class TankBuildAutomation
     // Screenshot-only App Store metadata update. The live 1.8.0 build remains
     // unchanged; App Store Connect requires a new version/build to replace
     // screenshots after a version is approved.
-    private const string ReleaseVersion = "1.9.0";
-    private const int ReleaseBuildNumber = 17;
-    private const int AndroidReleaseBuildNumber = 5;
+    private const string ReleaseVersion = "1.9.1";
+    private const int ReleaseBuildNumber = 18;
+    private const int AndroidReleaseBuildNumber = 6;
 
     [MenuItem("Tread Shred/Build/iOS device project")]
     public static void BuildIosDeviceProject()
