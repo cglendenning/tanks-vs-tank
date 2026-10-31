@@ -3,7 +3,7 @@
 
     ASC_ISSUER_ID=<issuer> ASC_KEY_ID=<key> python3 scripts/app-store-connect.py game-center
     ... app-store-connect.py icloud
-    ... app-store-connect.py adhoc-profile <certificate serial> <device UDID>
+    ... app-store-connect.py adhoc-profile <certificate serial> <device UDID> [<bundle ID> "<app name>"]
     ... app-store-connect.py appstore-profile <certificate serial>
     ... app-store-connect.py listing <version>
     ... app-store-connect.py media <version> <iphone-shots-dir> <ipad-shots-dir> <iphone-preview.mp4>
@@ -21,7 +21,9 @@ icloud: enables the iCloud capability on the App ID, for cloud save (D-025).
 adhoc-profile: creates an Ad Hoc profile for the App ID with that distribution
 certificate and device, installs it in ~/Library/MobileDevice/Provisioning
 Profiles and prints its UUID. Capabilities enabled since the last profile
-(iCloud) are only signed into profiles created afterwards.
+(iCloud) are only signed into profiles created afterwards. With a bundle ID and
+app name it makes the profile for that App ID instead, registering it first:
+used for the admin app, which is installed over OTA and never sold.
 
 game-center: enables Game Center for the app, creates the HIGH SCORE
 leaderboard with its score limits (D-032) and archives retired boards. Safe to
@@ -140,12 +142,19 @@ def game_center(api):
           f"scores {LEADERBOARD['scoreRangeStart']}-{LEADERBOARD['scoreRangeEnd']}")
 
 
-def bundle_id(api):
-    found = [b for b in api.call("GET", f"/v1/bundleIds?filter[identifier]={BUNDLE_ID}")["data"]
-             if b["attributes"]["identifier"] == BUNDLE_ID]
-    if not found:
-        raise SystemExit(f"No App ID {BUNDLE_ID}")
-    return found[0]["id"]
+def bundle_id(api, identifier=BUNDLE_ID, register_as=None):
+    """The App ID's resource ID. With register_as, an App ID that does not exist yet is registered under that name
+    (developer portal only: no App Store Connect app record is created)."""
+    found = [b for b in api.call("GET", f"/v1/bundleIds?filter[identifier]={identifier}")["data"]
+             if b["attributes"]["identifier"] == identifier]
+    if found:
+        return found[0]["id"]
+    if not register_as:
+        raise SystemExit(f"No App ID {identifier}")
+    created = api.call("POST", "/v1/bundleIds", {"data": {"type": "bundleIds", "attributes": {
+        "identifier": identifier, "name": register_as, "platform": "IOS"}}})["data"]
+    print("App ID registered:", identifier, register_as)
+    return created["id"]
 
 
 def icloud(api):
@@ -161,17 +170,18 @@ def icloud(api):
     print("iCloud enabled on", BUNDLE_ID)
 
 
-def create_profile(api, kind, certificate_serial, udid=None):
+def create_profile(api, kind, certificate_serial, udid=None, identifier=BUNDLE_ID, app_name="Tread Shred"):
     """Creates an Ad Hoc (with that device) or App Store profile for the App ID and that distribution
-    certificate, installs it in ~/Library/MobileDevice/Provisioning Profiles and prints its UUID."""
-    app_id = bundle_id(api)
+    certificate, installs it in ~/Library/MobileDevice/Provisioning Profiles and prints its UUID. Another bundle
+    (the OTA-only admin app) is registered on first use."""
+    app_id = bundle_id(api, identifier, app_name if identifier != BUNDLE_ID else None)
     certificates = [c["id"] for c in api.call("GET", "/v1/certificates?filter[certificateType]=DISTRIBUTION")["data"]
                     if c["attributes"]["serialNumber"].upper() == certificate_serial.upper()]
     devices = [d["id"] for d in api.call("GET", f"/v1/devices?filter[udid]={udid}")["data"]] if udid else []
     if not certificates or (udid and not devices):
         raise SystemExit(f"Certificate {certificate_serial} or device {udid} not found")
     label, profile_type = ("Ad Hoc", "IOS_APP_ADHOC") if udid else ("App Store", "IOS_APP_STORE")
-    name = f"Tread Shred {label} " + time.strftime("%Y-%m-%d %H%M")
+    name = f"{app_name} {label} " + time.strftime("%Y-%m-%d %H%M")
     relationships = {"bundleId": {"data": {"type": "bundleIds", "id": app_id}},
                      "certificates": {"data": [{"type": "certificates", "id": c} for c in certificates]}}
     if devices:
@@ -421,6 +431,8 @@ def main():
         icloud(api)
     elif command == ["adhoc-profile"] and len(sys.argv) == 4:
         create_profile(api, "adhoc", sys.argv[2], sys.argv[3])
+    elif command == ["adhoc-profile"] and len(sys.argv) == 6:
+        create_profile(api, "adhoc", sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
     elif command == ["appstore-profile"] and len(sys.argv) == 3:
         create_profile(api, "appstore", sys.argv[2])
     elif command == ["listing"] and len(sys.argv) == 3:

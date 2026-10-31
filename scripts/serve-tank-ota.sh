@@ -2,13 +2,16 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OTA_DIR="$ROOT_DIR/Builds/iOSDevice/ota"
+# OTA_DIR, OTA_BUNDLE_ID and OTA_TITLE default to the game; the OTA-only admin app sets all three so it is served
+# from its own folder and never touches the game's files.
+OTA_DIR="${OTA_DIR:-$ROOT_DIR/Builds/iOSDevice/ota}"
 IPA_PATH="${1:-$OTA_DIR/TreadShred.ipa}"
 # Port: second argument, then $PORT, then 8765. Pick one no other app owns.
 PORT="${2:-${PORT:-8765}}"
 HTTP_LOG="$OTA_DIR/http.log"
 TUNNEL_LOG="$OTA_DIR/cloudflared.log"
-BUNDLE_ID="com.tgts.tanksvstank"
+BUNDLE_ID="${OTA_BUNDLE_ID:-com.tgts.tanksvstank}"
+TITLE="${OTA_TITLE:-Tread Shred}"
 IPA_INFO_DIR=""
 
 if [[ ! -f "$IPA_PATH" ]]; then
@@ -87,7 +90,7 @@ cat > "$OTA_DIR/manifest.plist" <<EOF
 <key>bundle-identifier</key><string>${BUNDLE_ID}</string>
 <key>bundle-version</key><string>${BUNDLE_VERSION}</string>
 <key>kind</key><string>software</string>
-<key>title</key><string>Tread Shred</string>
+<key>title</key><string>${TITLE}</string>
 </dict></dict></array>
 </dict></plist>
 EOF
@@ -102,11 +105,11 @@ OTA_URL="itms-services://?action=download-manifest&url=${ENCODED_MANIFEST_URL}"
 cat > "$OTA_DIR/install.html" <<EOF
 <!doctype html>
 <html lang="en">
-<head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tread Shred install</title></head>
+<head><meta name="viewport" content="width=device-width,initial-scale=1"><title>${TITLE} install</title></head>
 <body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:24px;background:#101820;color:#fff">
-  <h1>Tread Shred</h1>
+  <h1>${TITLE}</h1>
   <p>Open this page in Safari on the registered iPhone, then tap Install.</p>
-  <p><a style="display:inline-block;padding:14px 20px;background:#e86f16;color:#fff;text-decoration:none;border-radius:8px" href="${OTA_URL}">Install Tread Shred</a></p>
+  <p><a style="display:inline-block;padding:14px 20px;background:#e86f16;color:#fff;text-decoration:none;border-radius:8px" href="${OTA_URL}">Install ${TITLE}</a></p>
   <p><a style="color:#8bd7e5" href="${MANIFEST_URL}">View manifest</a></p>
 </body>
 </html>
