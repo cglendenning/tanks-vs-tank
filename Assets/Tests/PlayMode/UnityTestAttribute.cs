@@ -4,8 +4,8 @@ using NUnit.Framework.Internal;
 namespace TreadShred.Screens.Tests
 {
     /// <summary>
-    /// UnityTest with a Description, so play-mode tests name their directive the same way as
-    /// every other test: [UnityTest(Description = "D-###-AC-##: ...")].
+    /// UnityTest with a Description property, so play-mode tests name the directive they enforce
+    /// the same way as every other test.
     /// </summary>
     public sealed class UnityTestAttribute : UnityEngine.TestTools.UnityTestAttribute, IApplyToTest
     {

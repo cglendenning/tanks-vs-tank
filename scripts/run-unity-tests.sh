@@ -10,7 +10,8 @@
 # so PlayMode then runs without -nographics).
 # The editor's PlayerPrefs for the game are exported first and restored afterwards, so test
 # seeding never changes play data. Results and logs land in $RESULTS_DIR (default
-# <project>/Logs/tests). Exits non-zero when any test fails or does not run.
+# <project>/Logs/tests); when both suites run, all-results.xml combines them for
+# `spec_tools.py record --results`. Exits non-zero when any test fails or does not run.
 set -euo pipefail
 
 UNITY="${UNITY:-/Users/craig/Unity/Hub/Editor/6000.3.24f1-arm64/Unity.app/Contents/MacOS/Unity}"
@@ -88,6 +89,7 @@ import os, re, sys
 import xml.etree.ElementTree as ET
 results, platforms = sys.argv[1], sys.argv[2:]
 ok = True
+combined = None
 for platform in platforms:
     xml = os.path.join(results, platform + "-results.xml")
     log = os.path.join(results, platform + ".log")
@@ -100,6 +102,13 @@ for platform in platforms:
         continue
     root = ET.parse(xml).getroot()
     print(f"{platform}: {root.get('passed')} of {root.get('total')} passed, {root.get('failed')} failed")
+    if combined is None:
+        combined = root
+    else:
+        for suite in list(root):
+            combined.append(suite)
+        for count in ("total", "passed", "failed"):
+            combined.set(count, str(int(combined.get(count, 0)) + int(root.get(count, 0))))
     for case in root.iter("test-case"):
         if case.get("result") != "Passed":
             ok = False
@@ -108,5 +117,7 @@ for platform in platforms:
             print(f"  FAILED {case.get('classname').split('.')[-1]}.{case.get('name')}")
             for line in text.splitlines()[:40]:
                 print("    " + line)
+if combined is not None and len(platforms) > 1:
+    ET.ElementTree(combined).write(os.path.join(results, "all-results.xml"))
 sys.exit(0 if ok else 1)
 EOF
