@@ -78,7 +78,7 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
 
         statusText = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(0f, -240f), new Vector2(1200f, 36f), 26, font);
         statusText.color = TreadShredUi.DetailColor;
-        TreadShredUi.CreateButton("BACK", backdrop, new Vector2(0f, -390f), new Vector2(440f, 120f), 52, font,
+        TreadShredUi.CreateButton("DONE", backdrop, new Vector2(0f, -390f), new Vector2(440f, 120f), 52, font,
             () => Destroy(gameObject));
         // D-017-AC-06: shown while an upgrade made on this screen can still be given back.
         undoButton = TreadShredUi.CreateButton(ProgressionLabels.Undo, backdrop, new Vector2(-470f, -390f),

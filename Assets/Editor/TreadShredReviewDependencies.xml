@@ -1,0 +1,6 @@
+<dependencies>
+  <!-- D-033: Google Play In-App Review, called from TreadShredReviewPrompt. -->
+  <androidPackages>
+    <androidPackage spec="com.google.android.play:review:2.0.2"/>
+  </androidPackages>
+</dependencies>

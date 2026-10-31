@@ -47,6 +47,8 @@ public class ManagerScore : MonoBehaviour
 
         instance = this;
         RelabelFreeRetry();
+        // D-033: a mission today, and its active time, count toward real play.
+        TreadShredReviewPrompt.MissionStarted();
         SumEmnemy = CountEmnemy;
         LogMissionStart();
         if (CanvasGame == null)
@@ -252,6 +254,7 @@ public class ManagerScore : MonoBehaviour
             if (wf == false)
             {
                 TreadShredOverdriveBadge.Hide();
+                TreadShredReviewPrompt.MissionEnded(true);
 
 
 
@@ -305,9 +308,7 @@ public class ManagerScore : MonoBehaviour
 
         if (wf == false)
         {
-            // The tank is lost: Overdrive ends here unless Armored Redeploy resumes the run (D-009-AC-03).
-            TreadShredBoosts.Current.TankLost();
-            TreadShredOverdriveBadge.Hide();
+            TankLost();
             wf = true;
             LogMissionEnd(TreadShredProgress.Ensure().CompleteCurrentMission(false), false);
             // The tank was lost: SCORE's run ends here unless Armored Redeploy resumes it.
@@ -319,16 +320,6 @@ public class ManagerScore : MonoBehaviour
         }
     }
 
-
-    // The scene's free retry reads RETRY, so only the paid offer is called a redeploy.
-    private static void RelabelFreeRetry()
-    {
-        foreach (var label in FindObjectsByType<Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-        {
-            if (label.text == OfferLabels.SceneRetryLabel)
-                label.text = OfferLabels.Retry;
-        }
-    }
 
     private void BuildFailureRewardActions()
     {
@@ -348,6 +339,8 @@ public class ManagerScore : MonoBehaviour
             OfferLabels.OverdriveEffect,
             "ACTIVATE",
             () => ConfirmThen(GemOffer.Overdrive, RedeemOverdrive));
+        // D-033-AC-03: only a victory screen may ask for a store rating, after real play.
+        TreadShredReviewPrompt.VictoryScreenOpened();
     }
 
     private void BuildOfferPanel(GemOffer offer, string title, string detail, string action,
@@ -447,6 +440,25 @@ public class ManagerScore : MonoBehaviour
             return;
         }
         TreadShredConfirmDialog.Show(OfferLabels.Confirmation(offer, store.Wallet.Balance), rewardFont, redeem);
+    }
+
+    // The scene's free retry reads RETRY, so only the paid offer is called a redeploy.
+    private static void RelabelFreeRetry()
+    {
+        foreach (var label in FindObjectsByType<Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (label.text == OfferLabels.SceneRetryLabel)
+                label.text = OfferLabels.Retry;
+        }
+    }
+
+    // The tank is lost: Overdrive ends here unless Armored Redeploy resumes the run (D-009-AC-03), and the
+    // mission counts toward real play as a loss (D-033).
+    private static void TankLost()
+    {
+        TreadShredBoosts.Current.TankLost();
+        TreadShredReviewPrompt.MissionEnded(false);
+        TreadShredOverdriveBadge.Hide();
     }
 
     private void OnBalanceChanged(int balance) => RefreshOfferControls(null);
