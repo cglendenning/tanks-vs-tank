@@ -51,6 +51,7 @@ namespace TreadShred.Progression
         }
 
         public const string Undo = "UNDO UPGRADE";
+        public const string UpgradesButton = "UPGRADES";
 
         /// <summary>D-018: the upgrade screen's note on where each currency comes from and what it buys.</summary>
         public const string CurrencyNoteTitle = "COINS AND GEMS";

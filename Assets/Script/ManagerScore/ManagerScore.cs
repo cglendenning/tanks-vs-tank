@@ -42,6 +42,8 @@ public class ManagerScore : MonoBehaviour
  
 
         Medel = VictoryofFail.transform.GetChild(14).gameObject;
+        // The original game's medal disc sits behind the offer card, half showing (D-013-AC-02): kept hidden.
+        Medel.SetActive(false);
 
         instance = this;
         RelabelFreeRetry();
@@ -402,30 +404,33 @@ public class ManagerScore : MonoBehaviour
             TreadShredUi.CreateText("EARNED: " + ProgressionLabels.Reward(reward.Value), (RectTransform)VictoryofFail.transform,
                 new Vector2(0f, 104f), new Vector2(900f, 32f), 22, rewardFont).color = TreadShredUi.TitleColor;
 
-        // Where the player stands right after the mission (D-032-AC-02).
+        // D-017-AC-07: upgrade between missions without leaving the mission or the run; what is bought applies
+        // from the next mission, retry or redeploy. Gems spent there refresh the offer's balance line.
+        TreadShredUi.CreateButton(ProgressionLabels.UpgradesButton, (RectTransform)VictoryofFail.transform,
+            new Vector2(-530f, -18f), new Vector2(280f, 80f), 24, rewardFont, () => TreadShredUpgradePanel.Show(rewardFont));
+        TreadShredStore.Ensure().Wallet.BalanceChanged += OnBalanceChanged;
+
+        // Where the player stands right after the mission (D-032-AC-02): the rank rides on the button once reported.
         if (TreadShredLeaderboard.Available)
-            TreadShredUi.CreateButton(LeaderboardRules.Title, (RectTransform)VictoryofFail.transform,
+        {
+            var board = TreadShredUi.CreateButton(LeaderboardRules.Title, (RectTransform)VictoryofFail.transform,
                 new Vector2(530f, -18f), new Vector2(280f, 80f), 24, rewardFont,
                 () => TreadShredLeaderboardPanel.OpenFrom(rewardFont));
+            TreadShredUi.ShrinkToFit(board.GetComponentInChildren<Text>(), 16);
+            TreadShredLeaderboard.RequestRank(rank =>
+            {
+                if (board != null)
+                    TreadShredUi.SetLabel(board, LeaderboardRules.ButtonLabel(rank));
+            });
+        }
 
-        // Where the player stands on the platform leaderboard, once it reports (D-032).
-        // SCORE and HIGH SCORE (D-032-AC-01), what this mission added, and the rank once reported.
+        // SCORE and HIGH SCORE (D-032-AC-01), kept to one line above what the mission earned.
         var results = (RectTransform)VictoryofFail.transform;
-        TreadShredUi.CreateText(ScoreRules.ScoreLine(lastMission.RunScore), results, new Vector2(-240f, 172f),
+        TreadShredUi.CreateText(ScoreRules.ScoreLine(lastMission.RunScore), results, new Vector2(-240f, 150f),
             new Vector2(460f, 32f), 22, rewardFont).color = Color.white;
         TreadShredUi.CreateText(ScoreRules.HighScoreLine(TreadShredScores.HighScore, newHighScore), results,
-            new Vector2(240f, 172f), new Vector2(460f, 32f), 22, rewardFont).color =
+            new Vector2(240f, 150f), new Vector2(460f, 32f), 22, rewardFont).color =
             newHighScore ? TreadShredUi.TitleColor : Color.white;
-        TreadShredUi.CreateText(ScoreRules.MissionLine(lastMission), results, new Vector2(0f, 138f),
-            new Vector2(1000f, 30f), 20, rewardFont).color = TreadShredUi.DetailColor;
-        var rankText = TreadShredUi.CreateText(string.Empty, results, new Vector2(0f, 206f), new Vector2(900f, 32f), 22,
-            rewardFont);
-        rankText.color = Color.white;
-        TreadShredLeaderboard.RequestRank(rank =>
-        {
-            if (rankText != null)
-                rankText.text = LeaderboardRules.RankLine(rank);
-        });
     }
 
     // D-009: gems already held are spent only after the player confirms; when
@@ -442,6 +447,14 @@ public class ManagerScore : MonoBehaviour
             return;
         }
         TreadShredConfirmDialog.Show(OfferLabels.Confirmation(offer, store.Wallet.Balance), rewardFont, redeem);
+    }
+
+    private void OnBalanceChanged(int balance) => RefreshOfferControls(null);
+
+    private void OnDestroy()
+    {
+        if (TreadShredStore.Instance != null)
+            TreadShredStore.Instance.Wallet.BalanceChanged -= OnBalanceChanged;
     }
 
     // D-034: the sales screen's button is this offer's own, with the same label and the same purchase.

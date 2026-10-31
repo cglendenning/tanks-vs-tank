@@ -44,6 +44,9 @@ namespace TreadShred.Progression
             return acceptedThisSession > 0 && playerScoreOnBoard < acceptedThisSession && readsSoFar < CatchUpReads;
         }
 
+        /// <summary>D-032-AC-02: the result screen's LEADERBOARD button carries the rank once the platform reports it.</summary>
+        public static string ButtonLabel(int rank) => rank > 0 ? Title + " #" + CountText.Format(rank) : Title;
+
         public static string RankLine(int rank)
         {
             return "LEADERBOARD RANK: #" + CountText.Format(rank);
