@@ -127,8 +127,6 @@ public class ManagerScore : MonoBehaviour
         {
             scoreCommitted = true;
             lastMission = TreadShredScores.Run.Complete(won, CurDieEmnemy, TreadShredProgress.Ensure().SelectedTier);
-            if (lastMission.Won)
-                TreadShredImpact.MissionClear(lastMission.ClearPoints);
             newHighScore = TreadShredScores.RecordScore(lastMission.RunScore);
             TreadShredLeaderboard.SubmitIfRaised();
         }
@@ -265,6 +263,8 @@ public class ManagerScore : MonoBehaviour
                 }
 
                 wf = true;
+                // D-032-AC-01: the clear points show on the final kill, before the result screen opens over them.
+                TreadShredImpact.MissionClear(ScoreRules.ClearValue(TreadShredProgress.Ensure().SelectedTier));
                 LogMissionEnd(TreadShredProgress.Ensure().CompleteCurrentMission(true), true);
                 VictoryObj.SetActive(true);
                 StartCoroutine(DelayVictotory());
@@ -287,6 +287,7 @@ public class ManagerScore : MonoBehaviour
         CanvasGame.transform.GetChild(10).gameObject.SetActive(false);
         MusicManager.instance.Victory();
         CaculaterScore(true);
+        TreadShredImpact.MissionOver();
         VictoryofFail.SetActive(true);
         if (FailureObj != null && FailureObj.activeSelf)
             BuildFailureRewardActions();

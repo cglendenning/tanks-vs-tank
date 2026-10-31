@@ -47,7 +47,9 @@ public sealed class TreadShredImpact : MonoBehaviour
         impact.Shake(ImpactRules.ShakeOnKill);
         impact.SpawnDebris(position);
         // The kill's points appear with it (D-032-AC-01).
-        impact.ShowCallout(ScoreRules.KillCallout(ScoreRules.KillValue(TreadShredProgress.Ensure().SelectedTier)));
+        // A shell still in flight can land after the mission ends; the result screen stays clean (D-013-AC-04).
+        if (!missionOver)
+            impact.ShowCallout(ScoreRules.KillCallout(ScoreRules.KillValue(TreadShredProgress.Ensure().SelectedTier)));
         if (!impact.frozen)
             impact.StartCoroutine(impact.FreezeFrame());
     }
@@ -103,6 +105,30 @@ public sealed class TreadShredImpact : MonoBehaviour
             body.AddTorque(Random.insideUnitSphere * 8f, ForceMode.Impulse);
             Destroy(piece, 2.5f);
         }
+    }
+
+    private static bool missionOver;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void ResetEachMission()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += (scene, mode) => missionOver = false;
+    }
+
+    /// <summary>The result screen is opening: clear any callout so nothing sits over its text (D-013-AC-04).</summary>
+    public static void MissionOver()
+    {
+        missionOver = true;
+        var impact = Ensure();
+        foreach (var line in new[] { impact.callout, impact.clearCallout })
+        {
+            if (line != null)
+                line.color = new Color(line.color.r, line.color.g, line.color.b, 0f);
+        }
+        if (impact.calloutRoutine != null)
+            impact.StopCoroutine(impact.calloutRoutine);
+        if (impact.clearRoutine != null)
+            impact.StopCoroutine(impact.clearRoutine);
     }
 
     /// <summary>D-032-AC-01: the clear points appear the moment the last enemy falls.</summary>

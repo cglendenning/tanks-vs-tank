@@ -16,6 +16,22 @@
   `python3 spec_tools.py validate --app-root ../games/tread-shred` from the
   spec repository; it fails on any unlabeled test.
 
+## Think first, run once (owner rule)
+
+Waiting on Unity, simulators, emulators and phones is the slowest part of this project. Before any
+Unity batch run, simulator or emulator session, device install or script run:
+
+- Predict the outcome from static analysis first: read the code paths involved, the scene, prefab and
+  settings data, existing logs and earlier results. Run only to confirm a prediction, never to explore.
+- Gather everything one run should prove in that single run (all log lines, screenshots and assertions
+  needed), so a run is never repeated just to see one more thing.
+- Check the preconditions that make a run fail fast before starting it: device authorized and awake,
+  correct tool paths, scenes and modes that exist, tags and components the code relies on.
+- Prefer the fastest loop that answers the question: static reading, then filtered EditMode tests,
+  then the PlayMode screen sweep, and only then simulators, emulators or devices.
+- For helper tooling, prefer shell with `jq` or a compiled tool over an interpreter when the work is
+  simple; reach for Python only when nothing lighter fits.
+
 ## Unity editor and build tooling
 
 - The Unity editor is already installed on this Mac. Never download, install,

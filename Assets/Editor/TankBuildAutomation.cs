@@ -122,7 +122,8 @@ public static class TankBuildAutomation
         // current Android player minimum and avoid the legacy project's setting.
         PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
         PlayerSettings.Android.targetSdkVersion = (AndroidSdkVersions)36;
-        PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+        // ARMv7 too: budget phones such as the moto g play (2023) run 32-bit Android and cannot install an ARM64-only build.
+        PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARMv7 | AndroidArchitecture.ARM64;
         ConfigureAndroidSigning();
         PlayerSettings.iOS.targetOSVersionString = "15.0";
         PlayerSettings.iOS.requiresFullScreen = true;

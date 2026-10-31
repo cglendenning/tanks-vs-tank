@@ -29,6 +29,11 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private const int LeaderboardTap = 15;
     // D-032: the leaderboard screen filled with a sample page, for layout review only.
     private const int LeaderboardLayout = 16;
+    // D-031: the ad-reel trailer. A real mission with the camera in close; the driver aims at the
+    // nearest enemy and fires through the player's own FireAt, so every kill, explosion and callout is real.
+    private const int Trailer = 17;
+    private const float TrailerZoom = 0.6f;
+    private const float TrailerShotSeconds = 0.5f;
 
     private PlayerMoverment player;
     private ManagerScore score;
@@ -48,7 +53,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private static void InstallIfEnabled()
     {
         var mode = PlayerPrefs.GetInt(CaptureModeKey, 0);
-        if (mode < CombatSingle || mode > LeaderboardLayout)
+        if (mode < CombatSingle || mode > Trailer)
             return;
 
         Debug.Log($"[STORE_CAPTURE] installing capture driver mode={mode}");
@@ -92,6 +97,8 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
                 StartCoroutine(TapLeaderboard());
             else if (mode == LeaderboardLayout)
                 Invoke(nameof(ShowSampleLeaderboard), 1.5f);
+            else if (mode == Trailer)
+                Invoke(nameof(LoadTrailerScene), 0.8f);
             else
                 Invoke(nameof(LoadCombatScene), 0.8f);
             return;
@@ -102,6 +109,195 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
             Debug.Log($"[STORE_CAPTURE] combat scene loaded: {scene.name}");
             Invoke(nameof(AttachToPlayer), IsRealActionCapture ? 0.1f : 1.2f);
         }
+    }
+
+    private void LoadTrailerScene()
+    {
+        // The follow camera keeps the player's tank framed once the view is zoomed in.
+        PlayerPrefs.SetFloat("Camera", 0f);
+        TreadShredBoosts.Current.ArmOverdrive();
+        // Lv17: ten enemies and few interior obstacles, so shots connect and kills keep coming.
+        SceneManager.LoadScene("Lv17", LoadSceneMode.Single);
+    }
+
+    private Transform trailerTarget;
+    private bool trailerTargetVisible;
+    private Vector3 trailerLastPosition;
+    private float trailerProgressCheckAt;
+    private float trailerSidestepUntil;
+    private float trailerSidestepSign = 1f;
+    private float trailerLastClearShotAt;
+    private int trailerRestages;
+    private Vector3 trailerCameraOffset;
+    private Vector3 trailerCameraVelocity;
+
+    private void StartTrailer()
+    {
+        // Enemy weapons off for this capture only, so the reel is not cut short by an early death.
+        var enemyWeapons = FindObjectsByType<BulletEmnemy>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (var i = 0; i < enemyWeapons.Length; i++)
+            enemyWeapons[i].enabled = false;
+        player.countdie = 99;
+        var view = Camera.main;
+        if (view != null)
+        {
+            // The level camera clamps to the arena, which loses a tank near the edge once zoomed; frame the action instead.
+            var follow = view.GetComponent("Camerafllow") as Behaviour;
+            if (follow != null)
+                follow.enabled = false;
+            var ground = new Plane(Vector3.up, player.transform.position);
+            var ray = new Ray(view.transform.position, view.transform.forward);
+            trailerCameraOffset = ground.Raycast(ray, out var distance) ? view.transform.position - ray.GetPoint(distance) : new Vector3(0f, 30f, -1f);
+            trailerCameraOffset *= TrailerZoom;
+        }
+        StageEnemiesInView();
+        nextShotAt = Time.time + TrailerShotSeconds;
+        trailerLastClearShotAt = Time.time;
+        Debug.Log("[STORE_CAPTURE] trailer armed");
+    }
+
+    // Capture-only staging: moves the mission's real enemies (behaviour and kill logic intact) onto open
+    // ground in a fan in front of the player, each with a clear line from the gun and no wall beside it.
+    private void StageEnemiesInView()
+    {
+        var enemies = FindObjectsByType<MoveEmnemy>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        var staged = 0;
+        for (var i = 0; i < enemies.Length; i++)
+        {
+            if (PlaceInView(enemies[i].transform, i))
+                staged++;
+        }
+        Debug.Log($"[STORE_CAPTURE] trailer staged {staged} of {enemies.Length} enemies in view");
+    }
+
+    private bool PlaceInView(Transform enemy, int seed)
+    {
+        var origin = player.transform.position;
+        var forward = -origin;
+        forward.y = 0f;
+        forward = forward.sqrMagnitude > 0.01f ? forward.normalized : Vector3.forward;
+        for (var attempt = 0; attempt < 16; attempt++)
+        {
+            var angle = ((seed * 37 + attempt * 23) % 100) - 50f;
+            var distance = 6f + ((seed + attempt) % 5) * 2.2f;
+            var spot = origin + Quaternion.Euler(0f, angle, 0f) * forward * distance;
+            if (!UnityEngine.AI.NavMesh.SamplePosition(spot, out var onMesh, 1.5f, UnityEngine.AI.NavMesh.AllAreas))
+                continue;
+            spot = onMesh.position;
+            if (WallBetween(origin + Vector3.up * 0.4f, spot + Vector3.up * 0.4f) || Crowded(spot))
+                continue;
+            var agent = enemy.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (agent != null && agent.enabled)
+                agent.Warp(spot);
+            else
+                enemy.position = spot;
+            Physics.SyncTransforms();
+            return true;
+        }
+        return false;
+    }
+
+    private static bool WallBetween(Vector3 from, Vector3 to)
+    {
+        foreach (var hit in Physics.RaycastAll(from, (to - from).normalized, Vector3.Distance(from, to)))
+        {
+            if (hit.collider.CompareTag("thanh"))
+                return true;
+        }
+        return false;
+    }
+
+    private static bool Crowded(Vector3 spot)
+    {
+        foreach (var nearby in Physics.OverlapSphere(spot, 1.1f))
+        {
+            if (nearby.CompareTag("thanh") || nearby.CompareTag("targetMask"))
+                return true;
+        }
+        return false;
+    }
+
+    // Game time stands still during the mission countdown, so firing starts on ENGAGE.
+    private void TrailerTick()
+    {
+        if (player == null || Time.timeScale == 0f || Time.time < nextShotAt)
+            return;
+        nextShotAt = Time.time + TrailerShotSeconds;
+        trailerTarget = null;
+        var best = float.MaxValue;
+        // Every mission's enemy tanks drive with MoveEmnemy, whatever they are tagged.
+        foreach (var enemy in FindObjectsByType<MoveEmnemy>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+        {
+            var distance = (enemy.transform.position - player.transform.position).sqrMagnitude;
+            if (distance < best)
+            {
+                best = distance;
+                trailerTarget = enemy.transform;
+            }
+        }
+        trailerTargetVisible = trailerTarget != null && ClearShot(trailerTarget);
+        if (trailerTargetVisible)
+        {
+            trailerLastClearShotAt = Time.time;
+            player.FireAt(trailerTarget.position);
+        }
+        else if (trailerTarget != null && Time.time - trailerLastClearShotAt > 1.5f)
+        {
+            // An enemy pinned behind a wall would stall the reel: bring it back into the open.
+            PlaceInView(trailerTarget, ++trailerRestages);
+            trailerLastClearShotAt = Time.time;
+        }
+    }
+
+    // True when nothing but the target stands between the player's gun and it.
+    private bool ClearShot(Transform target)
+    {
+        var from = player.pointbullet.position;
+        var to = target.position + Vector3.up * 0.3f;
+        foreach (var hit in Physics.RaycastAll(from, (to - from).normalized, Vector3.Distance(from, to)))
+        {
+            if (hit.transform.IsChildOf(player.transform) || hit.collider.isTrigger)
+                continue;
+            if (!hit.transform.IsChildOf(target))
+                return false;
+        }
+        return true;
+    }
+
+    // With no clear shot, drive toward the nearest enemy through the tank's own Move, as the joystick
+    // would; sidestep for a moment whenever a wall stops progress.
+    private void DriveTrailer()
+    {
+        if (trailerTarget == null || trailerTargetVisible || Time.timeScale == 0f)
+            return;
+        var toward = trailerTarget.position - player.transform.position;
+        toward.y = 0f;
+        var direction = toward.normalized;
+        if (Time.time >= trailerProgressCheckAt)
+        {
+            if ((player.transform.position - trailerLastPosition).sqrMagnitude < 0.04f && Time.time >= trailerSidestepUntil)
+            {
+                trailerSidestepUntil = Time.time + 0.9f;
+                trailerSidestepSign = -trailerSidestepSign;
+            }
+            trailerLastPosition = player.transform.position;
+            trailerProgressCheckAt = Time.time + 0.5f;
+        }
+        if (Time.time < trailerSidestepUntil)
+            direction = Quaternion.Euler(0f, 90f * trailerSidestepSign, 0f) * direction;
+        player.Move(direction.x, direction.z);
+        player.transform.GetChild(1).rotation = Quaternion.LookRotation(direction);
+    }
+
+    // Keeps the shooter and the current target in frame, moving smoothly between kills.
+    private void LateUpdate()
+    {
+        if (mode != Trailer || player == null || Camera.main == null || trailerCameraOffset == Vector3.zero)
+            return;
+        DriveTrailer();
+        var focus = trailerTarget != null ? Vector3.Lerp(player.transform.position, trailerTarget.position, 0.4f) : player.transform.position;
+        var view = Camera.main.transform;
+        view.position = Vector3.SmoothDamp(view.position, focus + trailerCameraOffset, ref trailerCameraVelocity, 0.35f, Mathf.Infinity, Time.unscaledDeltaTime);
     }
 
     private void LoadCombatScene()
@@ -160,6 +356,11 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
         player = FindObjectOfType<PlayerMoverment>();
         score = FindObjectOfType<ManagerScore>();
         Debug.Log($"[STORE_CAPTURE] attach player={(player != null)} score={(score != null)} mode={mode}");
+        if (mode == Trailer && player != null)
+        {
+            StartTrailer();
+            return;
+        }
         if (mode == ReviveOffer && player != null)
         {
             Invoke(nameof(ShowReviveOffer), 2.5f);
@@ -197,6 +398,11 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
 
     private void Update()
     {
+        if (mode == Trailer)
+        {
+            TrailerTick();
+            return;
+        }
         if (mode >= CombatSingle && mode <= RealActionCapture)
             Debug.developerConsoleVisible = false;
 

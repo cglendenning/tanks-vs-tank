@@ -40,10 +40,10 @@ prefs_backup="$results/playerprefs-backup.plist"
 had_prefs=0
 if defaults export "$PREFS_DOMAIN" "$prefs_backup" 2>/dev/null; then had_prefs=1; fi
 restore_prefs() {
+  # Import merges, so clear the domain first: keys a test run added must not outlive it.
+  defaults delete "$PREFS_DOMAIN" 2>/dev/null || true
   if [ "$had_prefs" = 1 ]; then
     defaults import "$PREFS_DOMAIN" "$prefs_backup"
-  else
-    defaults delete "$PREFS_DOMAIN" 2>/dev/null || true
   fi
 }
 trap restore_prefs EXIT

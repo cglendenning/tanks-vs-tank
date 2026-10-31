@@ -82,7 +82,10 @@ namespace TreadShred.Screens.Tests
                     var manager = Find("ManagerScore");
                     SetMember(manager, "CountEmnemy", 1);
                     Call(manager, "Victory");
-                    yield return Settle(3.5f);
+                    // The moment the result screen opens, when a clear callout once covered its score line.
+                    yield return Settle(2.3f);
+                    yield return Audit(save + " VICTORY OPENING", "OVERDRIVE");
+                    yield return Settle(1.2f);
                     yield return Audit(save + " VICTORY", "OVERDRIVE");
 
                     yield return StartMission();
@@ -246,6 +249,11 @@ namespace TreadShred.Screens.Tests
         // Calls a method on target, or "Type.Method" statically when target is null; a failure is a finding, never silent.
         private object Call(object target, string method, params object[] args)
         {
+            if (target == null && method.IndexOf('.') < 0)
+            {
+                Findings.Add(new Finding(Defect.NotReached, "nothing to call " + method + " on in " + SceneManager.GetActiveScene().name));
+                return null;
+            }
             var type = target?.GetType() ?? GameType(method.Substring(0, method.LastIndexOf('.')));
             var name = target == null ? method.Substring(method.LastIndexOf('.') + 1) : method;
             var flags = BindingFlags.Public | BindingFlags.NonPublic | (target == null ? BindingFlags.Static : BindingFlags.Instance);
