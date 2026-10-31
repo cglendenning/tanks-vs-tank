@@ -5,6 +5,7 @@
     python3 scripts/play-console.py check-upload-key <aab>    # upload into a throwaway edit: does Google accept its signing key?
     python3 scripts/play-console.py release <aab> <fraction>  # one edit: bundle, staged production rollout, listing text and images
     python3 scripts/play-console.py rollout <fraction>        # change the live production rollout; 1 completes it for everyone
+    python3 scripts/play-console.py status                    # Google's review state of each production release
 
 Authenticates with the service account key at $PLAY_KEY_FILE (default
 ~/.play-console/tread-shred-play.json); the account needs Tread Shred permissions in the Play Console.
@@ -181,6 +182,14 @@ def rollout(auth, fraction):
           + (f" at {float(fraction):.0%}" if release["status"] == "inProgress" else " for 100% of users"))
 
 
+def status(auth):
+    """Prints Google Play's review lifecycle state for each production release (in review, approved, published)."""
+    for release in call("GET", "/tracks/production/releases", auth).get("releases", []):
+        codes = ", ".join(str(a["versionCode"]) for a in release.get("activeArtifacts", []))
+        state = release["releaseLifecycleState"].removeprefix("RELEASE_LIFECYCLE_STATE_")
+        print(f"production {release['releaseName']} (version code {codes}): {state}")
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 2 and sys.argv[1] == "products":
         products(token())
@@ -188,6 +197,8 @@ if __name__ == "__main__":
         check_upload_key(token(), sys.argv[2])
     elif len(sys.argv) == 4 and sys.argv[1] == "release":
         release(token(), sys.argv[2], sys.argv[3])
+    elif len(sys.argv) == 2 and sys.argv[1] == "status":
+        status(token())
     elif len(sys.argv) == 3 and sys.argv[1] == "rollout":
         rollout(token(), sys.argv[2])
     else:

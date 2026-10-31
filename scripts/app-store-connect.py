@@ -10,6 +10,8 @@
     ... app-store-connect.py attach-build <version> <build-number>
     ... app-store-connect.py submit <version>
     ... app-store-connect.py full-release <version>
+    ... app-store-connect.py resubmit <version>
+    ... app-store-connect.py status <version>
 listing: finds or creates that iOS version (it stays invisible until submitted),
 writes the approved English copy from Store/listing-en-US.md (D-030) and removes
 every other language from that version and its app info.
@@ -290,8 +292,40 @@ def attach_build(api, version, build_number):
     raise SystemExit("Build still processing after 30 minutes")
 
 
+AWAITING_REVIEW = ("PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "DEVELOPER_REJECTED")
+
+
+def review_items(api, app):
+    """Every in-app purchase version and active leaderboard version with its review state. Apple reviews a
+    first purchase or board only in the same submission as an app version; one left out is not live with it."""
+    items = []
+    for iap in api.call("GET", f"/v1/apps/{app}/inAppPurchasesV2?limit=200")["data"]:
+        for v in api.call("GET", f"/v2/inAppPurchases/{iap['id']}/versions")["data"]:
+            items.append(("inAppPurchaseVersion", "inAppPurchaseVersions", v["id"], iap["attributes"]["productId"], v["attributes"]["state"]))
+    detail = api.call("GET", f"/v1/apps/{app}/gameCenterDetail")["data"]["id"]
+    for board in api.call("GET", f"/v1/gameCenterDetails/{detail}/gameCenterLeaderboardsV2")["data"]:
+        if board["attributes"].get("archived"):
+            continue
+        for v in api.call("GET", f"/v2/gameCenterLeaderboards/{board['id']}/versions")["data"]:
+            items.append(("gameCenterLeaderboardVersion", "gameCenterLeaderboardVersions", v["id"], board["attributes"]["vendorIdentifier"], v["attributes"]["state"]))
+    return items
+
+
+def items_in(api, submission_id):
+    """Ids of what a draft submission already holds, so a retry never adds an item twice."""
+    held = set()
+    items = api.call("GET", f"/v1/reviewSubmissions/{submission_id}/items?limit=200"
+                     "&include=appStoreVersion,inAppPurchaseVersion,gameCenterLeaderboardVersion")["data"]
+    for item in items:
+        for relation in item.get("relationships", {}).values():
+            if isinstance(relation.get("data"), dict):
+                held.add(relation["data"]["id"])
+    return held
+
+
 def submit(api, version):
-    """Submits the version for App Review with a phased release; its build declares exempt encryption only."""
+    """Submits the version for App Review with every in-app purchase and leaderboard awaiting review, released
+    to all users on approval; its build declares exempt encryption only."""
     app, target, _ = en_us_localization(api, version)
     build = api.call("GET", f"/v1/appStoreVersions/{target['id']}/build")["data"]
     if not build:
@@ -313,22 +347,57 @@ def submit(api, version):
         api.create("gameCenterLeaderboardReleases", None, {
             "gameCenterDetail": {"data": {"type": "gameCenterDetails", "id": detail}},
             "gameCenterLeaderboard": {"data": {"type": "gameCenterLeaderboards", "id": board["id"]}}})
-    phased = api.call("GET", f"/v1/appStoreVersions/{target['id']}/appStoreVersionPhasedRelease")["data"]
-    if not phased:
-        api.create("appStoreVersionPhasedReleases", {"phasedReleaseState": "INACTIVE"},
-                   {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": target["id"]}}})
     # Reuse a draft submission left by an earlier attempt; Apple allows only one open per platform.
     drafts = [s for s in api.call("GET", f"/v1/reviewSubmissions?filter[app]={app}&filter[platform]=IOS")["data"]
               if s["attributes"].get("state") == "READY_FOR_REVIEW"]
     submission = drafts[0] if drafts else api.create("reviewSubmissions", {"platform": "IOS"}, {"app": {"data": {"type": "apps", "id": app}}})
-    api.create("reviewSubmissionItems", None, {
-        "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": submission["id"]}},
-        "appStoreVersion": {"data": {"type": "appStoreVersions", "id": target["id"]}}})
+    held = items_in(api, submission["id"])
+    extras = [i for i in review_items(api, app) if i[4] in AWAITING_REVIEW]
+    for relation, kind, item_id, _, _ in [("appStoreVersion", "appStoreVersions", target["id"], version, None)] + extras:
+        if item_id not in held:
+            api.create("reviewSubmissionItems", None, {
+                "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": submission["id"]}},
+                relation: {"data": {"type": kind, "id": item_id}}})
     api.call("PATCH", f"/v1/reviewSubmissions/{submission['id']}", {"data": {"type": "reviewSubmissions",
              "id": submission["id"], "attributes": {"submitted": True}}})
     state = api.call("GET", f"/v1/appStoreVersions/{target['id']}")["data"]["attributes"]["appStoreState"]
-    print(f"{version} submitted for review with a phased release; state: {state}")
+    print(f"{version} submitted for review with {', '.join(i[3] for i in extras) or 'no other items'}; "
+          f"releases to all users on approval; state: {state}")
 
+
+def resubmit(api, version):
+    """Cancels the version's open review, waits for Apple to hand it back, and submits it again with everything
+    awaiting review. Review starts over."""
+    app, target, _ = en_us_localization(api, version)
+    submissions = lambda: api.call("GET", f"/v1/reviewSubmissions?filter[app]={app}&filter[platform]=IOS")["data"]
+    for s in submissions():
+        if s["attributes"].get("state") in ("WAITING_FOR_REVIEW", "IN_REVIEW", "UNRESOLVED_ISSUES"):
+            api.call("PATCH", f"/v1/reviewSubmissions/{s['id']}", {"data": {"type": "reviewSubmissions", "id": s["id"],
+                     "attributes": {"canceled": True}}})
+    deadline = time.time() + 180
+    while True:
+        state = api.call("GET", f"/v1/appStoreVersions/{target['id']}")["data"]["attributes"]["appStoreState"]
+        if state not in ("WAITING_FOR_REVIEW", "IN_REVIEW") and not any(
+                s["attributes"].get("state") == "CANCELING" for s in submissions()):
+            break
+        if time.time() > deadline:
+            raise SystemExit(f"Apple has not finished cancelling the review after 3 minutes (version {state}); run resubmit again")
+        print(f"cancelling the review: version {state}", flush=True)
+        time.sleep(10)
+    submit(api, version)
+
+
+def status(api, version):
+    """Prints the version's App Store state, its latest review submission, and each purchase and board's review state."""
+    app, target, _ = en_us_localization(api, version)
+    state = api.call("GET", f"/v1/appStoreVersions/{target['id']}")["data"]["attributes"]["appStoreState"]
+    print(f"{version}: {state}")
+    latest = api.call("GET", f"/v1/reviewSubmissions?filter[app]={app}&filter[platform]=IOS&limit=1")["data"]
+    if latest:
+        a = latest[0]["attributes"]
+        print(f"latest review submission: {a.get('state')}, submitted {a.get('submittedDate') or 'not yet'}")
+    for _, _, _, name, state in review_items(api, app):
+        print(f"{name}: {state}")
 
 def full_release(api, version):
     """Removes the phased release so the version goes to all users at once."""
@@ -361,6 +430,10 @@ def main():
         attach_build(api, sys.argv[2], sys.argv[3])
     elif command == ["submit"] and len(sys.argv) == 3:
         submit(api, sys.argv[2])
+    elif command == ["resubmit"] and len(sys.argv) == 3:
+        resubmit(api, sys.argv[2])
+    elif command == ["status"] and len(sys.argv) == 3:
+        status(api, sys.argv[2])
     elif command == ["full-release"] and len(sys.argv) == 3:
         full_release(api, sys.argv[2])
     else:
