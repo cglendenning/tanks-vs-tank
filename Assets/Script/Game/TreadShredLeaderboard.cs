@@ -4,20 +4,13 @@ using System.Runtime.InteropServices;
 using TreadShred.Progression;
 using UnityEngine;
 
-public enum LeaderboardOpenResult
-{
-    // Signed in: show the in-game leaderboard screen.
-    Ready,
-    SignInShown,
-    SignInFromSettings
-}
-
 /// <summary>
 /// D-032: the platform leaderboard (Game Center on iOS, through the
 /// TreadShredGameCenter plugin). The platform owns the player's identity and
-/// nickname; the game submits HIGH SCORE and reads back the top entries and
-/// the player's rank for its own leaderboard screen. Sign-in is offered when
-/// the player taps LEADERBOARD, never forced, and nothing here pauses play.
+/// nickname; LeaderboardSync decides when HIGH SCORE is submitted and how the
+/// board is read back; this class only connects it to the plugin. Sign-in is
+/// offered when the player taps LEADERBOARD, never forced, and nothing here
+/// pauses play.
 /// </summary>
 public sealed class TreadShredLeaderboard : MonoBehaviour
 {
@@ -41,17 +34,9 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
     private static void TreadShredGameCenterLoadTop(string board, int count) { }
 #endif
 
-    private static bool submitting;
-    private static int submittingTotal;
-    // Game Center's own record of the player's score, and what it accepted this session. Submitting
-    // against these (not a local "last submitted" marker) means a stale marker can never block a score.
-    private static long? gameCenterScore;
-    private static int acceptedThisSession;
+    private static readonly GameCenterPlugin plugin = new GameCenterPlugin();
+    private static readonly LeaderboardSync sync = new LeaderboardSync(plugin, () => TreadShredScores.HighScore, After);
     private static TreadShredLeaderboard instance;
-    private static readonly List<Action<int>> afterSubmit = new List<Action<int>>();
-    private static readonly List<Action<int, long>> awaitingRank = new List<Action<int, long>>();
-    private static readonly List<Action<LeaderboardPage>> afterSubmitTop = new List<Action<LeaderboardPage>>();
-    private static readonly List<Action<LeaderboardPage>> awaitingTop = new List<Action<LeaderboardPage>>();
 
     /// <summary>Raised when Game Center finishes signing the player in.</summary>
     public static event Action SignedInNow;
@@ -59,7 +44,7 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
     /// <summary>Whether this platform has a Tread Shred leaderboard (Game Center today).</summary>
     public static bool Available => Application.platform == RuntimePlatform.IPhonePlayer;
 
-    public static bool SignedIn => TreadShredGameCenterIsSignedIn() != 0;
+    public static bool SignedIn => Available && plugin.SignedIn;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void SignInQuietly()
@@ -75,104 +60,77 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
     /// <summary>Submits HIGH SCORE when it beats what Game Center holds for the player.</summary>
     public static void SubmitIfRaised()
     {
-        if (!Available || !SignedIn || submitting)
-            return;
-        // Wait until Game Center has reported the player's entry after sign-in.
-        var onGameCenter = LeaderboardRules.Baseline(gameCenterScore, acceptedThisSession);
-        if (!onGameCenter.HasValue)
-            return;
-        var highScore = TreadShredScores.HighScore;
-        if (!LeaderboardRules.ShouldSubmit(highScore, onGameCenter.Value))
-            return;
-        submitting = true;
-        submittingTotal = highScore;
-        TreadShredGameCenterSubmit(highScore, GameCenterId);
+        if (Available)
+            sync.SubmitIfRaised();
     }
 
     /// <summary>Calls back with the player's all-time rank, after any submission in flight.</summary>
     public static void RequestRank(Action<int> onRank)
     {
-        if (!Available || !SignedIn)
-            return;
-        if (submitting)
-            afterSubmit.Add(onRank);
-        else
-            CatchUpRank(onRank, 0);
+        if (Available)
+            sync.RequestRank(onRank);
     }
 
     /// <summary>Calls back with the top entries and the player's own, after any submission in flight; null when unavailable.</summary>
     public static void RequestTop(Action<LeaderboardPage> onPage)
     {
-        if (!Available || !SignedIn)
-        {
-            onPage(null);
-            return;
-        }
-        if (submitting)
-            afterSubmitTop.Add(onPage);
+        if (Available)
+            sync.RequestTop(onPage);
         else
-            CatchUpTop(onPage, 0);
+            onPage(null);
     }
 
     /// <summary>Ready when signed in; otherwise offers Apple's sign-in, or says to sign in from Settings.</summary>
     public static LeaderboardOpenResult Open()
     {
-        if (SignedIn)
-            return LeaderboardOpenResult.Ready;
-        return TreadShredGameCenterOfferSignIn() != 0
-            ? LeaderboardOpenResult.SignInShown
-            : LeaderboardOpenResult.SignInFromSettings;
+        return sync.Open();
     }
 
-    // Re-reads until the board shows the score accepted this session (Game Center uploads it a few seconds later).
-    private static void CatchUpTop(Action<LeaderboardPage> onPage, int reads)
-    {
-        LoadTop(page =>
-        {
-            var onBoard = page != null && page.Player.HasValue ? page.Player.Value.Score : 0;
-            if (page != null && LeaderboardRules.BoardBehind(onBoard, acceptedThisSession, reads + 1))
-                RetryLater(() => CatchUpTop(onPage, reads + 1));
-            else
-                onPage(page);
-        });
-    }
-
-    private static void CatchUpRank(Action<int> onRank, int reads)
-    {
-        LoadRank((rank, score) =>
-        {
-            if (LeaderboardRules.BoardBehind(score, acceptedThisSession, reads + 1))
-                RetryLater(() => CatchUpRank(onRank, reads + 1));
-            else if (rank > 0)
-                onRank(rank);
-        });
-    }
-
-    private static void RetryLater(Action read)
+    private static void After(float seconds, Action run)
     {
         if (instance != null)
-            instance.StartCoroutine(After(LeaderboardRules.CatchUpSeconds, read));
+            instance.StartCoroutine(Wait(seconds, run));
     }
 
-    private static System.Collections.IEnumerator After(float seconds, Action read)
+    private static System.Collections.IEnumerator Wait(float seconds, Action run)
     {
         yield return new WaitForSecondsRealtime(seconds);
-        read();
+        run();
     }
 
-    private static void LoadTop(Action<LeaderboardPage> onPage)
+    // Game Center through the plugin. Answers arrive as the UnitySendMessage callbacks below; reads
+    // of the same kind share one native request while it is in flight.
+    private sealed class GameCenterPlugin : IGameCenter
     {
-        awaitingTop.Add(onPage);
-        if (awaitingTop.Count == 1)
-            TreadShredGameCenterLoadTop(GameCenterId, LeaderboardPage.TopCount);
-    }
+        public readonly List<Action<int, long>> AwaitingEntry = new List<Action<int, long>>();
+        public readonly List<Action<LeaderboardPage>> AwaitingTop = new List<Action<LeaderboardPage>>();
+        public Action<bool> AwaitingSubmit;
+        public long Submitting;
 
-    private static void LoadRank(Action<int, long> onRank)
-    {
-        if (onRank != null)
-            awaitingRank.Add(onRank);
-        if (awaitingRank.Count <= 1)
-            TreadShredGameCenterLoadRank(GameCenterId);
+        public bool SignedIn => TreadShredGameCenterIsSignedIn() != 0;
+
+        public bool OfferSignIn() => TreadShredGameCenterOfferSignIn() != 0;
+
+        public void Submit(long score, Action<bool> accepted)
+        {
+            AwaitingSubmit = accepted;
+            Submitting = score;
+            TreadShredGameCenterSubmit(score, GameCenterId);
+        }
+
+        public void LoadPlayerEntry(Action<int, long> entry)
+        {
+            AwaitingEntry.Add(entry);
+            if (AwaitingEntry.Count == 1)
+                TreadShredGameCenterLoadRank(GameCenterId);
+        }
+
+        public void LoadTop(int count, Action<LeaderboardPage> page)
+        {
+            AwaitingTop.Add(page);
+            if (AwaitingTop.Count == 1)
+                TreadShredGameCenterLoadTop(GameCenterId, count);
+        }
     }
 
     // Called by the plugin with "1" (signed in), "0" (not) or "offer" (Apple's sign-in screen is ready).
@@ -181,31 +139,17 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
         Debug.Log("[Leaderboard] Game Center sign-in: " + state);
         if (state != "1")
             return;
-        // Learn the player's score on Game Center first; OnRank then submits if the game's total is higher.
-        LoadRank(null);
+        sync.SignedIn();
         SignedInNow?.Invoke();
     }
 
     private void OnSubmitted(string accepted)
     {
-        submitting = false;
-        if (accepted == "1")
-        {
-            acceptedThisSession = Math.Max(acceptedThisSession, submittingTotal);
-        }
-        else
-        {
-            // Retried after the next mission or launch, since the saved total did not move.
-            Debug.LogWarning("[Leaderboard] score " + submittingTotal + " was not accepted");
-        }
-        var waiting = afterSubmit.ToArray();
-        afterSubmit.Clear();
-        foreach (var onRank in waiting)
-            CatchUpRank(onRank, 0);
-        var waitingTop = afterSubmitTop.ToArray();
-        afterSubmitTop.Clear();
-        foreach (var onPage in waitingTop)
-            CatchUpTop(onPage, 0);
+        if (accepted != "1")
+            Debug.LogWarning("[Leaderboard] score " + plugin.Submitting + " was not accepted");
+        var answer = plugin.AwaitingSubmit;
+        plugin.AwaitingSubmit = null;
+        answer?.Invoke(accepted == "1");
     }
 
     [Serializable]
@@ -227,8 +171,8 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
 
     private void OnTop(string json)
     {
-        var waiting = awaitingTop.ToArray();
-        awaitingTop.Clear();
+        var waiting = plugin.AwaitingTop.ToArray();
+        plugin.AwaitingTop.Clear();
         LeaderboardPage page = null;
         try
         {
@@ -255,17 +199,15 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
     // Called by the plugin with "rank:score" for the player's own entry ("0:0" when there is none).
     private void OnRank(string reported)
     {
-        var waiting = awaitingRank.ToArray();
-        awaitingRank.Clear();
+        var waiting = plugin.AwaitingEntry.ToArray();
+        plugin.AwaitingEntry.Clear();
         var parts = (reported ?? string.Empty).Split(':');
         int.TryParse(parts[0], out var rank);
         long score = 0;
         if (parts.Length > 1)
             long.TryParse(parts[1], out score);
-        gameCenterScore = score;
         Debug.Log("[Leaderboard] Game Center holds rank " + rank + ", score " + score);
-        SubmitIfRaised();
-        foreach (var onRank in waiting)
-            onRank(rank, score);
+        foreach (var onEntry in waiting)
+            onEntry(rank, score);
     }
 }
