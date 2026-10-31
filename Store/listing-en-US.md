@@ -1,0 +1,42 @@
+# Tread Shred store listing, en-US (D-030)
+
+Every claim below exists in the release candidate and works as shown (D-030-AC-03). Re-check this file
+against the build before every submission. Google Play omits the iOS-only lines marked (iOS).
+
+## Both stores
+
+- **Name / title:** Tread Shred
+- **App Store subtitle (30):** Tank combat. Permanent power.
+- **Google Play short description (80):** Tank combat with permanent upgrades. 40 missions, three tiers, no ads.
+- **App Store promotional text (170):** Forty missions. Three tiers. Every win upgrades your tank for good. Clear Recruit, then prove it on Veteran and Elite.
+- **App Store keywords (100):** tank,combat,shooter,missions,armor,upgrade,arcade,action,war,battle,tactical,tiers
+
+## Description
+
+Destroy every hostile.
+Tread Shred is close-quarters tank combat in walled arenas. Steer with the joystick, tap to fire, and use the walls for cover while you line up your shots. Every enemy tank is hunting you too, so reading the angles and staying on the move matter as much as aim. Each kill lands with a freeze-frame, a fireball and a shake you can feel.
+
+Every win makes you stronger
+Every mission pays out coins, and coins buy permanent upgrades. Thicken your armor until your tank shrugs off eight hits, push your firepower to double damage, and tune your speed half again faster. Each track has ten levels, and every upgrade stays with your tank for good, so the mission that beat you yesterday is the one you shred today.
+
+Three tiers, no mercy
+Forty missions make up the Recruit campaign. Clear them all and Veteran unlocks: the same arenas with tougher, faster enemies and double points for every kill and every cleared mission. Clear Veteran and Elite opens up, where enemies are at their toughest and fastest and every score is tripled.
+
+Chase the high score
+Every enemy destroyed is worth 100 points and every mission cleared is worth 500, multiplied by your tier. Keep a run going to push your high score higher, then see where you rank on the Game Center leaderboard, right from the game. (iOS)
+
+Boost when it counts
+Gems turn a close call into a win. Revive on the spot with full armor when your tank goes down, redeploy into a failed mission with an extra hit, or arm Overdrive to fire two shots per tap on your next mission. Every boost tells you its cost before you spend. You start with 100 gems, earn more from progress milestones, and can buy packs of 100, 550 or 1,200.
+
+Your progress is safe
+Upgrades, coins, gems and cleared missions back up to iCloud automatically and come back if you reinstall or switch devices. (iOS)
+
+Features
+• 40 missions across three difficulty tiers: Recruit, Veteran and Elite
+• Permanent armor, firepower and speed upgrades, ten levels each
+• Freeze-frames, explosions, camera shake and haptics on every kill
+• Game Center leaderboard and iCloud progress backup (iOS)
+• Sound, music, vibration and camera settings
+• No ads
+
+Free to play. Optional in-app purchases: gem packs.
