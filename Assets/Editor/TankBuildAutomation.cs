@@ -24,7 +24,7 @@ public static class TankBuildAutomation
     // screenshots after a version is approved.
     private const string ReleaseVersion = "1.8.1";
     private const int ReleaseBuildNumber = 17;
-    private const int AndroidReleaseBuildNumber = 4;
+    private const int AndroidReleaseBuildNumber = 5;
 
     [MenuItem("Tread Shred/Build/iOS device project")]
     public static void BuildIosDeviceProject()

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Google Play Console setup for Tread Shred through the Android Publisher API.
 
-    python3 scripts/play-console.py products   # create or update the gem packs (D-007-AC-02) and activate them
+    python3 scripts/play-console.py products                  # create or update the gem packs (D-007-AC-02) and activate them
+    python3 scripts/play-console.py check-upload-key <aab>    # upload into a throwaway edit: does Google accept its signing key?
 
 Authenticates with the service account key at $PLAY_KEY_FILE (default
 ~/.play-console/tread-shred-play.json); the account needs Tread Shred permissions in the Play Console.
@@ -81,8 +82,31 @@ def products(auth):
         print(f"{product_id}: {gems:,} gems, US ${usd}, {len(regions)} regions, {state}")
 
 
+def check_upload_key(auth, bundle):
+    """Uploads the bundle into a new edit and deletes the edit: nothing is released or kept."""
+    edit = call("POST", "/edits", auth, {})["id"]
+    try:
+        url = API.replace("/androidpublisher/v3/", "/upload/androidpublisher/v3/") + f"/edits/{edit}/bundles?uploadType=media"
+        request = urllib.request.Request(url, method="POST", data=open(bundle, "rb").read(),
+                                         headers={"Authorization": "Bearer " + auth, "Content-Type": "application/octet-stream"})
+        try:
+            uploaded = json.loads(urllib.request.urlopen(request, timeout=600).read())
+            print(f"Google accepted the bundle's upload key (version code {uploaded.get('versionCode')}); the edit is discarded.")
+        except urllib.error.HTTPError as error:
+            raw = error.read().decode(errors="replace")
+            try:
+                message = json.loads(raw).get("error", {}).get("message", raw)
+            except ValueError:
+                message = raw
+            print(f"Google rejected the bundle: HTTP {error.code}: {message[:400]}")
+    finally:
+        call("DELETE", f"/edits/{edit}", auth)
+
+
 if __name__ == "__main__":
-    commands = {"products": products}
-    if len(sys.argv) != 2 or sys.argv[1] not in commands:
+    if len(sys.argv) == 2 and sys.argv[1] == "products":
+        products(token())
+    elif len(sys.argv) == 3 and sys.argv[1] == "check-upload-key":
+        check_upload_key(token(), sys.argv[2])
+    else:
         sys.exit(__doc__)
-    commands[sys.argv[1]](token())
