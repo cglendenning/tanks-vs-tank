@@ -336,17 +336,14 @@ def submit(api, version):
                  "attributes": {"usesNonExemptEncryption": False}}})
     api.call("PATCH", f"/v1/appStoreVersions/{target['id']}", {"data": {"type": "appStoreVersions", "id": target["id"],
              "attributes": {"releaseType": "AFTER_APPROVAL"}}})
-    # The build carries the Game Center entitlement: the version must be linked to Game Center, and the
-    # HIGH SCORE board needs a release so it is live for players when the version is.
+    # The build carries the Game Center entitlement, so the version must be linked to Game Center. Boards go
+    # live through their versions in the submission; Apple refuses those while an old draft release exists.
     if not api.call("GET", f"/v1/appStoreVersions/{target['id']}/gameCenterAppVersion").get("data"):
         api.create("gameCenterAppVersions", None, {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": target["id"]}}})
     detail = api.call("GET", f"/v1/apps/{app}/gameCenterDetail")["data"]["id"]
-    if not api.call("GET", f"/v1/gameCenterDetails/{detail}/leaderboardReleases")["data"]:
-        board = next(b for b in api.call("GET", f"/v1/gameCenterDetails/{detail}/gameCenterLeaderboards")["data"]
-                     if b["attributes"]["vendorIdentifier"] == LEADERBOARD["vendorIdentifier"])
-        api.create("gameCenterLeaderboardReleases", None, {
-            "gameCenterDetail": {"data": {"type": "gameCenterDetails", "id": detail}},
-            "gameCenterLeaderboard": {"data": {"type": "gameCenterLeaderboards", "id": board["id"]}}})
+    for release in api.call("GET", f"/v1/gameCenterDetails/{detail}/leaderboardReleases")["data"]:
+        if not release["attributes"].get("live"):
+            api.call("DELETE", f"/v1/gameCenterLeaderboardReleases/{release['id']}")
     # Reuse a draft submission left by an earlier attempt; Apple allows only one open per platform.
     drafts = [s for s in api.call("GET", f"/v1/reviewSubmissions?filter[app]={app}&filter[platform]=IOS")["data"]
               if s["attributes"].get("state") == "READY_FOR_REVIEW"]
