@@ -128,8 +128,10 @@ def play_listing():
 
 
 def upload(auth, path, url):
+    # Play takes bundles as octet-stream but images only with their own media type.
+    kind = "image/png" if str(path).endswith(".png") else "application/octet-stream"
     request = urllib.request.Request(url, method="POST", data=Path(path).read_bytes(),
-                                     headers={"Authorization": "Bearer " + auth, "Content-Type": "application/octet-stream"})
+                                     headers={"Authorization": "Bearer " + auth, "Content-Type": kind})
     try:
         return json.loads(urllib.request.urlopen(request, timeout=600).read() or b"{}")
     except urllib.error.HTTPError as error:
