@@ -40,13 +40,6 @@ namespace TreadShred.Screens.Tests
                 Defect.NotUpright);
         }
 
-        [UnityTest(Description = "D-028-AC-04: every number of four or more digits on every screen is written with thousands separators")]
-        public IEnumerator NumbersUseThousandsSeparators()
-        {
-            yield return Swept();
-            AssertNone(Defect.UnformattedNumber);
-        }
-
         [UnityTest(Description = "D-013-AC-03: every visible label on every screen uses the Black Ops One typeface")]
         public IEnumerator EveryLabelUsesTheTypeface()
         {

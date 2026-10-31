@@ -152,9 +152,11 @@ namespace TreadShred.Screens.Tests
                     d.Graphic is Image image && Covers(image) && Intersects(d.Rect, ink, tolerance));
                 if (cover.Graphic != null)
                     findings.Add(new Finding(Defect.PartlyHidden, described + " under " + Path(cover.Graphic.transform)));
-                // Text running into another button reads as part of it, or vanishes against it, whichever draws first.
+                // Text running into another button on the same screen reads as part of it, or vanishes against it,
+                // whichever draws first. Buttons on a screen behind a dialog do not count.
                 var crowded = UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None).FirstOrDefault(b =>
                     b.isActiveAndEnabled && !text.transform.IsChildOf(b.transform) && b.targetGraphic is Image other &&
+                    other.canvas != null && other.canvas.rootCanvas == label.Canvas &&
                     Covers(other) && Intersects(PixelRect(other.rectTransform), ink, tolerance) &&
                     !Contains(PixelRect(other.rectTransform), ink, tolerance));
                 if (crowded != null)
