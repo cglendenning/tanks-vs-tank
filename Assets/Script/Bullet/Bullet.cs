@@ -3,7 +3,6 @@ using System.Collections;
 
 public class Bullet : MonoBehaviour {
    
-    private bool m_rotate;
     Rigidbody rb;
     void Start()
     {

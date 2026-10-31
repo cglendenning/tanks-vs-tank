@@ -62,22 +62,6 @@ public class MusicManager : MonoBehaviour {
             source.Play();
     }
 
-    public void OutTank()
-    {
-        if (issound == false)
-        {
-            transform.GetChild(3).gameObject.GetComponent<AudioSource>().Play();
-        }
-    }
-
-    public void CountDown()
-    {
-        if (issound == false)
-        {
-            transform.GetChild(4).gameObject.GetComponent<AudioSource>().Play();
-        }
-    }
-
     public void Victory()
     {
         if (ismusic)

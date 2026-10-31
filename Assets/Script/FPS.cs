@@ -1,8 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
-
 public class FPS : MonoBehaviour {
 
     float deltaTime;
@@ -22,10 +20,4 @@ public class FPS : MonoBehaviour {
     }
   
 
-    public void ReLoadPlay()
-    {
-        int scene = SceneManager.GetActiveScene().buildIndex;
-        SceneManager.LoadScene(scene, LoadSceneMode.Single);
-        Time.timeScale = 1;
-    }
 }

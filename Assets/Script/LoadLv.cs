@@ -182,11 +182,6 @@ public class LoadLv : MonoBehaviour {
         }
     }
 
-    public void Loadlevel(string lv)
-    {
-        Application.LoadLevel(lv);
-    }
-
     public void Fade()
     {
         anim.SetTrigger("Fade");
@@ -212,13 +207,6 @@ public class LoadLv : MonoBehaviour {
     {
         PanelStart.SetActive(false);
         PanelMenu.SetActive(true);
-    }
-
-    public void BackToPlay()
-    {
-        PanelStart.SetActive(true);
-        PanelMenu.SetActive(false);
-        RestoreStartScreenLayout();
     }
 
 
