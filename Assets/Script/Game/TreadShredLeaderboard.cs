@@ -152,7 +152,7 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
     // Called by the plugin with "1" (signed in), "0" (not) or "offer" (Apple's sign-in screen is ready).
     private void OnSignIn(string state)
     {
-        Debug.Log("[Leaderboard] Game Center sign-in: " + state);
+        Debug.Log("[Leaderboard] platform sign-in: " + state);
         if (state != "1")
             return;
         sync.SignedIn();
@@ -222,7 +222,7 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
         long score = 0;
         if (parts.Length > 1)
             long.TryParse(parts[1], out score);
-        Debug.Log("[Leaderboard] Game Center holds rank " + rank + ", score " + score);
+        Debug.Log("[Leaderboard] platform holds rank " + rank + ", score " + score);
         foreach (var onEntry in waiting)
             onEntry(rank, score);
     }
