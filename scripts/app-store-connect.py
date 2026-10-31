@@ -8,6 +8,7 @@
     ... app-store-connect.py listing <version>
     ... app-store-connect.py media <version> <iphone-shots-dir> <ipad-shots-dir> <iphone-preview.mp4>
     ... app-store-connect.py attach-build <version> <build-number>
+    ... app-store-connect.py submit <version>
 listing: finds or creates that iOS version (it stays invisible until submitted),
 writes the approved English copy from Store/listing-en-US.md (D-030) and removes
 every other language from that version and its app info.
@@ -72,6 +73,10 @@ class AppStoreConnect:
         except urllib.error.HTTPError as error:
             details = json.loads(error.read() or b"{}").get("errors", [])
             reasons = "; ".join(f"{e.get('code')}: {e.get('detail') or e.get('title')}" for e in details)
+            # A refused review lists its real causes under meta.associatedErrors, keyed by resource.
+            for e in details:
+                for resource, problems in (e.get("meta", {}).get("associatedErrors") or {}).items():
+                    reasons += "".join(f"\n  {resource}: {x.get('code')}: {x.get('detail') or x.get('title')}" for x in problems)
             raise SystemExit(f"{method} {path} failed with HTTP {error.code}: {reasons}")
 
     def create(self, resource_type, attributes, relationships):
@@ -284,6 +289,46 @@ def attach_build(api, version, build_number):
     raise SystemExit("Build still processing after 30 minutes")
 
 
+def submit(api, version):
+    """Submits the version for App Review with a phased release; its build declares exempt encryption only."""
+    app, target, _ = en_us_localization(api, version)
+    build = api.call("GET", f"/v1/appStoreVersions/{target['id']}/build")["data"]
+    if not build:
+        raise SystemExit(f"{version} has no build attached")
+    if build["attributes"].get("usesNonExemptEncryption") is None:
+        # The game uses only the platform's standard HTTPS, which is exempt from export documentation.
+        api.call("PATCH", f"/v1/builds/{build['id']}", {"data": {"type": "builds", "id": build["id"],
+                 "attributes": {"usesNonExemptEncryption": False}}})
+    api.call("PATCH", f"/v1/appStoreVersions/{target['id']}", {"data": {"type": "appStoreVersions", "id": target["id"],
+             "attributes": {"releaseType": "AFTER_APPROVAL"}}})
+    # The build carries the Game Center entitlement: the version must be linked to Game Center, and the
+    # HIGH SCORE board needs a release so it is live for players when the version is.
+    if not api.call("GET", f"/v1/appStoreVersions/{target['id']}/gameCenterAppVersion").get("data"):
+        api.create("gameCenterAppVersions", None, {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": target["id"]}}})
+    detail = api.call("GET", f"/v1/apps/{app}/gameCenterDetail")["data"]["id"]
+    if not api.call("GET", f"/v1/gameCenterDetails/{detail}/leaderboardReleases")["data"]:
+        board = next(b for b in api.call("GET", f"/v1/gameCenterDetails/{detail}/gameCenterLeaderboards")["data"]
+                     if b["attributes"]["vendorIdentifier"] == LEADERBOARD["vendorIdentifier"])
+        api.create("gameCenterLeaderboardReleases", None, {
+            "gameCenterDetail": {"data": {"type": "gameCenterDetails", "id": detail}},
+            "gameCenterLeaderboard": {"data": {"type": "gameCenterLeaderboards", "id": board["id"]}}})
+    phased = api.call("GET", f"/v1/appStoreVersions/{target['id']}/appStoreVersionPhasedRelease")["data"]
+    if not phased:
+        api.create("appStoreVersionPhasedReleases", {"phasedReleaseState": "INACTIVE"},
+                   {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": target["id"]}}})
+    # Reuse a draft submission left by an earlier attempt; Apple allows only one open per platform.
+    drafts = [s for s in api.call("GET", f"/v1/reviewSubmissions?filter[app]={app}&filter[platform]=IOS")["data"]
+              if s["attributes"].get("state") == "READY_FOR_REVIEW"]
+    submission = drafts[0] if drafts else api.create("reviewSubmissions", {"platform": "IOS"}, {"app": {"data": {"type": "apps", "id": app}}})
+    api.create("reviewSubmissionItems", None, {
+        "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": submission["id"]}},
+        "appStoreVersion": {"data": {"type": "appStoreVersions", "id": target["id"]}}})
+    api.call("PATCH", f"/v1/reviewSubmissions/{submission['id']}", {"data": {"type": "reviewSubmissions",
+             "id": submission["id"], "attributes": {"submitted": True}}})
+    state = api.call("GET", f"/v1/appStoreVersions/{target['id']}")["data"]["attributes"]["appStoreState"]
+    print(f"{version} submitted for review with a phased release; state: {state}")
+
+
 def main():
     command = sys.argv[1:2]
     issuer, key_id = os.environ.get("ASC_ISSUER_ID"), os.environ.get("ASC_KEY_ID")
@@ -304,6 +349,8 @@ def main():
         media(api, *sys.argv[2:6])
     elif command == ["attach-build"] and len(sys.argv) == 4:
         attach_build(api, sys.argv[2], sys.argv[3])
+    elif command == ["submit"] and len(sys.argv) == 3:
+        submit(api, sys.argv[2])
     else:
         raise SystemExit(__doc__)
 
