@@ -3,17 +3,20 @@
 
     python3 scripts/play-console.py products                  # create or update the gem packs (D-007-AC-02) and activate them
     python3 scripts/play-console.py check-upload-key <aab>    # upload into a throwaway edit: does Google accept its signing key?
+    python3 scripts/play-console.py release <aab> <fraction>  # one edit: bundle, staged production rollout, listing text and images
 
 Authenticates with the service account key at $PLAY_KEY_FILE (default
 ~/.play-console/tread-shred-play.json); the account needs Tread Shred permissions in the Play Console.
 """
 import json
+import re
 import os
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 import jwt
 
@@ -103,10 +106,64 @@ def check_upload_key(auth, bundle):
         call("DELETE", f"/edits/{edit}", auth)
 
 
+ROOT = Path(__file__).resolve().parent.parent
+MEDIA = ROOT / "Store/media/1.9.0/google-play"
+RELEASE_NOTES = "Permanent armor, firepower and speed upgrades. Veteran and Elite tiers. A high score to chase. No more ads."
+
+
+def play_listing():
+    """Store/listing-en-US.md for Google Play: sentences and lines marked (iOS) are left out."""
+    text = (ROOT / "Store/listing-en-US.md").read_text()
+    field = lambda label: text.split(f"**{label}:** ", 1)[1].split("\n", 1)[0].strip()
+    kept = []
+    for paragraph in text.split("## Description\n", 1)[1].strip().split("\n\n"):
+        lines = paragraph.split("\n")
+        # A sentence's (iOS) marker follows its full stop, so keep the marker with the sentence it marks.
+        body = [" ".join(s for s in re.split(r"(?<=\.) (?!\(iOS\))", line) if "(iOS)" not in s) for line in lines[1:]]
+        body = [line for line in body if line.strip()]
+        if body or len(lines) == 1:
+            kept.append("\n".join([lines[0]] + body))
+    return {"title": field("Name / title"), "shortDescription": field("Google Play short description (80)"),
+            "fullDescription": "\n\n".join(kept)}
+
+
+def upload(auth, path, url):
+    request = urllib.request.Request(url, method="POST", data=Path(path).read_bytes(),
+                                     headers={"Authorization": "Bearer " + auth, "Content-Type": "application/octet-stream"})
+    try:
+        return json.loads(urllib.request.urlopen(request, timeout=600).read() or b"{}")
+    except urllib.error.HTTPError as error:
+        sys.exit(f"upload {Path(path).name}: HTTP {error.code}: {error.read().decode(errors='replace')[:300]}")
+
+
+def release(auth, bundle, fraction):
+    """One edit: uploads the bundle, starts a staged production rollout, writes the listing and replaces its images."""
+    upload_api = API.replace("/androidpublisher/v3/", "/upload/androidpublisher/v3/")
+    edit = call("POST", "/edits", auth, {})["id"]
+    version_code = upload(auth, bundle, f"{upload_api}/edits/{edit}/bundles?uploadType=media")["versionCode"]
+    call("PUT", f"/edits/{edit}/tracks/production", auth, {"track": "production", "releases": [{
+        "versionCodes": [str(version_code)], "status": "inProgress", "userFraction": float(fraction),
+        "releaseNotes": [{"language": "en-US", "text": RELEASE_NOTES}]}]})
+    listing = play_listing()
+    call("PATCH", f"/edits/{edit}/listings/en-US", auth, dict(listing, language="en-US"))
+    for kind, files in (("phoneScreenshots", sorted((MEDIA / "phone").glob("*.png"))),
+                        ("sevenInchScreenshots", sorted((MEDIA / "tablet").glob("*.png"))),
+                        ("tenInchScreenshots", sorted((MEDIA / "tablet").glob("*.png"))),
+                        ("featureGraphic", [MEDIA / "feature-graphic-1024x500.png"])):
+        call("DELETE", f"/edits/{edit}/listings/en-US/{kind}", auth)
+        for image in files:
+            upload(auth, image, f"{upload_api}/edits/{edit}/listings/en-US/{kind}?uploadType=media")
+        print(f"{kind}: {len(files)} uploaded")
+    call("POST", f"/edits/{edit}:commit", auth)
+    print(f"Released version code {version_code} to production at {float(fraction):.0%} with the 1.9.0 listing.")
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 2 and sys.argv[1] == "products":
         products(token())
     elif len(sys.argv) == 3 and sys.argv[1] == "check-upload-key":
         check_upload_key(token(), sys.argv[2])
+    elif len(sys.argv) == 4 and sys.argv[1] == "release":
+        release(token(), sys.argv[2], sys.argv[3])
     else:
         sys.exit(__doc__)
