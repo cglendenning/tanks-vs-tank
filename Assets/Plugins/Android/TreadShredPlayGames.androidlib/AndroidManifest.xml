@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- D-025, D-032: tells Google Play Games which Play Games Services project this app belongs to. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.tgts.treadshred.playgames">
+  <application>
+    <meta-data android:name="com.google.android.gms.games.APP_ID"
+               android:value="@string/game_services_project_id"/>
+  </application>
+</manifest>

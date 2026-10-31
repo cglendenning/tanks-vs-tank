@@ -6,6 +6,7 @@
     python3 scripts/play-console.py release <aab> <fraction>  # one edit: bundle, staged production rollout, listing text and images
     python3 scripts/play-console.py rollout <fraction>        # change the live production rollout; 1 completes it for everyone
     python3 scripts/play-console.py status                    # Google's review state of each production release
+    python3 scripts/play-console.py games-leaderboard <id>    # Play Games HIGH SCORE board with score limits (D-032-AC-04)
 
 Authenticates with the service account key at $PLAY_KEY_FILE (default
 ~/.play-console/tread-shred-play.json); the account needs Tread Shred permissions in the Play Console.
@@ -24,6 +25,14 @@ import jwt
 
 PACKAGE = "com.tgts.tankkvstank"
 API = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/" + PACKAGE
+GAMES_API = "https://gamesconfiguration.googleapis.com/games/v1configuration/applications/"
+# D-032-AC-04: the Play Games HIGH SCORE board, with the same limits as Game Center's (TreadShredLeaderboard.PlayGamesId).
+LEADERBOARD = {
+    "token": "treadshred.best_run",
+    "scoreOrder": "LARGER_IS_BETTER",
+    "scoreMin": "0",
+    "scoreMax": "250800",  # ScoreRules.MaxRunScore: (218 kills x 100 + 40 clears x 500) x (1 + 2 + 3)
+}
 # R-GEM-PACKS: the same product IDs and USD prices as App Store Connect (GemCatalog.Packs).
 PACKS = [("treadshred.gems100", 100, "0.99"), ("treadshred.gems550", 550, "4.99"), ("treadshred.gems1200", 1200, "9.99")]
 PURCHASE_OPTION = "buy"
@@ -38,8 +47,8 @@ def token():
     return json.load(urllib.request.urlopen(key["token_uri"], body.encode()))["access_token"]
 
 
-def call(method, path, auth, body=None, query=None):
-    url = API + path + ("?" + urllib.parse.urlencode(query) if query else "")
+def call(method, path, auth, body=None, query=None, base=API):
+    url = base + path + ("?" + urllib.parse.urlencode(query) if query else "")
     request = urllib.request.Request(url, method=method, data=json.dumps(body).encode() if body is not None else None,
                                      headers={"Authorization": "Bearer " + auth, "Content-Type": "application/json"})
     try:
@@ -190,6 +199,19 @@ def status(auth):
         print(f"production {release['releaseName']} (version code {codes}): {state}")
 
 
+def games_leaderboard(auth, application_id):
+    """Creates the HIGH SCORE leaderboard in Play Games Services (draft until the game's Play Games
+    configuration is published), or finds it, and prints its ID for TreadShredLeaderboard.PlayGamesId."""
+    boards = call("GET", f"{application_id}/leaderboards", auth, base=GAMES_API).get("items", [])
+    board = next((b for b in boards if b.get("token") == LEADERBOARD["token"]), None)
+    if board is None:
+        board = call("POST", f"{application_id}/leaderboards", auth, dict(LEADERBOARD, draft={
+            "name": {"translations": [{"locale": "en-US", "value": "HIGH SCORE"}]},
+            "scoreFormat": {"numberFormatType": "NUMERIC", "numDecimalPlaces": 0},
+            "sortRank": 1}), base=GAMES_API)
+    print(f"Play Games leaderboard {board['id']}: scores {board.get('scoreMin')} to {board.get('scoreMax')}, {board.get('scoreOrder')}")
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 2 and sys.argv[1] == "products":
         products(token())
@@ -197,6 +219,8 @@ if __name__ == "__main__":
         check_upload_key(token(), sys.argv[2])
     elif len(sys.argv) == 4 and sys.argv[1] == "release":
         release(token(), sys.argv[2], sys.argv[3])
+    elif len(sys.argv) == 3 and sys.argv[1] == "games-leaderboard":
+        games_leaderboard(token(), sys.argv[2])
     elif len(sys.argv) == 2 and sys.argv[1] == "status":
         status(token())
     elif len(sys.argv) == 3 and sys.argv[1] == "rollout":

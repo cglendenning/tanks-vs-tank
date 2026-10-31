@@ -16,6 +16,13 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
 {
     // Created in App Store Connect by scripts/app-store-connect.py with score limits 0 to ScoreRules.MaxRunScore.
     public const string GameCenterId = "treadshred.best_run";
+    // Created in the Play Console by scripts/play-console.py games-leaderboard, with the same limits.
+    public const string PlayGamesId = "PENDING_PLAY_GAMES_LEADERBOARD";
+#if UNITY_ANDROID
+    private const string BoardId = PlayGamesId;
+#else
+    private const string BoardId = GameCenterId;
+#endif
     private const string ReceiverName = "TreadShredGameCenter";
 
 #if UNITY_IOS && !UNITY_EDITOR
@@ -25,6 +32,14 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
     [DllImport("__Internal")] private static extern void TreadShredGameCenterSubmit(long score, string board);
     [DllImport("__Internal")] private static extern void TreadShredGameCenterLoadRank(string board);
     [DllImport("__Internal")] private static extern void TreadShredGameCenterLoadTop(string board, int count);
+#elif UNITY_ANDROID && !UNITY_EDITOR
+    // Google Play Games through Plugins/Android/TreadShredPlayGames.java, which answers with the same messages.
+    private static void TreadShredGameCenterSignIn() => TreadShredPlayGames.Start();
+    private static int TreadShredGameCenterIsSignedIn() => TreadShredPlayGames.SignedIn ? 1 : 0;
+    private static int TreadShredGameCenterOfferSignIn() => TreadShredPlayGames.OfferSignIn() ? 1 : 0;
+    private static void TreadShredGameCenterSubmit(long score, string board) => TreadShredPlayGames.Submit(score, board);
+    private static void TreadShredGameCenterLoadRank(string board) => TreadShredPlayGames.LoadRank(board);
+    private static void TreadShredGameCenterLoadTop(string board, int count) => TreadShredPlayGames.LoadTop(board, count);
 #else
     private static void TreadShredGameCenterSignIn() { }
     private static int TreadShredGameCenterIsSignedIn() => 0;
@@ -41,8 +56,9 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
     /// <summary>Raised when Game Center finishes signing the player in.</summary>
     public static event Action SignedInNow;
 
-    /// <summary>Whether this platform has a Tread Shred leaderboard (Game Center today).</summary>
-    public static bool Available => Application.platform == RuntimePlatform.IPhonePlayer;
+    /// <summary>Whether this platform has a Tread Shred leaderboard: Game Center on iOS, Play Games on Android.</summary>
+    public static bool Available =>
+        Application.platform == RuntimePlatform.IPhonePlayer || Application.platform == RuntimePlatform.Android;
 
     public static bool SignedIn => Available && plugin.SignedIn;
 
@@ -115,21 +131,21 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
         {
             AwaitingSubmit = accepted;
             Submitting = score;
-            TreadShredGameCenterSubmit(score, GameCenterId);
+            TreadShredGameCenterSubmit(score, BoardId);
         }
 
         public void LoadPlayerEntry(Action<int, long> entry)
         {
             AwaitingEntry.Add(entry);
             if (AwaitingEntry.Count == 1)
-                TreadShredGameCenterLoadRank(GameCenterId);
+                TreadShredGameCenterLoadRank(BoardId);
         }
 
         public void LoadTop(int count, Action<LeaderboardPage> page)
         {
             AwaitingTop.Add(page);
             if (AwaitingTop.Count == 1)
-                TreadShredGameCenterLoadTop(GameCenterId, count);
+                TreadShredGameCenterLoadTop(BoardId, count);
         }
     }
 

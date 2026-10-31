@@ -1,0 +1,6 @@
+<dependencies>
+  <!-- D-025, D-032: Google Play Games Services v2, called from Plugins/Android/TreadShredPlayGames.java. -->
+  <androidPackages>
+    <androidPackage spec="com.google.android.gms:play-services-games-v2:22.1.0"/>
+  </androidPackages>
+</dependencies>

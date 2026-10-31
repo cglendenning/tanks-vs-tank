@@ -7,8 +7,9 @@ using UnityEngine;
 
 /// <summary>
 /// D-025: connects CloudSync (all decisions) to PlayerPrefs for the local save,
-/// iCloud key-value storage for the cloud (iOS plugin TreadShredCloud.m), and the
-/// live wallet and progression when a newer save arrives during play.
+/// the platform cloud (iCloud key-value storage through TreadShredCloud.m on iOS, Play
+/// Games saved games through TreadShredPlayGames.java on Android), and the live wallet
+/// and progression when a newer save arrives during play.
 /// </summary>
 public sealed class TreadShredCloudSave : MonoBehaviour
 {
@@ -22,6 +23,9 @@ public sealed class TreadShredCloudSave : MonoBehaviour
 #endif
 
     private static CloudSync sync;
+#if UNITY_ANDROID && !UNITY_EDITOR
+    private static DeferredCloudSave playGamesCloud;
+#endif
 
     private sealed class PlayerPrefsSave : ILocalSave
     {
@@ -65,18 +69,7 @@ public sealed class TreadShredCloudSave : MonoBehaviour
     {
         public SaveSnapshot Read()
         {
-            var json = TreadShredCloudLoad();
-            if (string.IsNullOrEmpty(json))
-                return null;
-            try
-            {
-                return JsonUtility.FromJson<SaveSnapshot>(json);
-            }
-            catch (ArgumentException error)
-            {
-                Debug.LogWarning("[CloudSave] unreadable iCloud save ignored: " + error.Message);
-                return null;
-            }
+            return Parse(TreadShredCloudLoad());
         }
 
         public void Write(SaveSnapshot snapshot)
@@ -98,6 +91,42 @@ public sealed class TreadShredCloudSave : MonoBehaviour
         DontDestroyOnLoad(host);
         host.AddComponent<TreadShredCloudSave>();
         TreadShredCloudWatch();
+#elif UNITY_ANDROID && !UNITY_EDITOR
+        // Play Games answers after sign-in, which the leaderboard starts; nothing is restored before that.
+        playGamesCloud = new DeferredCloudSave(snapshot => TreadShredPlayGames.WriteSave(JsonUtility.ToJson(snapshot)));
+        sync = new CloudSync(new PlayerPrefsSave(), playGamesCloud, () => DateTime.UtcNow.Ticks);
+        sync.RestoreAtLaunch();
+        var host = new GameObject("TreadShredCloudSave");
+        DontDestroyOnLoad(host);
+        host.AddComponent<TreadShredCloudSave>();
+#endif
+    }
+
+    private static SaveSnapshot Parse(string json)
+    {
+        if (string.IsNullOrEmpty(json))
+            return null;
+        try
+        {
+            return JsonUtility.FromJson<SaveSnapshot>(json);
+        }
+        catch (ArgumentException error)
+        {
+            Debug.LogWarning("[CloudSave] unreadable cloud save ignored: " + error.Message);
+            return null;
+        }
+    }
+
+    // Android: Play Games loaded the saved game ("" when the player has none yet).
+    private void OnCloudLoaded(string json)
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        playGamesCloud.Arrived(Parse(json));
+        var applied = sync.CloudChanged(ApplyInPlay);
+        if (applied)
+            Debug.Log("[CloudSave] applied the Play Games saved game");
+        if (playGamesCloud.ReleaseHeld(applied))
+            sync.LocalSaved();
 #endif
     }
 
