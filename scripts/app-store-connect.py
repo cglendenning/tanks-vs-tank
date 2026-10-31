@@ -4,7 +4,10 @@
     ASC_ISSUER_ID=<issuer> ASC_KEY_ID=<key> python3 scripts/app-store-connect.py game-center
     ... app-store-connect.py icloud
     ... app-store-connect.py adhoc-profile <certificate serial> <device UDID>
+    ... app-store-connect.py appstore-profile <certificate serial>
     ... app-store-connect.py listing <version>
+    ... app-store-connect.py media <version> <iphone-shots-dir> <ipad-shots-dir> <iphone-preview.mp4>
+    ... app-store-connect.py attach-build <version> <build-number>
 listing: finds or creates that iOS version (it stays invisible until submitted),
 writes the approved English copy from Store/listing-en-US.md (D-030) and removes
 every other language from that version and its app info.
@@ -22,6 +25,7 @@ rerun: existing items are left as they are. The private key is read from
 are printed, never the key or the signed token.
 """
 import base64
+import hashlib
 import json
 import os
 import sys
@@ -147,24 +151,27 @@ def icloud(api):
     print("iCloud enabled on", BUNDLE_ID)
 
 
-def adhoc_profile(api, certificate_serial, udid):
+def create_profile(api, kind, certificate_serial, udid=None):
+    """Creates an Ad Hoc (with that device) or App Store profile for the App ID and that distribution
+    certificate, installs it in ~/Library/MobileDevice/Provisioning Profiles and prints its UUID."""
     app_id = bundle_id(api)
     certificates = [c["id"] for c in api.call("GET", "/v1/certificates?filter[certificateType]=DISTRIBUTION")["data"]
                     if c["attributes"]["serialNumber"].upper() == certificate_serial.upper()]
-    devices = [d["id"] for d in api.call("GET", f"/v1/devices?filter[udid]={udid}")["data"]]
-    if not certificates or not devices:
+    devices = [d["id"] for d in api.call("GET", f"/v1/devices?filter[udid]={udid}")["data"]] if udid else []
+    if not certificates or (udid and not devices):
         raise SystemExit(f"Certificate {certificate_serial} or device {udid} not found")
-    name = "Tread Shred Ad Hoc " + time.strftime("%Y-%m-%d %H%M")
-    profile = api.create("profiles", {"name": name, "profileType": "IOS_APP_ADHOC"}, {
-        "bundleId": {"data": {"type": "bundleIds", "id": app_id}},
-        "certificates": {"data": [{"type": "certificates", "id": c} for c in certificates]},
-        "devices": {"data": [{"type": "devices", "id": d} for d in devices]},
-    })
+    label, profile_type = ("Ad Hoc", "IOS_APP_ADHOC") if udid else ("App Store", "IOS_APP_STORE")
+    name = f"Tread Shred {label} " + time.strftime("%Y-%m-%d %H%M")
+    relationships = {"bundleId": {"data": {"type": "bundleIds", "id": app_id}},
+                     "certificates": {"data": [{"type": "certificates", "id": c} for c in certificates]}}
+    if devices:
+        relationships["devices"] = {"data": [{"type": "devices", "id": d} for d in devices]}
+    profile = api.create("profiles", {"name": name, "profileType": profile_type}, relationships)
     uuid = profile["attributes"]["uuid"]
     folder = Path.home() / "Library/MobileDevice/Provisioning Profiles"
     folder.mkdir(parents=True, exist_ok=True)
     (folder / f"{uuid}.mobileprovision").write_bytes(base64.b64decode(profile["attributes"]["profileContent"]))
-    print("Ad Hoc profile created and installed:", name, uuid)
+    print(f"{label} profile created and installed:", name, uuid)
 
 
 def listing_copy():
@@ -210,6 +217,73 @@ def listing(api, version):
     print(f"en-US copy written; {removed} other-language entries removed")
 
 
+def en_us_localization(api, version):
+    app = api.call("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"][0]["id"]
+    target = next(v for v in api.call("GET", f"/v1/apps/{app}/appStoreVersions?filter[platform]=IOS&limit=10")["data"]
+                  if v["attributes"]["versionString"] == version)
+    loc = next(l for l in api.call("GET", f"/v1/appStoreVersions/{target['id']}/appStoreVersionLocalizations")["data"]
+               if l["attributes"]["locale"] == "en-US")
+    return app, target, loc
+
+
+def upload_asset(api, resource, set_type, set_id, path):
+    """Reserves an asset, uploads its parts to Apple's upload operations and commits it with its MD5."""
+    data = Path(path).read_bytes()
+    reserved = api.create(resource, {"fileName": Path(path).name, "fileSize": len(data)},
+                          {set_type[:-1]: {"data": {"type": set_type, "id": set_id}}})
+    for op in reserved["attributes"]["uploadOperations"]:
+        chunk = data[op["offset"]:op["offset"] + op["length"]]
+        request = urllib.request.Request(op["url"], data=chunk, method=op["method"])
+        for header in op.get("requestHeaders", []):
+            request.add_header(header["name"], header["value"])
+        urllib.request.urlopen(request, timeout=120).read()
+    api.call("PATCH", f"/v1/{resource}/{reserved['id']}", {"data": {"type": resource, "id": reserved["id"],
+             "attributes": {"uploaded": True, "sourceFileChecksum": hashlib.md5(data).hexdigest()}}})
+
+
+def media(api, version, iphone_dir, ipad_dir, preview):
+    _, _, loc = en_us_localization(api, version)
+    sets = {s["attributes"]["screenshotDisplayType"]: s["id"]
+            for s in api.call("GET", f"/v1/appStoreVersionLocalizations/{loc['id']}/appScreenshotSets")["data"]}
+    for display, folder in (("APP_IPHONE_67", iphone_dir), ("APP_IPAD_PRO_3GEN_129", ipad_dir), ("APP_IPAD_PRO_129", ipad_dir)):
+        set_id = sets.get(display) or api.create("appScreenshotSets", {"screenshotDisplayType": display},
+                                                 {"appStoreVersionLocalization": {"data": {"type": "appStoreVersionLocalizations", "id": loc["id"]}}})["id"]
+        for old in api.call("GET", f"/v1/appScreenshotSets/{set_id}/appScreenshots")["data"]:
+            api.call("DELETE", f"/v1/appScreenshots/{old['id']}")
+        shots = sorted(Path(folder).glob("*.png"))
+        for shot in shots:
+            upload_asset(api, "appScreenshots", "appScreenshotSets", set_id, shot)
+        print(f"{display}: {len(shots)} screenshots uploaded")
+    previews = {s["attributes"]["previewType"]: s["id"]
+                for s in api.call("GET", f"/v1/appStoreVersionLocalizations/{loc['id']}/appPreviewSets")["data"]}
+    for preview_type, set_id in previews.items():
+        for old in api.call("GET", f"/v1/appPreviewSets/{set_id}/appPreviews")["data"]:
+            api.call("DELETE", f"/v1/appPreviews/{old['id']}")
+            print(f"{preview_type}: removed {old['attributes'].get('fileName')}")
+    set_id = previews.get("IPHONE_67") or api.create("appPreviewSets", {"previewType": "IPHONE_67"},
+                                                     {"appStoreVersionLocalization": {"data": {"type": "appStoreVersionLocalizations", "id": loc["id"]}}})["id"]
+    upload_asset(api, "appPreviews", "appPreviewSets", set_id, preview)
+    print("IPHONE_67 preview uploaded:", Path(preview).name)
+
+
+def attach_build(api, version, build_number):
+    app, target, _ = en_us_localization(api, version)
+    for attempt in range(60):
+        builds = api.call("GET", f"/v1/builds?filter[app]={app}&filter[version]={build_number}"
+                                 f"&filter[preReleaseVersion.version]={version}")["data"]
+        state = builds[0]["attributes"]["processingState"] if builds else "NOT YET VISIBLE"
+        print(f"build {version} ({build_number}): {state}", flush=True)
+        if state == "VALID":
+            api.call("PATCH", f"/v1/appStoreVersions/{target['id']}/relationships/build",
+                     {"data": {"type": "builds", "id": builds[0]["id"]}})
+            print("attached to", version)
+            return
+        if state in ("FAILED", "INVALID"):
+            raise SystemExit(f"Apple rejected the build: {state}")
+        time.sleep(30)
+    raise SystemExit("Build still processing after 30 minutes")
+
+
 def main():
     command = sys.argv[1:2]
     issuer, key_id = os.environ.get("ASC_ISSUER_ID"), os.environ.get("ASC_KEY_ID")
@@ -221,9 +295,15 @@ def main():
     elif command == ["icloud"] and len(sys.argv) == 2:
         icloud(api)
     elif command == ["adhoc-profile"] and len(sys.argv) == 4:
-        adhoc_profile(api, sys.argv[2], sys.argv[3])
+        create_profile(api, "adhoc", sys.argv[2], sys.argv[3])
+    elif command == ["appstore-profile"] and len(sys.argv) == 3:
+        create_profile(api, "appstore", sys.argv[2])
     elif command == ["listing"] and len(sys.argv) == 3:
         listing(api, sys.argv[2])
+    elif command == ["media"] and len(sys.argv) == 6:
+        media(api, *sys.argv[2:6])
+    elif command == ["attach-build"] and len(sys.argv) == 4:
+        attach_build(api, sys.argv[2], sys.argv[3])
     else:
         raise SystemExit(__doc__)
 

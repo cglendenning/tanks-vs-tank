@@ -3,6 +3,7 @@
 #
 #   scripts/capture-store-video.sh capture <simulator-udid> <TreadShred.app> <clips-dir>
 #   scripts/capture-store-video.sh compose <clips-dir> <out-dir>
+#   scripts/capture-store-video.sh screenshots <simulator-udid> <TreadShred.app> <WxH> <out-dir>
 #
 # Each scene runs the game's own store capture mode (TreadShredStoreCaptureMode, enabled through its
 # PlayerPrefs key) and is recorded with `simctl io recordVideo`, so every frame is genuine gameplay.
@@ -124,8 +125,39 @@ compose() {
   rm -rf "$work"
 }
 
+# Store screenshots at an accepted App Store size: the start screen, two combat moments and the result
+# screen from the trailer capture, then upgrades and mission select. All are genuine frames of the build.
+screenshots() {
+  local sim="$1" app="$2" size="$3" out="$4" prefs
+  local w="${size%x*}" h="${size#*x}"
+  mkdir -p "$out"
+  xcrun simctl boot "$sim" 2>/dev/null || true
+  xcrun simctl bootstatus "$sim" -b >/dev/null
+  xcrun simctl install "$sim" "$app"
+  prefs="$(xcrun simctl get_app_container "$sim" "$BUNDLE_ID" data)/Library/Preferences/$BUNDLE_ID"
+  shot() {
+    xcrun simctl io "$sim" screenshot "$out/raw-$1.png" >/dev/null 2>&1
+    ffmpeg -loglevel error -y -i "$out/raw-$1.png" -vf "scale=$w:$h:force_original_aspect_ratio=increase,crop=$w:$h" "$out/$1.png"
+    rm -f "$out/raw-$1.png"
+  }
+  launch() {
+    xcrun simctl terminate "$sim" "$BUNDLE_ID" 2>/dev/null || true
+    if [ "$1" = 0 ]; then xcrun simctl spawn "$sim" defaults delete "$prefs" "$KEY" 2>/dev/null || true
+    else xcrun simctl spawn "$sim" defaults write "$prefs" "$KEY" -int "$1"; fi
+    xcrun simctl launch "$sim" "$BUNDLE_ID" >/dev/null
+  }
+  launch 0;  sleep 8;  shot 1-start
+  launch 17; sleep 14; shot 2-combat; sleep 3; shot 3-combat; sleep 13; shot 4-mission-clear
+  launch 11; sleep 9;  shot 5-upgrades
+  launch 6;  sleep 9;  shot 6-missions
+  xcrun simctl terminate "$sim" "$BUNDLE_ID" 2>/dev/null || true
+  xcrun simctl spawn "$sim" defaults delete "$prefs" "$KEY" 2>/dev/null || true
+  echo "screenshots ($size): $(ls "$out" | tr '\n' ' ')"
+}
+
 case "${1:-}" in
   capture) [ $# -eq 4 ] || { echo "usage: $0 capture <simulator-udid> <app> <clips-dir>" >&2; exit 2; }; capture "$2" "$3" "$4" ;;
   compose) [ $# -eq 3 ] || { echo "usage: $0 compose <clips-dir> <out-dir>" >&2; exit 2; }; compose "$2" "$3" ;;
-  *) sed -n '2,12p' "$0" >&2; exit 2 ;;
+  screenshots) [ $# -eq 5 ] || { echo "usage: $0 screenshots <simulator-udid> <app> <WxH> <out-dir>" >&2; exit 2; }; screenshots "$2" "$3" "$4" "$5" ;;
+  *) sed -n '2,13p' "$0" >&2; exit 2 ;;
 esac
