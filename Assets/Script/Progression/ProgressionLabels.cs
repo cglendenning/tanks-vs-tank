@@ -52,6 +52,16 @@ namespace TreadShred.Progression
 
         public const string Undo = "UNDO UPGRADE";
 
+        /// <summary>D-018: the upgrade screen's note on where each currency comes from and what it buys.</summary>
+        public const string CurrencyNoteTitle = "COINS AND GEMS";
+
+        public static IReadOnlyList<string> CurrencyNote() => new[]
+        {
+            "COINS: EARNED IN EVERY MISSION, WIN OR LOSE. THEY BUY PERMANENT UPGRADES.",
+            "GEMS: BOUGHT IN THE STORE OR EARNED AT MILESTONES. THEY BUY BOOSTS AND REVIVES.",
+            "SHORT ON COINS? GEMS COVER THE GAP AT 1 GEM FOR " + ProgressionRules.CoinsPerGem + " COINS."
+        };
+
         /// <summary>
         /// D-017-AC-05: what an upgrade will spend, asked before anything is spent. When gems fall short the
         /// confirm button says it buys a pack, and the store's own sheet follows.

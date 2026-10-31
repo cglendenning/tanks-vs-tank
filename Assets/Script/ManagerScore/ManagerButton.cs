@@ -49,6 +49,7 @@ public class ManagerButton : MonoBehaviour {
             KillScore.SetActive(false);
             Heart.SetActive(false);
             PauseGameObj.SetActive(true);
+            TreadShredOverdriveBadge.SetVisible(false);
             Time.timeScale = 0;
         }
         else
@@ -57,6 +58,7 @@ public class ManagerButton : MonoBehaviour {
            
             CountObj.GetComponent<Animator>().enabled = true;
             PauseGameObj.SetActive(false);
+            TreadShredOverdriveBadge.SetVisible(true);
             BgIg.SetActive(true);
             KillScore.SetActive(true);
             Heart.SetActive(true);

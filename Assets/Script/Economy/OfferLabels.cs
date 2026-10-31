@@ -45,9 +45,14 @@ namespace TreadShred.Economy
         public const string Retry = "RETRY";
         public const string SceneRetryLabel = "REDEPLOY";
 
+        /// <summary>How long Overdrive lasts (D-009-AC-03).</summary>
+        public const string OverdriveLasts = "UNTIL YOUR TANK GOES DOWN";
+        public const string OverdriveEffect = "2 SHOTS PER TAP " + OverdriveLasts;
+
+        /// <summary>The victory screen while Overdrive runs: just bought (gems spent), or carried from earlier (0).</summary>
         public static string OverdriveActiveDetail(int gemsSpent)
         {
-            return "NEXT MISSION: 2 SHOTS PER TAP. " + CountText.Format(gemsSpent) + " GEMS SPENT";
+            return gemsSpent > 0 ? OverdriveEffect + ". " + CountText.Format(gemsSpent) + " GEMS SPENT" : OverdriveEffect;
         }
 
         public static string Pack(GemPack pack, string localizedPrice, string prefix = "")

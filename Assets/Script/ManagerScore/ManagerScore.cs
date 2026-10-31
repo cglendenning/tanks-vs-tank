@@ -249,6 +249,7 @@ public class ManagerScore : MonoBehaviour
         {
             if (wf == false)
             {
+                TreadShredOverdriveBadge.Hide();
 
 
 
@@ -302,6 +303,9 @@ public class ManagerScore : MonoBehaviour
 
         if (wf == false)
         {
+            // The tank is lost: Overdrive ends here unless Armored Redeploy resumes the run (D-009-AC-03).
+            TreadShredBoosts.Current.TankLost();
+            TreadShredOverdriveBadge.Hide();
             wf = true;
             LogMissionEnd(TreadShredProgress.Ensure().CompleteCurrentMission(false), false);
             // The tank was lost: SCORE's run ends here unless Armored Redeploy resumes it.
@@ -339,7 +343,7 @@ public class ManagerScore : MonoBehaviour
         BuildOfferPanel(
             GemOffer.Overdrive,
             "OVERDRIVE",
-            "NEXT MISSION: 2 SHOTS PER TAP",
+            OfferLabels.OverdriveEffect,
             "ACTIVATE",
             () => ConfirmThen(GemOffer.Overdrive, RedeemOverdrive));
     }
@@ -379,8 +383,17 @@ public class ManagerScore : MonoBehaviour
         rewardButton = TreadShredUi.CreateButton(action, rootRect, new Vector2(column, -50f), new Vector2(420f, 72f), 22,
             rewardFont, onTap);
         TreadShredUi.ShrinkToFit(rewardButton.GetComponentInChildren<Text>(), 14);
-        RefreshOfferControls(null);
-        TreadShredAnalytics.Log(GameEvents.OfferShown(OfferName(offer), TreadShredStore.Ensure().Wallet.Balance));
+        if (offer == GemOffer.Overdrive && TreadShredBoosts.Current.OverdriveActive)
+        {
+            // Still running from an earlier mission (D-009-AC-03): say so instead of selling it again.
+            rewardUsedThisScreen = true;
+            ShowOverdriveActive(0);
+        }
+        else
+        {
+            RefreshOfferControls(null);
+            TreadShredAnalytics.Log(GameEvents.OfferShown(OfferName(offer), TreadShredStore.Ensure().Wallet.Balance));
+        }
 
         // Coins, milestone gems and tier unlocks earned by this mission (D-018, D-026, D-019).
         var reward = TreadShredProgress.Ensure().LastReward;
@@ -484,11 +497,11 @@ public class ManagerScore : MonoBehaviour
             rewardUsedThisScreen = true;
             TreadShredAnalytics.Log(GameEvents.OfferAccepted(OfferName(GemOffer.Overdrive), GemCatalog.Cost(GemOffer.Overdrive), packBought));
             TreadShredBoosts.Current.ArmOverdrive();
-            ShowOverdriveActive();
+            ShowOverdriveActive(GemCatalog.Cost(GemOffer.Overdrive));
         }, RefreshOfferControls);
     }
 
-    private void ShowOverdriveActive()
+    private void ShowOverdriveActive(int gemsSpent)
     {
         TreadShredUi.SetLabel(rewardButton, OfferLabels.OverdriveActive);
         // The tint multiplies the image color, so use a white image for a solid accent fill.
@@ -499,7 +512,7 @@ public class ManagerScore : MonoBehaviour
         rewardButton.interactable = false;
         if (UnityEngine.EventSystems.EventSystem.current != null)
             UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
-        rewardBalanceText.text = OfferLabels.OverdriveActiveDetail(GemCatalog.Cost(GemOffer.Overdrive));
+        rewardBalanceText.text = OfferLabels.OverdriveActiveDetail(gemsSpent);
         rewardBalanceText.color = TreadShredUi.TitleColor;
     }
 

@@ -83,7 +83,7 @@ namespace TreadShred.Progression.Tests
         {
             Assert.AreEqual(2, CombatBoosts.OverdriveRoundsPerTap, "Overdrive's copy says two shots");
             Assert.AreEqual("TWO SHOTS EVERY TAP", SalesPitches.For(SaleItem.Overdrive).Outcome);
-            CollectionAssert.Contains(SalesPitches.For(SaleItem.Overdrive).Points, "FOR YOUR NEXT MISSION");
+            CollectionAssert.Contains(SalesPitches.For(SaleItem.Overdrive).Points, "UNTIL YOUR TANK GOES DOWN");
             CollectionAssert.Contains(SalesPitches.For(SaleItem.ArmoredRedeploy).Points, "REPLAY THIS MISSION");
             CollectionAssert.Contains(SalesPitches.For(SaleItem.ArmoredRedeploy).Points, "WITH 1 EXTRA HIT OF ARMOR");
             CollectionAssert.Contains(SalesPitches.For(SaleItem.ArmoredRedeploy).Points, "YOUR SCORE RUN CONTINUES");

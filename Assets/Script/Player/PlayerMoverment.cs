@@ -64,6 +64,8 @@ public class PlayerMoverment : MonoBehaviour {
         countdie = loadout.ArmorHits;
         missionArmorHits = loadout.ArmorHits;
         overdriveActive = loadout.RoundsPerTap > 1;
+        if (overdriveActive)
+            TreadShredOverdriveBadge.Show(TreadShredUi.FindFont(GameObject.Find("Canvas")));
         Speed *= progress.SpeedMultiplier;
        if (StyteBullet == null)
         {

@@ -28,8 +28,8 @@ namespace TreadShred.Economy.Tests
             Assert.AreEqual(3, after.ArmorHits, "the extra hit is used up by the reloaded mission");
         }
 
-        [Test(Description = "D-009-AC-03: Overdrive gives the next mission two rounds per tap and only that mission")]
-        public void OverdriveDoublesRoundsForTheNextMissionOnly()
+        [Test(Description = "D-009-AC-03: Overdrive gives the next mission two rounds per tap and stays on for the missions after it")]
+        public void OverdriveDoublesRoundsFromTheNextMission()
         {
             var boosts = new CombatBoosts(new MemoryFlags());
             boosts.ArmOverdrive();
@@ -39,7 +39,7 @@ namespace TreadShred.Economy.Tests
 
             Assert.AreEqual(2, next.RoundsPerTap);
             Assert.AreEqual(3, next.ArmorHits);
-            Assert.AreEqual(1, later.RoundsPerTap);
+            Assert.AreEqual(2, later.RoundsPerTap, "Overdrive lasts until the tank is lost (owner decision 2026-10-31)");
         }
 
         [Test(Description = "D-009-AC-03: with no boost bought a mission starts with base armor and one round per tap")]

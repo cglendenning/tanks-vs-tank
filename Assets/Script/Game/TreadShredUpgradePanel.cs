@@ -45,6 +45,11 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
 
         TreadShredUi.CreateText("UPGRADES", backdrop, new Vector2(0f, 420f), new Vector2(900f, 90f), 72, font)
             .color = TreadShredUi.TitleColor;
+        // D-018: what coins and gems are, one tap away.
+        var note = TreadShredUi.CreateButton(ProgressionLabels.CurrencyNoteTitle, backdrop, new Vector2(575f, 420f),
+            new Vector2(230f, 70f), 24, font,
+            () => TreadShredNotePanel.Show(ProgressionLabels.CurrencyNoteTitle, ProgressionLabels.CurrencyNote(), font));
+        TreadShredUi.ShrinkToFit(note.GetComponentInChildren<Text>(), 16);
         coinsText = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(-260f, 330f), new Vector2(560f, 40f), 30, font);
         gemsText = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(260f, 330f), new Vector2(560f, 40f), 30, font);
         gemsText.color = coinsText.color = TreadShredUi.DetailColor;

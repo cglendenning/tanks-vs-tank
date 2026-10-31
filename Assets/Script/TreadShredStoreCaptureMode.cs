@@ -155,6 +155,9 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
             upgradeLevels = new[] { mode == ClipArmor ? top : 0, mode == ClipFirepower ? top : 0, mode == ClipSpeed ? top : 0 }
         };
         TreadShredProgress.Ensure().Progression.Replace(state);
+        // Overdrive lasts until the tank is lost, so an earlier clip's Overdrive must not carry into this one.
+        PlayerPrefs.DeleteKey(TreadShred.Economy.CombatBoosts.OverdriveKey);
+        PlayerPrefs.DeleteKey(TreadShred.Economy.CombatBoosts.OverdriveLostKey);
         if (mode == ClipRedeploy)
             TreadShredBoosts.Current.ArmRedeploy();
     }

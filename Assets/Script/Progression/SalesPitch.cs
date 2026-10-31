@@ -79,7 +79,7 @@ namespace TreadShred.Progression
             {
                 case SaleItem.Overdrive:
                     return new SalesPitch("OVERDRIVE", "TWO SHOTS EVERY TAP",
-                        new[] { "FOR YOUR NEXT MISSION", "DOUBLE THE ROUNDS ON EVERY TARGET" });
+                        new[] { OfferLabels.OverdriveLasts, "DOUBLE THE ROUNDS ON EVERY TARGET" });
                 case SaleItem.ArmoredRedeploy:
                     return new SalesPitch("ARMORED REDEPLOY", "GET BACK IN AND FINISH THE JOB",
                         new[] { "REPLAY THIS MISSION", "WITH " + CombatBoosts.RedeployExtraHits + " EXTRA HIT OF ARMOR", RunContinues });
