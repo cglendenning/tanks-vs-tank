@@ -113,14 +113,15 @@ public sealed class TreadShredReviewPrompt : MonoBehaviour
     {
         private sealed class Completed : AndroidJavaProxy
         {
-            private readonly Action<AndroidJavaObject> onComplete;
+            private readonly Action<AndroidJavaObject> handler;
 
-            public Completed(Action<AndroidJavaObject> onComplete) : base("com.google.android.gms.tasks.OnCompleteListener")
+            public Completed(Action<AndroidJavaObject> handler) : base("com.google.android.gms.tasks.OnCompleteListener")
             {
-                this.onComplete = onComplete;
+                this.handler = handler;
             }
 
-            public void onComplete(AndroidJavaObject task) => onComplete(task);
+            // Named as the Java interface method, so the Play task calls it.
+            public void onComplete(AndroidJavaObject task) => handler(task);
         }
 
         public static void Request()
