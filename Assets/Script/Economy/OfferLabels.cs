@@ -40,6 +40,11 @@ namespace TreadShred.Economy
         // Overdrive waits for the next mission, so the panel must say it is on.
         public const string OverdriveActive = "OVERDRIVE ACTIVE";
 
+        // The free retry on the result screens. The mission scenes label it with the paid offer's name, which
+        // made Armored Redeploy look like a worse deal than a free button; missions relabel it on load.
+        public const string Retry = "RETRY";
+        public const string SceneRetryLabel = "REDEPLOY";
+
         public static string OverdriveActiveDetail(int gemsSpent)
         {
             return "NEXT MISSION: 2 SHOTS PER TAP. " + CountText.Format(gemsSpent) + " GEMS SPENT";

@@ -32,6 +32,12 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     // D-031: the ad-reel trailer. A real mission with the camera in close; the driver aims at the
     // nearest enemy and fires through the player's own FireAt, so every kill, explosion and callout is real.
     private const int Trailer = 17;
+    // D-034: one sales clip per purchasable item, each the trailer driver with only that item's effect active.
+    private const int ClipOverdrive = 18;
+    private const int ClipFirepower = 19;
+    private const int ClipSpeed = 20;
+    private const int ClipArmor = 21;
+    private const int ClipRedeploy = 22;
     private const float TrailerZoom = 0.6f;
     private const float TrailerShotSeconds = 0.5f;
 
@@ -49,11 +55,16 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
         get { return mode == ActionCapture || mode == RealActionCapture; }
     }
 
+    private bool UsesTrailerDriver => mode == Trailer || (mode >= ClipOverdrive && mode <= ClipRedeploy);
+
+    // The Armor clip shows real hits landing on a fully armored tank: its armor is not padded.
+    private bool EnemiesFire => mode == ClipArmor;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void InstallIfEnabled()
     {
         var mode = PlayerPrefs.GetInt(CaptureModeKey, 0);
-        if (mode < CombatSingle || mode > Trailer)
+        if (mode < CombatSingle || mode > ClipRedeploy)
             return;
 
         Debug.Log($"[STORE_CAPTURE] installing capture driver mode={mode}");
@@ -97,7 +108,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
                 StartCoroutine(TapLeaderboard());
             else if (mode == LeaderboardLayout)
                 Invoke(nameof(ShowSampleLeaderboard), 1.5f);
-            else if (mode == Trailer)
+            else if (UsesTrailerDriver)
                 Invoke(nameof(LoadTrailerScene), 0.8f);
             else
                 Invoke(nameof(LoadCombatScene), 0.8f);
@@ -115,7 +126,10 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     {
         // The follow camera keeps the player's tank framed once the view is zoomed in.
         PlayerPrefs.SetFloat("Camera", 0f);
-        TreadShredBoosts.Current.ArmOverdrive();
+        if (mode != Trailer)
+            SetClipLoadout();
+        if (mode == Trailer || mode == ClipOverdrive)
+            TreadShredBoosts.Current.ArmOverdrive();
         // Lv17: ten enemies and few interior obstacles, so shots connect and kills keep coming.
         SceneManager.LoadScene("Lv17", LoadSceneMode.Single);
     }
@@ -131,13 +145,37 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private Vector3 trailerCameraOffset;
     private Vector3 trailerCameraVelocity;
 
+    // Upgrade levels for a sales clip: only the clip's own track is raised, to its top level. The capture
+    // script reinstalls the app before each run, so this never reaches a player's saved progress.
+    private void SetClipLoadout()
+    {
+        var top = TreadShred.Progression.ProgressionRules.LevelsPerTrack;
+        var state = new TreadShred.Progression.ProgressionState
+        {
+            upgradeLevels = new[] { mode == ClipArmor ? top : 0, mode == ClipFirepower ? top : 0, mode == ClipSpeed ? top : 0 }
+        };
+        TreadShredProgress.Ensure().Progression.Replace(state);
+        if (mode == ClipRedeploy)
+            TreadShredBoosts.Current.ArmRedeploy();
+    }
+
     private void StartTrailer()
     {
-        // Enemy weapons off for this capture only, so the reel is not cut short by an early death.
-        var enemyWeapons = FindObjectsByType<BulletEmnemy>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        for (var i = 0; i < enemyWeapons.Length; i++)
-            enemyWeapons[i].enabled = false;
-        player.countdie = 99;
+        if (!EnemiesFire)
+        {
+            // Enemy weapons off for this capture only, so the reel is not cut short by an early death.
+            var enemyWeapons = FindObjectsByType<BulletEmnemy>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (var i = 0; i < enemyWeapons.Length; i++)
+                enemyWeapons[i].enabled = false;
+            player.countdie = 99;
+        }
+        // Enemies fire through BulletPlayer(), called whatever the component's state, so the Armor clip
+        // limits the guns by keeping two enemies: their shells land one at a time on ten levels of armor.
+        if (mode == ClipRedeploy)
+            KeepEnemies(3);
+        else if (mode == ClipArmor)
+            KeepEnemies(2);
+        StageEnemiesInView();
         var view = Camera.main;
         if (view != null)
         {
@@ -150,10 +188,22 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
             trailerCameraOffset = ground.Raycast(ray, out var distance) ? view.transform.position - ray.GetPoint(distance) : new Vector3(0f, 30f, -1f);
             trailerCameraOffset *= TrailerZoom;
         }
-        StageEnemiesInView();
         nextShotAt = Time.time + TrailerShotSeconds;
         trailerLastClearShotAt = Time.time;
         Debug.Log("[STORE_CAPTURE] trailer armed");
+    }
+
+    // The Armored Redeploy clip ends on MISSION CLEAR within seconds: only the nearest enemies stay, and the
+    // mission counts just those, so the last kill is the real victory.
+    private void KeepEnemies(int count)
+    {
+        var enemies = FindObjectsByType<MoveEmnemy>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        System.Array.Sort(enemies, (a, b) => (a.transform.position - player.transform.position).sqrMagnitude
+            .CompareTo((b.transform.position - player.transform.position).sqrMagnitude));
+        for (var i = count; i < enemies.Length; i++)
+            enemies[i].gameObject.SetActive(false);
+        if (score != null)
+            score.CountEmnemy = Mathf.Min(count, enemies.Length);
     }
 
     // Capture-only staging: moves the mission's real enemies (behaviour and kill logic intact) onto open
@@ -268,6 +318,11 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     // would; sidestep for a moment whenever a wall stops progress.
     private void DriveTrailer()
     {
+        if (mode == ClipSpeed)
+        {
+            StrafeAtSpeed();
+            return;
+        }
         if (trailerTarget == null || trailerTargetVisible || Time.timeScale == 0f)
             return;
         var toward = trailerTarget.position - player.transform.position;
@@ -289,10 +344,31 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
         player.transform.GetChild(1).rotation = Quaternion.LookRotation(direction);
     }
 
+    private float strafeFlipAt;
+    private float strafeSign = 1f;
+
+    // The Speed clip keeps the tank moving the whole time: circling the nearest enemy, closing in when far,
+    // turning back every couple of seconds, while the trailer driver keeps firing on clear shots.
+    private void StrafeAtSpeed()
+    {
+        if (trailerTarget == null || Time.timeScale == 0f)
+            return;
+        var toward = trailerTarget.position - player.transform.position;
+        toward.y = 0f;
+        if (Time.time >= strafeFlipAt)
+        {
+            strafeSign = -strafeSign;
+            strafeFlipAt = Time.time + 1.8f;
+        }
+        var across = Quaternion.Euler(0f, 90f * strafeSign, 0f) * toward.normalized;
+        var direction = (across + toward.normalized * Mathf.Clamp01((toward.magnitude - 6f) / 6f)).normalized;
+        player.Move(direction.x, direction.z);
+    }
+
     // Keeps the shooter and the current target in frame, moving smoothly between kills.
     private void LateUpdate()
     {
-        if (mode != Trailer || player == null || Camera.main == null || trailerCameraOffset == Vector3.zero)
+        if (!UsesTrailerDriver || player == null || Camera.main == null || trailerCameraOffset == Vector3.zero)
             return;
         DriveTrailer();
         var focus = trailerTarget != null ? Vector3.Lerp(player.transform.position, trailerTarget.position, 0.4f) : player.transform.position;
@@ -356,7 +432,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
         player = FindObjectOfType<PlayerMoverment>();
         score = FindObjectOfType<ManagerScore>();
         Debug.Log($"[STORE_CAPTURE] attach player={(player != null)} score={(score != null)} mode={mode}");
-        if (mode == Trailer && player != null)
+        if (UsesTrailerDriver && player != null)
         {
             StartTrailer();
             return;
@@ -398,7 +474,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
 
     private void Update()
     {
-        if (mode == Trailer)
+        if (UsesTrailerDriver)
         {
             TrailerTick();
             return;

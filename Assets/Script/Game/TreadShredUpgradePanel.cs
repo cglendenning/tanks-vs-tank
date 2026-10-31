@@ -51,18 +51,23 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
         for (var i = 0; i < Tracks.Length; i++)
         {
             var track = Tracks[i];
-            var name = TreadShredUi.CreateText(ProgressionLabels.Track(track), backdrop, new Vector2(-480f, RowY[i] + 20f),
-                new Vector2(360f, 60f), 42, font);
+            // D-034: the upgrade working, looping at the start of its row; tapping it opens the sales screen.
+            TreadShredSalesClip.Create(backdrop, new Vector2(-595f, RowY[i]), new Vector2(190f, 107f),
+                SalesPitches.ForTrack(track), font, () => OpenSalesScreen(track));
+            var name = TreadShredUi.CreateText(ProgressionLabels.Track(track), backdrop, new Vector2(-335f, RowY[i] + 20f),
+                new Vector2(300f, 60f), 42, font);
             name.alignment = TextAnchor.MiddleLeft;
-            levelTexts[track] = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(-480f, RowY[i] - 34f),
-                new Vector2(360f, 36f), 24, font);
+            levelTexts[track] = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(-335f, RowY[i] - 34f),
+                new Vector2(300f, 36f), 24, font);
             levelTexts[track].alignment = TextAnchor.MiddleLeft;
             levelTexts[track].color = TreadShredUi.DetailColor;
-            effectTexts[track] = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(-70f, RowY[i]),
-                new Vector2(420f, 60f), 26, font);
+            effectTexts[track] = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(25f, RowY[i]),
+                new Vector2(400f, 60f), 26, font);
+            TreadShredUi.ShrinkToFit(effectTexts[track], 18);
             // Columns stay within +/-700 reference units so a 4:3 iPad shows all of them.
-            buttons[track] = TreadShredUi.CreateButton(string.Empty, backdrop, new Vector2(420f, RowY[i]),
-                new Vector2(540f, 100f), 26, font, () => Upgrade(track));
+            buttons[track] = TreadShredUi.CreateButton(string.Empty, backdrop, new Vector2(465f, RowY[i]),
+                new Vector2(450f, 100f), 26, font, () => Upgrade(track));
+            TreadShredUi.ShrinkToFit(buttons[track].GetComponentInChildren<Text>(), 18);
         }
 
         statusText = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(0f, -240f), new Vector2(1200f, 36f), 26, font);
@@ -81,6 +86,16 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     {
         statusText.text = string.Empty;
         shop.Buy(track);
+    }
+
+    // D-034: the sales screen's button is the row's own upgrade, with the same label and purchase.
+    private void OpenSalesScreen(UpgradeTrack track)
+    {
+        var maxed = Progression.IsMaxed(track);
+        TreadShredSalesScreen.Show(SalesPitches.ForTrack(track), font,
+            ProgressionLabels.UpgradeButton(Progression.Quote(track), maxed),
+            ProgressionLabels.Preview(track, Progression.Level(track)),
+            !maxed && !TreadShredStore.Ensure().PurchaseInProgress, () => Upgrade(track));
     }
 
     private void OnUpgraded(UpgradeTrack track, UpgradeQuote quote)

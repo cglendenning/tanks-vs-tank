@@ -4,6 +4,7 @@
 #   scripts/capture-store-video.sh capture <simulator-udid> <TreadShred.app> <clips-dir>
 #   scripts/capture-store-video.sh compose <clips-dir> <out-dir>
 #   scripts/capture-store-video.sh screenshots <simulator-udid> <TreadShred.app> <WxH> <out-dir>
+#   scripts/capture-store-video.sh clips <clips-dir> <out-dir>
 #
 # Each scene runs the game's own store capture mode (TreadShredStoreCaptureMode, enabled through its
 # PlayerPrefs key) and is recorded with `simctl io recordVideo`, so every frame is genuine gameplay.
@@ -11,6 +12,8 @@
 # compose cuts the clips into the AppLovin creatives (15 s and 30 s, 16:9 and 9:16), an App Store
 # app preview (1920x886, real capture only, under 30 s) and a Google Play promo video, with the game's
 # music. TRAILER_IN sets where the action starts in trailer.mp4 (seconds after the countdown).
+# clips cuts the in-game sales clips (D-034, R-SALES-CLIPS) from captures of modes 18-22: 5 s, 640x360,
+# silent, centred 16:9. CLIP_STARTS sets where each clip starts in its capture, as name:seconds.
 set -euo pipefail
 
 BUNDLE_ID="com.tgts.tanksvstank"
@@ -23,6 +26,8 @@ capture() {
   mkdir -p "$out"
   xcrun simctl boot "$sim" 2>/dev/null || true
   xcrun simctl bootstatus "$sim" -b >/dev/null
+  # A fresh install each run: capture modes change upgrade levels and boosts.
+  xcrun simctl uninstall "$sim" "$BUNDLE_ID" 2>/dev/null || true
   xcrun simctl install "$sim" "$app"
   local prefs
   prefs="$(xcrun simctl get_app_container "$sim" "$BUNDLE_ID" data)/Library/Preferences/$BUNDLE_ID"
@@ -155,9 +160,23 @@ screenshots() {
   echo "screenshots ($size): $(ls "$out" | tr '\n' ' ')"
 }
 
+clips() {
+  local in="$1" out="$2" starts name start
+  read -r -a starts <<<"${CLIP_STARTS:-overdrive:2 armored-redeploy:2 armor:2 firepower:2 speed:2}"
+  mkdir -p "$out"
+  for entry in "${starts[@]}"; do
+    IFS=: read -r name start <<<"$entry"
+    ffmpeg -loglevel error -y -ss "$start" -t 5 -i "$in/$name.mp4" \
+      -vf "crop=ih*16/9:ih,scale=640:360:flags=lanczos,fps=30,setsar=1" -an \
+      -c:v libx264 -profile:v main -pix_fmt yuv420p -crf 25 -preset slow -movflags +faststart "$out/$name.mp4"
+    echo "$name.mp4: $(ffprobe -v error -show_entries format=duration,size -of csv=p=0 "$out/$name.mp4")"
+  done
+}
+
 case "${1:-}" in
   capture) [ $# -eq 4 ] || { echo "usage: $0 capture <simulator-udid> <app> <clips-dir>" >&2; exit 2; }; capture "$2" "$3" "$4" ;;
   compose) [ $# -eq 3 ] || { echo "usage: $0 compose <clips-dir> <out-dir>" >&2; exit 2; }; compose "$2" "$3" ;;
+  clips) [ $# -eq 3 ] || { echo "usage: $0 clips <clips-dir> <out-dir>" >&2; exit 2; }; clips "$2" "$3" ;;
   screenshots) [ $# -eq 5 ] || { echo "usage: $0 screenshots <simulator-udid> <app> <WxH> <out-dir>" >&2; exit 2; }; screenshots "$2" "$3" "$4" "$5" ;;
-  *) sed -n '2,13p' "$0" >&2; exit 2 ;;
+  *) sed -n '2,16p' "$0" >&2; exit 2 ;;
 esac

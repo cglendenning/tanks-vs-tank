@@ -44,6 +44,7 @@ public class ManagerScore : MonoBehaviour
         Medel = VictoryofFail.transform.GetChild(14).gameObject;
 
         instance = this;
+        RelabelFreeRetry();
         SumEmnemy = CountEmnemy;
         LogMissionStart();
         if (CanvasGame == null)
@@ -313,12 +314,22 @@ public class ManagerScore : MonoBehaviour
     }
 
 
+    // The scene's free retry reads RETRY, so only the paid offer is called a redeploy.
+    private static void RelabelFreeRetry()
+    {
+        foreach (var label in FindObjectsByType<Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (label.text == OfferLabels.SceneRetryLabel)
+                label.text = OfferLabels.Retry;
+        }
+    }
+
     private void BuildFailureRewardActions()
     {
         BuildOfferPanel(
             GemOffer.ArmoredRedeploy,
             "ARMORED REDEPLOY",
-            "REPLAY THIS MISSION WITH 1 EXTRA HIT",
+            CombatBoosts.RedeployExtraHits + " EXTRA HIT. " + SalesPitches.RunContinues,
             "REDEPLOY",
             () => ConfirmThen(GemOffer.ArmoredRedeploy, RedeemArmoredRedeploy));
     }
@@ -345,21 +356,29 @@ public class ManagerScore : MonoBehaviour
         activeOfferAction = action;
 
         var rootRect = TreadShredUi.CreateRect("TreadShredOffer", (RectTransform)VictoryofFail.transform,
-            new Vector2(0f, -18f), new Vector2(720f, 196f),
+            new Vector2(0f, -18f), new Vector2(760f, 196f),
             typeof(RectTransform), typeof(Image), typeof(Outline));
         rewardedActionPanel = rootRect.gameObject;
         TreadShredUi.StylePanel(rewardedActionPanel);
 
-        TreadShredUi.CreateText(title, rootRect, new Vector2(0f, 70f), new Vector2(700f, 34f), 26, rewardFont)
-            .color = TreadShredUi.TitleColor;
-        TreadShredUi.CreateText(detail, rootRect, new Vector2(0f, 36f), new Vector2(700f, 24f), 17, rewardFont)
-            .color = Color.white;
-        rewardBalanceText = TreadShredUi.CreateText(string.Empty, rootRect, new Vector2(0f, 8f),
-            new Vector2(700f, 22f), 15, rewardFont);
-        rewardBalanceText.color = TreadShredUi.DetailColor;
+        // D-034: the boost working, looping beside the offer; tapping it opens the full sales screen.
+        TreadShredSalesClip.Create(rootRect, new Vector2(-222f, 0f), new Vector2(284f, 160f),
+            SalesPitches.ForOffer(offer), rewardFont, () => OpenSalesScreen(onTap));
 
-        rewardButton = TreadShredUi.CreateButton(action, rootRect, new Vector2(0f, -50f), new Vector2(520f, 72f), 22,
+        const float column = 150f;
+        TreadShredUi.CreateText(title, rootRect, new Vector2(column, 70f), new Vector2(430f, 34f), 26, rewardFont)
+            .color = TreadShredUi.TitleColor;
+        var detailText = TreadShredUi.CreateText(detail, rootRect, new Vector2(column, 36f), new Vector2(430f, 24f), 17, rewardFont);
+        detailText.color = Color.white;
+        TreadShredUi.ShrinkToFit(detailText, 12);
+        rewardBalanceText = TreadShredUi.CreateText(string.Empty, rootRect, new Vector2(column, 8f),
+            new Vector2(430f, 22f), 15, rewardFont);
+        rewardBalanceText.color = TreadShredUi.DetailColor;
+        TreadShredUi.ShrinkToFit(rewardBalanceText, 11);
+
+        rewardButton = TreadShredUi.CreateButton(action, rootRect, new Vector2(column, -50f), new Vector2(420f, 72f), 22,
             rewardFont, onTap);
+        TreadShredUi.ShrinkToFit(rewardButton.GetComponentInChildren<Text>(), 14);
         RefreshOfferControls(null);
         TreadShredAnalytics.Log(GameEvents.OfferShown(OfferName(offer), TreadShredStore.Ensure().Wallet.Balance));
 
@@ -410,6 +429,14 @@ public class ManagerScore : MonoBehaviour
             return;
         }
         TreadShredConfirmDialog.Show(OfferLabels.Confirmation(offer, store.Wallet.Balance), rewardFont, redeem);
+    }
+
+    // D-034: the sales screen's button is this offer's own, with the same label and the same purchase.
+    private void OpenSalesScreen(UnityEngine.Events.UnityAction onTap)
+    {
+        TreadShredSalesScreen.Show(SalesPitches.ForOffer(activeOffer), rewardFont,
+            rewardButton.GetComponentInChildren<Text>().text, rewardBalanceText.text,
+            rewardButton.interactable && !rewardUsedThisScreen, onTap);
     }
 
     // The offer's button, for the store capture mode's confirmation shots.
