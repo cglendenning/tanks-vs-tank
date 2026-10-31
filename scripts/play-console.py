@@ -3,7 +3,7 @@
 
     python3 scripts/play-console.py products                  # create or update the gem packs (D-007-AC-02) and activate them
     python3 scripts/play-console.py check-upload-key <aab>    # upload into a throwaway edit: does Google accept its signing key?
-    python3 scripts/play-console.py release <aab> <fraction> [hold]  # one edit: bundle, production release, listing text and images; hold leaves it for Send for review in Play Console
+    python3 scripts/play-console.py release <aab> <fraction>  # one edit: bundle, staged production rollout, listing text and images
     python3 scripts/play-console.py rollout <fraction>        # change the live production rollout; 1 completes it for everyone
     python3 scripts/play-console.py status                    # Google's review state of each production release
     python3 scripts/play-console.py games-leaderboard <id>    # Play Games HIGH SCORE board with score limits (D-032-AC-04)
@@ -139,7 +139,7 @@ def upload(auth, path, url):
         sys.exit(f"upload {Path(path).name}: HTTP {error.code}: {error.read().decode(errors='replace')[:300]}")
 
 
-def release(auth, bundle, fraction, hold=False):
+def release(auth, bundle, fraction):
     """One edit: uploads the bundle, releases it to production (fraction 1 is a full release, below 1 a staged
     rollout), writes the listing and replaces its images."""
     upload_api = API.replace("/androidpublisher/v3/", "/upload/androidpublisher/v3/")
@@ -160,11 +160,8 @@ def release(auth, bundle, fraction, hold=False):
         for image in files:
             upload(auth, image, f"{upload_api}/edits/{edit}/listings/en-US/{kind}?uploadType=media")
         print(f"{kind}: {len(files)} uploaded")
-    # hold: Google keeps the committed release with the other unsent changes (such as App content declarations)
-    # until the owner clicks Send for review in Publishing overview, so they are reviewed together.
-    call("POST", f"/edits/{edit}:commit" + ("?changesNotSentForReview=true" if hold else ""), auth)
-    print(f"{'Committed, not yet sent for review:' if hold else 'Released'} version code {version_code} to production at "
-          f"{min(float(fraction), 1):.0%} with the approved listing.")
+    call("POST", f"/edits/{edit}:commit", auth)
+    print(f"Released version code {version_code} to production at {min(float(fraction), 1):.0%} with the approved listing.")
 
 
 def rollout(auth, fraction):
@@ -213,8 +210,8 @@ if __name__ == "__main__":
         products(token())
     elif len(sys.argv) == 3 and sys.argv[1] == "check-upload-key":
         check_upload_key(token(), sys.argv[2])
-    elif len(sys.argv) in (4, 5) and sys.argv[1] == "release" and sys.argv[4:] in ([], ["hold"]):
-        release(token(), sys.argv[2], sys.argv[3], hold=sys.argv[4:] == ["hold"])
+    elif len(sys.argv) == 4 and sys.argv[1] == "release":
+        release(token(), sys.argv[2], sys.argv[3])
     elif len(sys.argv) == 3 and sys.argv[1] == "games-leaderboard":
         games_leaderboard(token(), sys.argv[2])
     elif len(sys.argv) == 2 and sys.argv[1] == "status":
