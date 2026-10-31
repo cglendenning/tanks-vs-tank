@@ -140,13 +140,16 @@ def upload(auth, path, url):
 
 
 def release(auth, bundle, fraction):
-    """One edit: uploads the bundle, starts a staged production rollout, writes the listing and replaces its images."""
+    """One edit: uploads the bundle, releases it to production (fraction 1 is a full release, below 1 a staged
+    rollout), writes the listing and replaces its images."""
     upload_api = API.replace("/androidpublisher/v3/", "/upload/androidpublisher/v3/")
     edit = call("POST", "/edits", auth, {})["id"]
     version_code = upload(auth, bundle, f"{upload_api}/edits/{edit}/bundles?uploadType=media")["versionCode"]
-    call("PUT", f"/edits/{edit}/tracks/production", auth, {"track": "production", "releases": [{
-        "versionCodes": [str(version_code)], "status": "inProgress", "userFraction": float(fraction),
-        "releaseNotes": [{"language": "en-US", "text": store_copy.copy_for("android")["releaseNotes"]}]}]})
+    # Google takes a full release as "completed" with no fraction; a fraction must stay below 1.
+    rollout = {"status": "completed"} if float(fraction) >= 1 else {"status": "inProgress", "userFraction": float(fraction)}
+    call("PUT", f"/edits/{edit}/tracks/production", auth, {"track": "production", "releases": [dict(rollout,
+        versionCodes=[str(version_code)],
+        releaseNotes=[{"language": "en-US", "text": store_copy.copy_for("android")["releaseNotes"]}])]})
     listing = play_listing()
     call("PATCH", f"/edits/{edit}/listings/en-US", auth, dict(listing, language="en-US"))
     for kind, files in (("phoneScreenshots", sorted((MEDIA / "phone").glob("*.png"))),
@@ -158,7 +161,7 @@ def release(auth, bundle, fraction):
             upload(auth, image, f"{upload_api}/edits/{edit}/listings/en-US/{kind}?uploadType=media")
         print(f"{kind}: {len(files)} uploaded")
     call("POST", f"/edits/{edit}:commit", auth)
-    print(f"Released version code {version_code} to production at {float(fraction):.0%} with the 1.9.0 listing.")
+    print(f"Released version code {version_code} to production at {min(float(fraction), 1):.0%} with the approved listing.")
 
 
 def rollout(auth, fraction):
