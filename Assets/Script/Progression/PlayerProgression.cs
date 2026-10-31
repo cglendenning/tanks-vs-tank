@@ -29,6 +29,25 @@ namespace TreadShred.Progression
         NotEnoughGems
     }
 
+    /// <summary>What one upgrade took: the level it bought, the coins it removed and the gems it spent.</summary>
+    public readonly struct UpgradeReceipt
+    {
+        public UpgradeReceipt(UpgradeTrack track, int level, int coinsPaid, int gemsSpent, UpgradeQuote quote)
+        {
+            Track = track;
+            Level = level;
+            CoinsPaid = coinsPaid;
+            GemsSpent = gemsSpent;
+            Quote = quote;
+        }
+
+        public UpgradeTrack Track { get; }
+        public int Level { get; }
+        public int CoinsPaid { get; }
+        public int GemsSpent { get; }
+        public UpgradeQuote Quote { get; }
+    }
+
     public readonly struct UpgradeQuote
     {
         public UpgradeQuote(int costCoins, int coinShortfall)
@@ -119,23 +138,47 @@ namespace TreadShred.Progression
         /// <summary>
         /// Buys the next level with coins, covering any coin shortfall with gems.
         /// </summary>
-        public UpgradeResult TryUpgrade(UpgradeTrack track)
+        public UpgradeResult TryUpgrade(UpgradeTrack track) => TryUpgrade(track, out _);
+
+        /// <summary>Buys the next level and says exactly what it took, so it can be given back.</summary>
+        public UpgradeResult TryUpgrade(UpgradeTrack track, out UpgradeReceipt receipt)
         {
+            receipt = default;
             if (IsMaxed(track))
                 return UpgradeResult.AlreadyMaxed;
 
             var quote = Quote(track);
+            var coinsBefore = state.coins;
+            var gemsSpent = 0;
             if (!quote.AffordableWithCoins)
             {
                 if (!wallet.TrySpend(quote.GemsNeeded))
                     return UpgradeResult.NotEnoughGems;
+                gemsSpent = quote.GemsNeeded;
                 state.coins += quote.GemsNeeded * ProgressionRules.CoinsPerGem;
             }
 
             state.coins -= quote.CostCoins;
             state.upgradeLevels[(int)track]++;
+            receipt = new UpgradeReceipt(track, Level(track), coinsBefore - state.coins, gemsSpent, quote);
             Commit();
             return UpgradeResult.Upgraded;
+        }
+
+        /// <summary>
+        /// Gives back an upgrade (D-017-AC-06): the track drops to the level before it, and the coins and gems
+        /// it took return. Refused when the track is no longer at the level that upgrade bought.
+        /// </summary>
+        public bool Refund(UpgradeReceipt receipt)
+        {
+            if (receipt.Level < 1 || Level(receipt.Track) != receipt.Level)
+                return false;
+            state.upgradeLevels[(int)receipt.Track]--;
+            state.coins += receipt.CoinsPaid;
+            if (receipt.GemsSpent > 0)
+                wallet.Refund(receipt.GemsSpent);
+            Commit();
+            return true;
         }
 
         public bool IsUnlocked(DifficultyTier tier)

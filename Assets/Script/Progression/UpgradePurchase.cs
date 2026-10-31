@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using TreadShred.Economy;
 
 namespace TreadShred.Progression
@@ -7,6 +9,7 @@ namespace TreadShred.Progression
     /// One tap on an upgrade (D-017, D-018, D-010): buys the next level with coins, covers a coin shortfall with
     /// gems, and when gems are short too buys the smallest covering pack and upgrades once it is delivered. The
     /// screen calls Release when it closes, so a purchase still arriving credits its gems and upgrades nothing (D-011).
+    /// Until then, Undo gives back the upgrades made on the screen, latest first (D-017-AC-06).
     /// </summary>
     public sealed class UpgradePurchase
     {
@@ -15,6 +18,7 @@ namespace TreadShred.Progression
         private readonly PurchaseFlow purchases;
         private readonly Action<UpgradeTrack, UpgradeQuote> onUpgraded;
         private readonly Action<string> onStatus;
+        private readonly Stack<UpgradeReceipt> receipts = new Stack<UpgradeReceipt>();
 
         public UpgradePurchase(PlayerProgression progression, GemWallet wallet, PurchaseFlow purchases,
             Action<UpgradeTrack, UpgradeQuote> onUpgraded, Action<string> onStatus)
@@ -34,9 +38,33 @@ namespace TreadShred.Progression
             purchases.Request(() => purchases.BuyPack(pack, () => AfterPack(track), onStatus), onStatus);
         }
 
-        /// <summary>The screen closed: a purchase it started still credits its gems but upgrades nothing.</summary>
+        public bool CanUndo => receipts.Count > 0;
+
+        /// <summary>The most recent upgrade still standing on this screen, if any.</summary>
+        public UpgradeReceipt? LastUpgrade => receipts.Count > 0 ? receipts.Peek() : (UpgradeReceipt?)null;
+
+        /// <summary>The upgrades made on this screen and not undone, oldest first: final once the screen closes.</summary>
+        public IReadOnlyList<UpgradeReceipt> Kept => receipts.Reverse().ToList();
+
+        /// <summary>Gives back the most recent upgrade; false when there is none or its track has changed since.</summary>
+        public bool Undo()
+        {
+            if (receipts.Count == 0)
+                return false;
+            if (progression.Refund(receipts.Pop()))
+                return true;
+            // Progress changed under the screen (a cloud restore): nothing older can be given back safely.
+            receipts.Clear();
+            return false;
+        }
+
+        /// <summary>
+        /// The screen closed: its upgrades are final, and a purchase it started still credits its gems but
+        /// upgrades nothing.
+        /// </summary>
         public void Release()
         {
+            receipts.Clear();
             purchases.Release(onStatus);
         }
 
@@ -49,10 +77,12 @@ namespace TreadShred.Progression
 
         private UpgradeResult TryUpgrade(UpgradeTrack track)
         {
-            var quote = progression.Quote(track);
-            var result = progression.TryUpgrade(track);
+            var result = progression.TryUpgrade(track, out var receipt);
             if (result == UpgradeResult.Upgraded)
-                onUpgraded(track, quote);
+            {
+                receipts.Push(receipt);
+                onUpgraded(track, receipt.Quote);
+            }
             return result;
         }
     }

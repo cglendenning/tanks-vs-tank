@@ -50,6 +50,40 @@ namespace TreadShred.Progression
             return Effect(track, level) + "  >  " + Effect(track, level + 2) + " AT LEVEL " + (level + 2);
         }
 
+        public const string Undo = "UNDO UPGRADE";
+
+        /// <summary>
+        /// D-017-AC-05: what an upgrade will spend, asked before anything is spent. When gems fall short the
+        /// confirm button says it buys a pack, and the store's own sheet follows.
+        /// </summary>
+        public static GemConfirmation UpgradeConfirmation(UpgradeTrack track, int nextLevel, UpgradeQuote quote, int gemBalance)
+        {
+            var coins = quote.CostCoins - quote.CoinShortfall;
+            var cost = quote.AffordableWithCoins
+                ? CountText.Format(quote.CostCoins) + " COINS"
+                : (coins > 0 ? CountText.Format(coins) + " COINS + " : string.Empty) + CountText.Format(quote.GemsNeeded) + " GEMS";
+            var detail = "LEVEL " + nextLevel + " FOR " + cost;
+            var confirm = "UPGRADE";
+            if (!quote.AffordableWithCoins && gemBalance < quote.GemsNeeded)
+            {
+                detail += ". YOU HAVE " + CountText.Format(gemBalance) + " GEMS";
+                confirm = "BUY " + CountText.Format(GemCatalog.SmallestPackCovering(quote.GemsNeeded - gemBalance).Gems) + " GEMS";
+            }
+            return new GemConfirmation("UPGRADE " + Track(track) + "?", detail, confirm, "CANCEL");
+        }
+
+        /// <summary>D-017-AC-06: what an undone upgrade gave back.</summary>
+        public static string Undone(UpgradeReceipt receipt)
+        {
+            var returned = new System.Collections.Generic.List<string>();
+            if (receipt.CoinsPaid > 0)
+                returned.Add(CountText.Format(receipt.CoinsPaid) + " COINS");
+            if (receipt.GemsSpent > 0)
+                returned.Add(CountText.Format(receipt.GemsSpent) + " GEMS");
+            var back = Track(receipt.Track) + " BACK TO LEVEL " + (receipt.Level - 1);
+            return returned.Count == 0 ? back : back + ". " + string.Join(" AND ", returned) + " RETURNED";
+        }
+
         public static string UpgradeButton(UpgradeQuote quote, bool maxed)
         {
             if (maxed)

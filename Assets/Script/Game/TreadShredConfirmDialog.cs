@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// D-009: asks before gems already held are spent on a boost. Nothing
+/// D-009, D-017-AC-05: asks before gems or coins already held are spent. Nothing
 /// behind the dialog takes taps while it is open.
 /// </summary>
 public sealed class TreadShredConfirmDialog : MonoBehaviour
@@ -27,10 +27,12 @@ public sealed class TreadShredConfirmDialog : MonoBehaviour
             typeof(RectTransform), typeof(Image), typeof(Outline));
         TreadShredUi.StylePanel(panel.gameObject);
 
-        TreadShredUi.CreateText(confirmation.Title, panel, new Vector2(0f, 120f), new Vector2(860f, 70f), 52, font)
-            .color = TreadShredUi.TitleColor;
-        TreadShredUi.CreateText(confirmation.Detail, panel, new Vector2(0f, 45f), new Vector2(860f, 44f), 30, font)
-            .color = Color.white;
+        var title = TreadShredUi.CreateText(confirmation.Title, panel, new Vector2(0f, 120f), new Vector2(860f, 70f), 52, font);
+        title.color = TreadShredUi.TitleColor;
+        TreadShredUi.ShrinkToFit(title, 32);
+        var detail = TreadShredUi.CreateText(confirmation.Detail, panel, new Vector2(0f, 45f), new Vector2(860f, 44f), 30, font);
+        detail.color = Color.white;
+        TreadShredUi.ShrinkToFit(detail, 18);
         TreadShredUi.CreateButton(confirmation.ConfirmButton, panel, new Vector2(-200f, -95f), new Vector2(360f, 100f),
             32, font, Confirm);
         TreadShredUi.CreateButton(confirmation.CancelButton, panel, new Vector2(200f, -95f), new Vector2(360f, 100f),

@@ -21,6 +21,7 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     private readonly Dictionary<UpgradeTrack, Text> effectTexts = new Dictionary<UpgradeTrack, Text>();
     private readonly Dictionary<UpgradeTrack, Button> buttons = new Dictionary<UpgradeTrack, Button>();
     private UpgradePurchase shop;
+    private Button undoButton;
 
     public static TreadShredUpgradePanel Show(Font font)
     {
@@ -74,6 +75,10 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
         statusText.color = TreadShredUi.DetailColor;
         TreadShredUi.CreateButton("BACK", backdrop, new Vector2(0f, -390f), new Vector2(440f, 120f), 52, font,
             () => Destroy(gameObject));
+        // D-017-AC-06: shown while an upgrade made on this screen can still be given back.
+        undoButton = TreadShredUi.CreateButton(ProgressionLabels.Undo, backdrop, new Vector2(-470f, -390f),
+            new Vector2(300f, 100f), 30, font, Undo);
+        TreadShredUi.ShrinkToFit(undoButton.GetComponentInChildren<Text>(), 18);
 
         var store = TreadShredStore.Ensure();
         shop = new UpgradePurchase(Progression, store.Wallet, store.Purchases, OnUpgraded, ShowStatus);
@@ -82,10 +87,26 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
         Refresh();
     }
 
+    // D-017-AC-05: nothing is spent until the player confirms what the upgrade costs.
     private void Upgrade(UpgradeTrack track)
     {
-        statusText.text = string.Empty;
-        shop.Buy(track);
+        if (Progression.IsMaxed(track))
+            return;
+        var confirmation = ProgressionLabels.UpgradeConfirmation(track, Progression.Level(track) + 1,
+            Progression.Quote(track), TreadShredStore.Ensure().Wallet.Balance);
+        TreadShredConfirmDialog.Show(confirmation, font, () =>
+        {
+            statusText.text = string.Empty;
+            shop.Buy(track);
+        });
+    }
+
+    private void Undo()
+    {
+        var receipt = shop.LastUpgrade;
+        if (receipt.HasValue && shop.Undo())
+            statusText.text = ProgressionLabels.Undone(receipt.Value);
+        Refresh();
     }
 
     // D-034: the sales screen's button is the row's own upgrade, with the same label and purchase.
@@ -100,9 +121,17 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
 
     private void OnUpgraded(UpgradeTrack track, UpgradeQuote quote)
     {
-        TreadShredAnalytics.Log(GameEvents.UpgradePurchased(track.ToString().ToLowerInvariant(), Progression.Level(track),
-            quote.CostCoins - quote.CoinShortfall, quote.AffordableWithCoins ? 0 : quote.GemsNeeded));
         statusText.text = ProgressionLabels.Track(track) + " UPGRADED TO LEVEL " + Progression.Level(track);
+        // Progress redraws the screen before the upgrade is recorded for undo; redraw once it is.
+        Refresh();
+    }
+
+    // Upgrades become final when the screen closes; only those are reported, so undone ones never count.
+    private static void LogPurchase(UpgradeReceipt receipt)
+    {
+        var quote = receipt.Quote;
+        TreadShredAnalytics.Log(GameEvents.UpgradePurchased(receipt.Track.ToString().ToLowerInvariant(), receipt.Level,
+            quote.CostCoins - quote.CoinShortfall, receipt.GemsSpent));
     }
 
     private void ShowStatus(string status)
@@ -125,6 +154,7 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
             // Locked while the store sheet is open, so a slow sheet never invites a second purchase.
             buttons[track].interactable = !maxed && !TreadShredStore.Ensure().PurchaseInProgress;
         }
+        undoButton.gameObject.SetActive(shop != null && shop.CanUndo);
     }
 
     private void OnBalanceChanged(int balance)
@@ -137,6 +167,9 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     private void OnDestroy()
     {
         TreadShredBack.Closed(this);
+        if (shop != null)
+            foreach (var receipt in shop.Kept)
+                LogPurchase(receipt);
         shop?.Release();
         if (TreadShredProgress.Instance != null)
             TreadShredProgress.Instance.Progression.Changed -= Refresh;

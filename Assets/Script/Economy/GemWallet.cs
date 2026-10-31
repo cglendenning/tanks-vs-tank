@@ -79,10 +79,15 @@ namespace TreadShred.Economy
         }
 
         // Gems earned in play (milestones); the caller guarantees each reward is paid once.
-        public void CreditReward(int gems)
+        public void CreditReward(int gems) => Credit(gems);
+
+        // Gems an undone upgrade spent, returned to the wallet (D-017-AC-06).
+        public void Refund(int gems) => Credit(gems);
+
+        private void Credit(int gems)
         {
             if (gems <= 0)
-                throw new ArgumentOutOfRangeException(nameof(gems), gems, "Reward must be positive.");
+                throw new ArgumentOutOfRangeException(nameof(gems), gems, "Gems credited must be positive.");
 
             state.balance += gems;
             Commit();
