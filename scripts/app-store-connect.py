@@ -4,6 +4,10 @@
     ASC_ISSUER_ID=<issuer> ASC_KEY_ID=<key> python3 scripts/app-store-connect.py game-center
     ... app-store-connect.py icloud
     ... app-store-connect.py adhoc-profile <certificate serial> <device UDID>
+    ... app-store-connect.py listing <version>
+listing: finds or creates that iOS version (it stays invisible until submitted),
+writes the approved English copy from Store/listing-en-US.md (D-030) and removes
+every other language from that version and its app info.
 
 icloud: enables the iCloud capability on the App ID, for cloud save (D-025).
 adhoc-profile: creates an Ad Hoc profile for the App ID with that distribution
@@ -163,6 +167,49 @@ def adhoc_profile(api, certificate_serial, udid):
     print("Ad Hoc profile created and installed:", name, uuid)
 
 
+def listing_copy():
+    """The approved App Store copy from Store/listing-en-US.md; the (iOS) markers are for Google Play."""
+    text = (Path(__file__).resolve().parent.parent / "Store/listing-en-US.md").read_text()
+    field = lambda label: text.split(f"**{label}:** ", 1)[1].split("\n", 1)[0].strip()
+    description = text.split("## Description\n", 1)[1].strip().replace(" (iOS)", "")
+    return {"subtitle": field("App Store subtitle (30)"), "promotionalText": field("App Store promotional text (170)"),
+            "keywords": field("App Store keywords (100)"), "description": description}
+
+
+def listing(api, version):
+    copy = listing_copy()
+    app = api.call("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"][0]["id"]
+    versions = api.call("GET", f"/v1/apps/{app}/appStoreVersions?filter[platform]=IOS&limit=10")["data"]
+    editable = [v for v in versions if v["attributes"]["appStoreState"] in ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED")]
+    if editable:
+        target = editable[0]
+        if target["attributes"]["versionString"] != version:
+            api.call("PATCH", f"/v1/appStoreVersions/{target['id']}", {"data": {"type": "appStoreVersions", "id": target["id"],
+                                                                              "attributes": {"versionString": version}}})
+    else:
+        target = api.create("appStoreVersions", {"platform": "IOS", "versionString": version},
+                            {"app": {"data": {"type": "apps", "id": app}}})
+    print(f"version {version}: {target['attributes'].get('appStoreState', 'PREPARE_FOR_SUBMISSION')} (not visible until submitted)")
+    removed = 0
+    for loc in api.call("GET", f"/v1/appStoreVersions/{target['id']}/appStoreVersionLocalizations?limit=50")["data"]:
+        if loc["attributes"]["locale"] == "en-US":
+            api.call("PATCH", f"/v1/appStoreVersionLocalizations/{loc['id']}", {"data": {"type": "appStoreVersionLocalizations", "id": loc["id"],
+                     "attributes": {k: copy[k] for k in ("description", "keywords", "promotionalText")}}})
+        else:
+            api.call("DELETE", f"/v1/appStoreVersionLocalizations/{loc['id']}")
+            removed += 1
+    infos = api.call("GET", f"/v1/apps/{app}/appInfos")["data"]
+    info = next(i for i in infos if i["attributes"].get("appStoreState", i["attributes"].get("state")) not in ("READY_FOR_SALE", "READY_FOR_DISTRIBUTION"))
+    for loc in api.call("GET", f"/v1/appInfos/{info['id']}/appInfoLocalizations?limit=50")["data"]:
+        if loc["attributes"]["locale"] == "en-US":
+            api.call("PATCH", f"/v1/appInfoLocalizations/{loc['id']}", {"data": {"type": "appInfoLocalizations", "id": loc["id"],
+                     "attributes": {"name": "Tread Shred", "subtitle": copy["subtitle"]}}})
+        else:
+            api.call("DELETE", f"/v1/appInfoLocalizations/{loc['id']}")
+            removed += 1
+    print(f"en-US copy written; {removed} other-language entries removed")
+
+
 def main():
     command = sys.argv[1:2]
     issuer, key_id = os.environ.get("ASC_ISSUER_ID"), os.environ.get("ASC_KEY_ID")
@@ -175,6 +222,8 @@ def main():
         icloud(api)
     elif command == ["adhoc-profile"] and len(sys.argv) == 4:
         adhoc_profile(api, sys.argv[2], sys.argv[3])
+    elif command == ["listing"] and len(sys.argv) == 3:
+        listing(api, sys.argv[2])
     else:
         raise SystemExit(__doc__)
 
