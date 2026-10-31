@@ -11,6 +11,7 @@
     ... app-store-connect.py submit <version>
     ... app-store-connect.py full-release <version>
     ... app-store-connect.py resubmit <version>
+    ... app-store-connect.py cancel-review <version>
     ... app-store-connect.py status <version>
 listing: finds or creates that iOS version (it stays invisible until submitted),
 writes the approved English copy from Store/listing-en-US.md (D-030) and removes
@@ -360,9 +361,8 @@ def submit(api, version):
           f"releases to all users on approval; state: {state}")
 
 
-def resubmit(api, version):
-    """Cancels the version's open review, waits for Apple to hand it back, and submits it again with everything
-    awaiting review. Review starts over."""
+def cancel_review(api, version):
+    """Cancels the version's open review and waits for Apple to hand it back (DEVELOPER_REJECTED, editable)."""
     app, target, _ = en_us_localization(api, version)
     submissions = lambda: api.call("GET", f"/v1/reviewSubmissions?filter[app]={app}&filter[platform]=IOS")["data"]
     for s in submissions():
@@ -374,11 +374,17 @@ def resubmit(api, version):
         state = api.call("GET", f"/v1/appStoreVersions/{target['id']}")["data"]["attributes"]["appStoreState"]
         if state not in ("WAITING_FOR_REVIEW", "IN_REVIEW") and not any(
                 s["attributes"].get("state") == "CANCELING" for s in submissions()):
-            break
+            print(f"{version} review cancelled; state: {state}")
+            return
         if time.time() > deadline:
-            raise SystemExit(f"Apple has not finished cancelling the review after 3 minutes (version {state}); run resubmit again")
+            raise SystemExit(f"Apple has not finished cancelling the review after 3 minutes (version {state}); run it again")
         print(f"cancelling the review: version {state}", flush=True)
         time.sleep(10)
+
+
+def resubmit(api, version):
+    """Cancels the version's open review and submits it again with everything awaiting review. Review starts over."""
+    cancel_review(api, version)
     submit(api, version)
 
 
@@ -425,6 +431,8 @@ def main():
         attach_build(api, sys.argv[2], sys.argv[3])
     elif command == ["submit"] and len(sys.argv) == 3:
         submit(api, sys.argv[2])
+    elif command == ["cancel-review"] and len(sys.argv) == 3:
+        cancel_review(api, sys.argv[2])
     elif command == ["resubmit"] and len(sys.argv) == 3:
         resubmit(api, sys.argv[2])
     elif command == ["status"] and len(sys.argv) == 3:
