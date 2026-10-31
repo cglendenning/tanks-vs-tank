@@ -96,14 +96,6 @@ EOF
 # iOS receives an XML content type when it requests the OTA manifest.
 cp "$OTA_DIR/manifest.plist" "$OTA_DIR/manifest.xml"
 
-for URL in "${TUNNEL_URL}/manifest.xml" "${TUNNEL_URL}/TreadShred.ipa"; do
-  for _ in $(seq 1 20); do
-    if curl --resolve "$TUNNEL_HOST:443:$TUNNEL_IP" --http1.1 -fsSI --max-time 20 -o /dev/null "$URL" >/dev/null 2>&1; then break; fi
-    sleep 1
-  done
-  curl --resolve "$TUNNEL_HOST:443:$TUNNEL_IP" --http1.1 -fsSI --max-time 20 -o /dev/null "$URL" >/dev/null
-done
-
 MANIFEST_URL="${TUNNEL_URL}/manifest.xml"
 ENCODED_MANIFEST_URL="$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=""))' "$MANIFEST_URL")"
 OTA_URL="itms-services://?action=download-manifest&url=${ENCODED_MANIFEST_URL}"
@@ -119,6 +111,15 @@ cat > "$OTA_DIR/install.html" <<EOF
 </body>
 </html>
 EOF
+
+# D-015-AC-01: no link is printed until the install page, manifest and IPA all answer HTTP 200.
+for URL in "${TUNNEL_URL}/install.html" "${TUNNEL_URL}/manifest.xml" "${TUNNEL_URL}/TreadShred.ipa"; do
+  for _ in $(seq 1 20); do
+    if curl --resolve "$TUNNEL_HOST:443:$TUNNEL_IP" --http1.1 -fsSI --max-time 20 -o /dev/null "$URL" >/dev/null 2>&1; then break; fi
+    sleep 1
+  done
+  curl --resolve "$TUNNEL_HOST:443:$TUNNEL_IP" --http1.1 -fsSI --max-time 20 -o /dev/null "$URL" >/dev/null
+done
 
 echo "OTA_URL=${OTA_URL}"
 echo "INSTALL_PAGE_URL=${TUNNEL_URL}/install.html"
