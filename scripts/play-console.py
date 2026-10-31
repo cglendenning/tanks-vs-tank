@@ -4,6 +4,7 @@
     python3 scripts/play-console.py products                  # create or update the gem packs (D-007-AC-02) and activate them
     python3 scripts/play-console.py check-upload-key <aab>    # upload into a throwaway edit: does Google accept its signing key?
     python3 scripts/play-console.py release <aab> <fraction>  # one edit: bundle, staged production rollout, listing text and images
+    python3 scripts/play-console.py rollout <fraction>        # change the live production rollout; 1 completes it for everyone
 
 Authenticates with the service account key at $PLAY_KEY_FILE (default
 ~/.play-console/tread-shred-play.json); the account needs Tread Shred permissions in the Play Console.
@@ -160,6 +161,26 @@ def release(auth, bundle, fraction):
     print(f"Released version code {version_code} to production at {float(fraction):.0%} with the 1.9.0 listing.")
 
 
+def rollout(auth, fraction):
+    """Moves the production release in progress to that fraction of users; 1 completes it for everyone."""
+    edit = call("POST", "/edits", auth, {})["id"]
+    track = call("GET", f"/edits/{edit}/tracks/production", auth)
+    staged = [r for r in track.get("releases", []) if r.get("status") == "inProgress"]
+    if not staged:
+        call("DELETE", f"/edits/{edit}", auth)
+        sys.exit("No production release is in progress")
+    release = staged[0]
+    if float(fraction) >= 1:
+        release["status"] = "completed"
+        release.pop("userFraction", None)
+    else:
+        release["userFraction"] = float(fraction)
+    call("PUT", f"/edits/{edit}/tracks/production", auth, {"track": "production", "releases": [release]})
+    call("POST", f"/edits/{edit}:commit", auth)
+    print(f"Production version code {release['versionCodes'][0]}: {release['status']}"
+          + (f" at {float(fraction):.0%}" if release["status"] == "inProgress" else " for 100% of users"))
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 2 and sys.argv[1] == "products":
         products(token())
@@ -167,5 +188,7 @@ if __name__ == "__main__":
         check_upload_key(token(), sys.argv[2])
     elif len(sys.argv) == 4 and sys.argv[1] == "release":
         release(token(), sys.argv[2], sys.argv[3])
+    elif len(sys.argv) == 3 and sys.argv[1] == "rollout":
+        rollout(token(), sys.argv[2])
     else:
         sys.exit(__doc__)

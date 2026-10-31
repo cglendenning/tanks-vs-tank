@@ -9,6 +9,7 @@
     ... app-store-connect.py media <version> <iphone-shots-dir> <ipad-shots-dir> <iphone-preview.mp4>
     ... app-store-connect.py attach-build <version> <build-number>
     ... app-store-connect.py submit <version>
+    ... app-store-connect.py full-release <version>
 listing: finds or creates that iOS version (it stays invisible until submitted),
 writes the approved English copy from Store/listing-en-US.md (D-030) and removes
 every other language from that version and its app info.
@@ -329,6 +330,15 @@ def submit(api, version):
     print(f"{version} submitted for review with a phased release; state: {state}")
 
 
+def full_release(api, version):
+    """Removes the phased release so the version goes to all users at once."""
+    _, target, _ = en_us_localization(api, version)
+    phased = api.call("GET", f"/v1/appStoreVersions/{target['id']}/appStoreVersionPhasedRelease")["data"]
+    if phased:
+        api.call("DELETE", f"/v1/appStoreVersionPhasedReleases/{phased['id']}")
+    print(f"{version}: phased release removed; it goes to all users when released")
+
+
 def main():
     command = sys.argv[1:2]
     issuer, key_id = os.environ.get("ASC_ISSUER_ID"), os.environ.get("ASC_KEY_ID")
@@ -351,6 +361,8 @@ def main():
         attach_build(api, sys.argv[2], sys.argv[3])
     elif command == ["submit"] and len(sys.argv) == 3:
         submit(api, sys.argv[2])
+    elif command == ["full-release"] and len(sys.argv) == 3:
+        full_release(api, sys.argv[2])
     else:
         raise SystemExit(__doc__)
 
