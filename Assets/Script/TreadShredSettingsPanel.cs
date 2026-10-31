@@ -118,6 +118,8 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
         Refresh();
     }
 
+    private void Start() => TreadShredBack.Opened(this, Close);
+
     private void Close()
     {
         Destroy(gameObject);
@@ -125,6 +127,7 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
 
     private void OnDestroy()
     {
+        TreadShredBack.Closed(this);
         if (TreadShredStore.Instance != null)
             TreadShredStore.Instance.Wallet.BalanceChanged -= OnBalanceChanged;
     }

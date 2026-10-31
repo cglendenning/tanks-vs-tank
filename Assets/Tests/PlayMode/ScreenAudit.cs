@@ -36,6 +36,7 @@ namespace TreadShred.Screens.Tests
         WrongFont,
         NotAllCaps,
         UnformattedNumber,
+        BackDoesNotClose,
         NotReached
     }
 

@@ -43,6 +43,10 @@ public sealed class TreadShredConfirmDialog : MonoBehaviour
         onConfirm();
     }
 
+    private void Start() => TreadShredBack.Opened(this, Cancel);
+
+    private void OnDestroy() => TreadShredBack.Closed(this);
+
     public void Cancel()
     {
         Destroy(gameObject);

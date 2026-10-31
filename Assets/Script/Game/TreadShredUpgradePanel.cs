@@ -116,8 +116,11 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
         Refresh();
     }
 
+    private void Start() => TreadShredBack.Opened(this, () => Destroy(gameObject));
+
     private void OnDestroy()
     {
+        TreadShredBack.Closed(this);
         if (TreadShredProgress.Instance != null)
             TreadShredProgress.Instance.Progression.Changed -= Refresh;
         if (TreadShredStore.Instance != null)

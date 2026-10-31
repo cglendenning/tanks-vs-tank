@@ -132,6 +132,8 @@ public sealed class TreadShredLeaderboardPanel : MonoBehaviour
         TreadShredUi.ShrinkToFit(text, 14);
     }
 
+    private void Start() => TreadShredBack.Opened(this, Close);
+
     private void Close()
     {
         Destroy(gameObject);
@@ -139,6 +141,7 @@ public sealed class TreadShredLeaderboardPanel : MonoBehaviour
 
     private void OnDestroy()
     {
+        TreadShredBack.Closed(this);
         if (open == this)
             open = null;
     }

@@ -47,6 +47,13 @@ namespace TreadShred.Screens.Tests
             AssertNone(Defect.UnformattedNumber);
         }
 
+        [UnityTest(Description = "D-014-AC-03: the system Back closes settings, upgrades, the leaderboard, the gem prompt and the revive offer, as their own buttons do")]
+        public IEnumerator SystemBackClosesEveryPanel()
+        {
+            yield return Swept();
+            AssertNone(Defect.BackDoesNotClose);
+        }
+
         [UnityTest(Description = "D-013-AC-03: every visible label on every screen uses the Black Ops One typeface")]
         public IEnumerator EveryLabelUsesTheTypeface()
         {

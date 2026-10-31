@@ -104,6 +104,10 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
         }, status => Refresh(status));
     }
 
+    private void Start() => TreadShredBack.Opened(this, Decline);
+
+    private void OnDestroy() => TreadShredBack.Closed(this);
+
     private void Decline()
     {
         if (offer.Decline())

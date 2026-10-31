@@ -5,6 +5,13 @@ apply from: '../shared/common.gradle'
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+// Android Resolver Dependencies Start
+    implementation 'com.google.android.gms:play-services-base:18.11.1' // Packages/com.google.firebase.app/Firebase/Editor/AppDependencies.xml:16
+    implementation 'com.google.firebase:firebase-analytics:24.0.0' // Packages/com.google.firebase.analytics/Firebase/Editor/AnalyticsDependencies.xml:12
+    implementation 'com.google.firebase:firebase-analytics-unity:14.1.0' // Packages/com.google.firebase.analytics/Firebase/Editor/AnalyticsDependencies.xml:17
+    implementation 'com.google.firebase:firebase-app-unity:14.1.0' // Packages/com.google.firebase.app/Firebase/Editor/AppDependencies.xml:21
+    implementation 'com.google.firebase:firebase-common:23.0.0' // Packages/com.google.firebase.app/Firebase/Editor/AppDependencies.xml:12
+// Android Resolver Dependencies End
 **DEPS**}
 
 // Android Resolver Exclusions Start

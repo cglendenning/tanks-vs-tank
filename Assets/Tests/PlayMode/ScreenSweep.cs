@@ -53,20 +53,20 @@ namespace TreadShred.Screens.Tests
                     {
                         yield return Settle();
                         yield return Audit(save + " SETTINGS", "VIBRATION");
-                        Tap("BACK");
+                        yield return PressBack("TreadShredSettings", save + " SETTINGS");
                         yield return Settle();
                     }
                     if (Tap("UPGRADES"))
                     {
                         yield return Settle();
                         yield return Audit(save + " UPGRADES", "LEVEL ");
-                        Tap("BACK");
+                        yield return PressBack("TreadShredUpgrades", save + " UPGRADES");
                         yield return Settle();
                     }
                     OpenLeaderboard(veteran);
                     yield return Settle();
                     yield return Audit(save + " LEADERBOARD", LeaderboardRules.Subtitle);
-                    Tap("BACK");
+                    yield return PressBack("TreadShredLeaderboard", save + " LEADERBOARD");
                     yield return Settle();
 
                     if (Tap("START MISSION"))
@@ -94,12 +94,14 @@ namespace TreadShred.Screens.Tests
                     {
                         yield return Settle();
                         yield return Audit(save + " GEM PROMPT", "SPEND ");
+                        yield return PressBack("TreadShredConfirm", save + " GEM PROMPT");
                     }
 
                     yield return StartMission();
                     Call(null, "TreadShredRevivePanel.TryOffer", Find("PlayerMoverment"));
                     yield return Settle();
                     yield return Audit(save + " REVIVE", "TANK DESTROYED");
+                    yield return PressBack("TreadShredRevive", save + " REVIVE");
                 }
             }
             finally
@@ -150,6 +152,16 @@ namespace TreadShred.Screens.Tests
                 yield return new WaitForSecondsRealtime(0.25f);
             if (Time.timeScale == 0f)
                 Findings.Add(new Finding(Defect.NotReached, "the mission countdown never finished"));
+        }
+
+        // D-014-AC-03: the system Back (Escape on Android) closes the open panel, as its own button does.
+        private IEnumerator PressBack(string panel, string screen)
+        {
+            Call(null, "TreadShredBack.Press");
+            yield return null;
+            yield return null;
+            if (GameObject.Find(panel) != null)
+                Findings.Add(new Finding(Defect.BackDoesNotClose, "[" + screen + "] the system Back left " + panel + " open"));
         }
 
         private static IEnumerator Settle(float seconds = 0.6f)
