@@ -17,7 +17,7 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
     // Created in App Store Connect by scripts/app-store-connect.py with score limits 0 to ScoreRules.MaxRunScore.
     public const string GameCenterId = "treadshred.best_run";
     // Created in the Play Console by scripts/play-console.py games-leaderboard, with the same limits.
-    public const string PlayGamesId = "PENDING_PLAY_GAMES_LEADERBOARD";
+    public const string PlayGamesId = "CgkIg7WH2cUEEAIQAA";
 #if UNITY_ANDROID
     private const string BoardId = PlayGamesId;
 #else
