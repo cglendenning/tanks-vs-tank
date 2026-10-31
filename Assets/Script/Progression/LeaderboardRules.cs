@@ -1,4 +1,4 @@
-using System.Globalization;
+using TreadShred.Economy;
 
 namespace TreadShred.Progression
 {
@@ -46,7 +46,7 @@ namespace TreadShred.Progression
 
         public static string RankLine(int rank)
         {
-            return "LEADERBOARD RANK: #" + rank.ToString("N0", CultureInfo.InvariantCulture);
+            return "LEADERBOARD RANK: #" + CountText.Format(rank);
         }
     }
 }

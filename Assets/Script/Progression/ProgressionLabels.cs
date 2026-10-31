@@ -1,3 +1,4 @@
+using TreadShred.Economy;
 using System.Collections.Generic;
 
 namespace TreadShred.Progression
@@ -7,9 +8,9 @@ namespace TreadShred.Progression
     {
         public static string Reward(MissionReward reward)
         {
-            var parts = new List<string> { "+" + reward.Coins + " COINS" };
+            var parts = new List<string> { "+" + CountText.Format(reward.Coins) + " COINS" };
             if (reward.Gems > 0)
-                parts.Add("+" + reward.Gems + " GEMS MILESTONE REWARD");
+                parts.Add("+" + CountText.Format(reward.Gems) + " GEMS MILESTONE REWARD");
             if (reward.UnlockedTier.HasValue)
                 parts.Add(Tier(reward.UnlockedTier.Value) + " UNLOCKED");
             return string.Join("   ", parts);
@@ -54,16 +55,16 @@ namespace TreadShred.Progression
             if (maxed)
                 return "MAXED";
             if (quote.AffordableWithCoins)
-                return "UPGRADE FOR " + quote.CostCoins + " COINS";
+                return "UPGRADE FOR " + CountText.Format(quote.CostCoins) + " COINS";
             var coins = quote.CostCoins - quote.CoinShortfall;
             return coins > 0
-                ? "UPGRADE FOR " + coins + " COINS + " + quote.GemsNeeded + " GEMS"
-                : "UPGRADE FOR " + quote.GemsNeeded + " GEMS";
+                ? "UPGRADE FOR " + CountText.Format(coins) + " COINS + " + CountText.Format(quote.GemsNeeded) + " GEMS"
+                : "UPGRADE FOR " + CountText.Format(quote.GemsNeeded) + " GEMS";
         }
 
         public static string Coins(int coins)
         {
-            return "YOU HAVE " + coins + " COINS";
+            return "YOU HAVE " + CountText.Format(coins) + " COINS";
         }
     }
 }

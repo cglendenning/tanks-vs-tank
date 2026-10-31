@@ -1,5 +1,5 @@
+using TreadShred.Economy;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace TreadShred.Progression
 {
@@ -52,12 +52,12 @@ namespace TreadShred.Progression
 
         public static string RankText(LeaderboardEntry entry)
         {
-            return "#" + entry.Rank.ToString("N0", CultureInfo.InvariantCulture);
+            return "#" + CountText.Format(entry.Rank);
         }
 
         public static string ScoreText(LeaderboardEntry entry)
         {
-            return entry.Score.ToString("N0", CultureInfo.InvariantCulture);
+            return CountText.Format(entry.Score);
         }
 
         // Platform nicknames in the game's all-caps style, cut to fit a row.

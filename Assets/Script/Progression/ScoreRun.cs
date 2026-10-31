@@ -1,5 +1,5 @@
+using TreadShred.Economy;
 using System;
-using System.Globalization;
 
 namespace TreadShred.Progression
 {
@@ -48,27 +48,26 @@ namespace TreadShred.Progression
             }
         }
 
-        public static string ScoreLine(int score) => "SCORE: " + Format(score);
+        public static string ScoreLine(int score) => "SCORE: " + CountText.Format(score);
 
         public static string HighScoreLine(int highScore, bool isNew) =>
-            (isNew ? "NEW HIGH SCORE: " : "HIGH SCORE: ") + Format(highScore);
+            (isNew ? "NEW HIGH SCORE: " : "HIGH SCORE: ") + CountText.Format(highScore);
 
-        public static string KillCallout(int points) => "TARGET DESTROYED +" + Format(points);
+        public static string KillCallout(int points) => "TARGET DESTROYED +" + CountText.Format(points);
 
-        public static string ClearCallout(int points) => "MISSION CLEAR +" + Format(points);
+        public static string ClearCallout(int points) => "MISSION CLEAR +" + CountText.Format(points);
 
         /// <summary>What this mission added, with the parts that make it: "THIS MISSION: 800 (3 KILLS 300 + CLEAR 500)".</summary>
         public static string MissionLine(MissionScore mission)
         {
             if (mission.MissionPoints == 0)
                 return "THIS MISSION: 0";
-            var parts = mission.Kills + (mission.Kills == 1 ? " KILL " : " KILLS ") + Format(mission.KillPoints);
+            var parts = mission.Kills + (mission.Kills == 1 ? " KILL " : " KILLS ") + CountText.Format(mission.KillPoints);
             if (mission.ClearPoints > 0)
-                parts += " + CLEAR " + Format(mission.ClearPoints);
-            return "THIS MISSION: " + Format(mission.MissionPoints) + " (" + parts + ")";
+                parts += " + CLEAR " + CountText.Format(mission.ClearPoints);
+            return "THIS MISSION: " + CountText.Format(mission.MissionPoints) + " (" + parts + ")";
         }
 
-        private static string Format(int value) => value.ToString("N0", CultureInfo.InvariantCulture);
     }
 
     /// <summary>What one finished mission added to the run.</summary>

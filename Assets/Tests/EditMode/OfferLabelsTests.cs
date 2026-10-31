@@ -48,7 +48,7 @@ namespace TreadShred.Economy.Tests
         public void PackShowsGemsAndPrice()
         {
             Assert.AreEqual("550 GEMS FOR $4.99", OfferLabels.Pack(GemCatalog.Packs[1], "$4.99"));
-            Assert.AreEqual("1200 GEMS", OfferLabels.Pack(GemCatalog.Packs[2], string.Empty));
+            Assert.AreEqual("1,200 GEMS", OfferLabels.Pack(GemCatalog.Packs[2], string.Empty));
         }
     }
 }

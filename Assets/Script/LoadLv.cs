@@ -407,7 +407,7 @@ public class LoadLv : MonoBehaviour {
         int TotalHighScore = TreadShredScores.HighScore;
 
         ScoreStatic.text = ScoreRules.HighScoreLine(TotalHighScore, false);
-        KillStatic.text = "CONFIRMED KILLS: " + PlayerPrefs.GetFloat("CountKill").ToString();
+        KillStatic.text = "CONFIRMED KILLS: " + TreadShred.Economy.CountText.Format((long)PlayerPrefs.GetFloat("CountKill"));
 
         if (TotalHighScore > 10000 && TotalHighScore < 23000)
         {
