@@ -19,6 +19,7 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
     private Text balanceText;
     private Button reviveButton;
     private ReviveOffer offer;
+    private System.Action<string> showStatus;
 
     /// <summary>Shows the offer and returns true, or returns false when no revive is allowed.</summary>
     public static bool TryOffer(PlayerMoverment player)
@@ -61,6 +62,7 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
         countdownText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(330f, 170f), new Vector2(160f, 70f), 56, font);
         countdownText.color = TreadShredUi.AccentColor;
 
+        showStatus = Refresh;
         Refresh(null);
         TreadShredAnalytics.Log(GameEvents.OfferShown("revive", TreadShredStore.Ensure().Wallet.Balance));
     }
@@ -72,6 +74,7 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
         var price = plan.CanSpendNow ? null : store.PriceFor(plan.PackToBuy);
         TreadShredUi.SetLabel(reviveButton, OfferLabels.ActionButton("REVIVE", plan, price));
         balanceText.text = status ?? OfferLabels.BalanceLine(store.Wallet.Balance, plan);
+        reviveButton.interactable = !store.PurchaseInProgress;
     }
 
     private void Update()
@@ -101,12 +104,18 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
             Finish();
             if (player != null)
                 player.Revive();
-        }, status => Refresh(status));
+        }, showStatus);
     }
 
     private void Start() => TreadShredBack.Opened(this, Decline);
 
-    private void OnDestroy() => TreadShredBack.Closed(this);
+    private void OnDestroy()
+    {
+        TreadShredBack.Closed(this);
+        // Declined while the sheet was opening: a delivery credits the gems and spends nothing on a revive.
+        if (TreadShredStore.Instance != null)
+            TreadShredStore.Instance.Release(showStatus);
+    }
 
     private void Decline()
     {

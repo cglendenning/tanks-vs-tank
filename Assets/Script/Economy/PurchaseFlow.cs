@@ -26,6 +26,7 @@ namespace TreadShred.Economy
         public const string Cancelled = "PURCHASE CANCELLED";
         public const string Failed = "PURCHASE FAILED. TRY AGAIN";
         public const string AwaitingApproval = "WAITING FOR APPROVAL. GEMS ARRIVE WHEN APPROVED";
+        public const string Opening = "OPENING THE STORE";
     }
 
     /// <summary>
@@ -39,6 +40,7 @@ namespace TreadShred.Economy
     {
         private sealed class Pending
         {
+            public string ProductId;
             public int SpendCost;
             public Action OnApplied;
             public Action<string> OnStatus;
@@ -97,7 +99,9 @@ namespace TreadShred.Economy
             if (result == CreditResult.UnknownProduct)
                 return OrderOutcome.LeaveUnconfirmed;
 
-            if (pending != null)
+            // Only a fresh delivery of the pack this purchase opened completes it. A replayed order, or one for
+            // another pack, is credited above and the purchase keeps waiting for its own outcome.
+            if (pending != null && result == CreditResult.Credited && productId == pending.ProductId)
             {
                 var purchase = pending;
                 pending = null;
@@ -119,6 +123,30 @@ namespace TreadShred.Economy
             Finish(PurchaseMessages.AwaitingApproval);
         }
 
+        /// <summary>
+        /// Runs a request that may open the store sheet and, when it did, says so at once: the sheet can take
+        /// seconds to appear, and a screen that does not react invites the player to leave it.
+        /// </summary>
+        public void Request(Action request, Action<string> onStatus)
+        {
+            var busy = InProgress;
+            request();
+            if (!busy && InProgress)
+                onStatus(PurchaseMessages.Opening);
+        }
+
+        /// <summary>
+        /// The screen that asked for the waiting purchase closed: drop its callbacks, so a later delivery credits
+        /// the gems and spends or applies nothing. Returns false when the purchase belongs to another screen.
+        /// </summary>
+        public bool Release(Action<string> onStatus)
+        {
+            if (pending == null || pending.OnStatus != onStatus)
+                return false;
+            pending = null;
+            return true;
+        }
+
         /// <summary>Drops the waiting purchase's callbacks (their scene is gone); the order still credits on delivery.</summary>
         public void Abandon()
         {
@@ -128,6 +156,7 @@ namespace TreadShred.Economy
         private void Start(GemPack pack, Pending purchase)
         {
             // Set first: the store may report the outcome before TryStartPurchase returns.
+            purchase.ProductId = pack.ProductId;
             pending = purchase;
             if (!gateway.TryStartPurchase(pack.ProductId))
             {

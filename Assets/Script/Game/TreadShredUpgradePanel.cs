@@ -20,6 +20,7 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     private readonly Dictionary<UpgradeTrack, Text> levelTexts = new Dictionary<UpgradeTrack, Text>();
     private readonly Dictionary<UpgradeTrack, Text> effectTexts = new Dictionary<UpgradeTrack, Text>();
     private readonly Dictionary<UpgradeTrack, Button> buttons = new Dictionary<UpgradeTrack, Button>();
+    private UpgradePurchase shop;
 
     public static TreadShredUpgradePanel Show(Font font)
     {
@@ -69,31 +70,30 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
         TreadShredUi.CreateButton("BACK", backdrop, new Vector2(0f, -390f), new Vector2(440f, 120f), 52, font,
             () => Destroy(gameObject));
 
+        var store = TreadShredStore.Ensure();
+        shop = new UpgradePurchase(Progression, store.Wallet, store.Purchases, OnUpgraded, ShowStatus);
         Progression.Changed += Refresh;
-        TreadShredStore.Ensure().Wallet.BalanceChanged += OnBalanceChanged;
+        store.Wallet.BalanceChanged += OnBalanceChanged;
         Refresh();
     }
 
     private void Upgrade(UpgradeTrack track)
     {
         statusText.text = string.Empty;
-        var quote = Progression.Quote(track);
-        var result = Progression.TryUpgrade(track);
-        if (result == UpgradeResult.Upgraded)
-        {
-            TreadShredAnalytics.Log(GameEvents.UpgradePurchased(track.ToString().ToLowerInvariant(), Progression.Level(track),
-                quote.CostCoins - quote.CoinShortfall, quote.AffordableWithCoins ? 0 : quote.GemsNeeded));
-            statusText.text = ProgressionLabels.Track(track) + " UPGRADED TO LEVEL " + Progression.Level(track);
-            return;
-        }
-        if (result == UpgradeResult.AlreadyMaxed)
-            return;
+        shop.Buy(track);
+    }
 
-        // Not enough gems for the coin shortfall: buy the smallest covering
-        // pack, then upgrade, in the same tap (D-010, D-018).
-        var store = TreadShredStore.Ensure();
-        var gemsShort = Progression.Quote(track).GemsNeeded - store.Wallet.Balance;
-        store.BuyPack(GemCatalog.SmallestPackCovering(gemsShort), () => Upgrade(track), status => statusText.text = status);
+    private void OnUpgraded(UpgradeTrack track, UpgradeQuote quote)
+    {
+        TreadShredAnalytics.Log(GameEvents.UpgradePurchased(track.ToString().ToLowerInvariant(), Progression.Level(track),
+            quote.CostCoins - quote.CoinShortfall, quote.AffordableWithCoins ? 0 : quote.GemsNeeded));
+        statusText.text = ProgressionLabels.Track(track) + " UPGRADED TO LEVEL " + Progression.Level(track);
+    }
+
+    private void ShowStatus(string status)
+    {
+        statusText.text = status;
+        Refresh();
     }
 
     private void Refresh()
@@ -107,7 +107,8 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
             levelTexts[track].text = "LEVEL " + level + " / " + ProgressionRules.LevelsPerTrack;
             effectTexts[track].text = ProgressionLabels.Preview(track, level);
             TreadShredUi.SetLabel(buttons[track], ProgressionLabels.UpgradeButton(Progression.Quote(track), maxed));
-            buttons[track].interactable = !maxed;
+            // Locked while the store sheet is open, so a slow sheet never invites a second purchase.
+            buttons[track].interactable = !maxed && !TreadShredStore.Ensure().PurchaseInProgress;
         }
     }
 
@@ -121,6 +122,7 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     private void OnDestroy()
     {
         TreadShredBack.Closed(this);
+        shop?.Release();
         if (TreadShredProgress.Instance != null)
             TreadShredProgress.Instance.Progression.Changed -= Refresh;
         if (TreadShredStore.Instance != null)

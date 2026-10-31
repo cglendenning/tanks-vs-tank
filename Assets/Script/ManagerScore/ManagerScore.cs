@@ -427,6 +427,7 @@ public class ManagerScore : MonoBehaviour
         var price = plan.CanSpendNow ? null : store.PriceFor(plan.PackToBuy);
         TreadShredUi.SetLabel(rewardButton, OfferLabels.ActionButton(activeOfferAction, plan, price));
         rewardBalanceText.text = status ?? OfferLabels.BalanceLine(store.Wallet.Balance, plan);
+        rewardButton.interactable = !store.PurchaseInProgress;
     }
 
     private void RedeemArmoredRedeploy()

@@ -86,17 +86,30 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
     /// </summary>
     public void SpendOrBuy(int cost, Action onApplied, Action<string> onStatus)
     {
-        purchases.SpendOrBuy(cost, onApplied, onStatus);
+        purchases.Request(() => purchases.SpendOrBuy(cost, onApplied, onStatus), onStatus);
     }
 
     public bool PurchaseInProgress => purchases.InProgress;
+
+    /// <summary>The purchase flow behind every buy button, for services that run their own purchase steps.</summary>
+    public PurchaseFlow Purchases => purchases;
+
+    /// <summary>
+    /// A screen that started a purchase is closing: a delivery still credits the gems, but spends or applies
+    /// nothing for a screen the player has left (D-011).
+    /// </summary>
+    public void Release(Action<string> onStatus)
+    {
+        if (purchases.Release(onStatus))
+            Debug.Log("[Store] Purchase screen closed; a delivered order will credit its gems only.");
+    }
 
     /// <summary>
     /// Buys a gem pack outright; onCredited runs once the gems are in the wallet.
     /// </summary>
     public void BuyPack(GemPack pack, Action onCredited, Action<string> onStatus)
     {
-        purchases.BuyPack(pack, onCredited, onStatus);
+        purchases.Request(() => purchases.BuyPack(pack, onCredited, onStatus), onStatus);
     }
 
     bool IPurchaseGateway.TryStartPurchase(string productId)

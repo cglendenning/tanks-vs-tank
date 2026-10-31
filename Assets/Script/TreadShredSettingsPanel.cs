@@ -22,6 +22,7 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
     private Button cameraButton;
     private Text balanceText;
     private Text statusText;
+    private System.Action<string> showStatus;
     private readonly List<KeyValuePair<GemPack, Button>> packButtons = new List<KeyValuePair<GemPack, Button>>();
 
     public static TreadShredSettingsPanel Show(LoadLv menu, Font font)
@@ -93,9 +94,10 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
     private void BuyPack(GemPack pack)
     {
         statusText.text = string.Empty;
+        showStatus ??= status => statusText.text = status;
         TreadShredStore.Ensure().BuyPack(pack,
             () => statusText.text = "+" + TreadShred.Economy.CountText.Format(pack.Gems) + " GEMS ADDED",
-            status => statusText.text = status);
+            showStatus);
     }
 
     private void Refresh()
@@ -129,6 +131,10 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
     {
         TreadShredBack.Closed(this);
         if (TreadShredStore.Instance != null)
+        {
             TreadShredStore.Instance.Wallet.BalanceChanged -= OnBalanceChanged;
+            // Closed while the sheet was opening: a delivery still credits the gems.
+            TreadShredStore.Instance.Release(showStatus);
+        }
     }
 }
