@@ -1,7 +1,8 @@
 # Tread Shred store listing, en-US (D-030)
 
 Every claim below exists in the release candidate and works as shown (D-030-AC-03). Re-check this file
-against the build before every submission. Google Play omits the iOS-only lines marked (iOS).
+against the build before every submission. Lines marked (iOS) appear only on the App Store and lines marked
+(Android) only on Google Play; neither store names the other platform (scripts/store_copy.py).
 
 ## Both stores
 
@@ -10,6 +11,11 @@ against the build before every submission. Google Play omits the iOS-only lines 
 - **Google Play short description (80):** Tank combat with permanent upgrades. 40 missions, three tiers, no ads.
 - **App Store promotional text (170):** Forty missions. Three tiers. Every win upgrades your tank for good. Clear Recruit, then prove it on Veteran and Elite.
 - **App Store keywords (100):** tank,combat,shooter,missions,armor,upgrade,arcade,action,war,battle,tactical,tiers
+
+## What's new (1.9.1)
+
+- **App Store What's New:** Tread Shred 1.9.1: permanent armor, firepower and speed upgrades, Veteran and Elite tiers, a Game Center high score leaderboard, iCloud progress backup, and no more ads. Watch every boost and upgrade in action before you buy, and Overdrive now lasts until your tank goes down.
+- **Google Play release notes:** Permanent armor, firepower and speed upgrades. Veteran and Elite tiers. A high score to chase on Google Play Games, with your progress saved there too. Watch every boost and upgrade in action before you buy. Overdrive lasts until your tank goes down. No more ads.
 
 ## Description
 
@@ -23,19 +29,21 @@ Three tiers, no mercy
 Forty missions make up the Recruit campaign. Clear them all and Veteran unlocks: the same arenas with tougher, faster enemies and double points for every kill and every cleared mission. Clear Veteran and Elite opens up, where enemies are at their toughest and fastest and every score is tripled.
 
 Chase the high score
-Every enemy destroyed is worth 100 points and every mission cleared is worth 500, multiplied by your tier. Keep a run going to push your high score higher, then see where you rank on the Game Center leaderboard, right from the game. (iOS)
+Every enemy destroyed is worth 100 points and every mission cleared is worth 500, multiplied by your tier. Keep a run going to push your high score higher, then see where you rank on the Game Center leaderboard, right from the game. (iOS) Keep a run going to push your high score higher, then see where you rank on the Google Play Games leaderboard, right from the game. (Android)
 
 Boost when it counts
-Gems turn a close call into a win. Revive on the spot with full armor when your tank goes down, redeploy into a failed mission with an extra hit, or arm Overdrive to fire two shots per tap on your next mission. Every boost tells you its cost before you spend. You start with 100 gems, earn more from progress milestones, and can buy packs of 100, 550 or 1,200.
+Gems turn a close call into a win. Revive on the spot with full armor when your tank goes down, redeploy into a failed mission with an extra hit, or arm Overdrive to fire two shots per tap until your tank goes down. Every boost shows you a clip of it in action and tells you its cost before you spend. You start with 100 gems, earn more from progress milestones, and can buy packs of 100, 550 or 1,200.
 
 Your progress is safe
-Upgrades, coins, gems and cleared missions back up to iCloud automatically and come back if you reinstall or switch devices. (iOS)
+Upgrades, coins, gems and cleared missions back up to iCloud automatically and come back if you reinstall or switch devices. (iOS) Upgrades, coins, gems and cleared missions back up to Google Play Games automatically and come back if you reinstall or switch devices. (Android)
 
 Features
 • 40 missions across three difficulty tiers: Recruit, Veteran and Elite
 • Permanent armor, firepower and speed upgrades, ten levels each
+• See every boost and upgrade in action before you buy
 • Freeze-frames, explosions, camera shake and haptics on every kill
 • Game Center leaderboard and iCloud progress backup (iOS)
+• Google Play Games leaderboard and saved games (Android)
 • Sound, music, vibration and camera settings
 • No ads
 

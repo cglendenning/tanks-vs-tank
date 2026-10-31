@@ -22,6 +22,7 @@ import urllib.request
 from pathlib import Path
 
 import jwt
+import store_copy
 
 PACKAGE = "com.tgts.tankkvstank"
 API = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/" + PACKAGE
@@ -119,23 +120,12 @@ def check_upload_key(auth, bundle):
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "Store/media/1.9.0/google-play"
-RELEASE_NOTES = "Permanent armor, firepower and speed upgrades. Veteran and Elite tiers. A high score to chase. No more ads."
 
 
 def play_listing():
-    """Store/listing-en-US.md for Google Play: sentences and lines marked (iOS) are left out."""
-    text = (ROOT / "Store/listing-en-US.md").read_text()
-    field = lambda label: text.split(f"**{label}:** ", 1)[1].split("\n", 1)[0].strip()
-    kept = []
-    for paragraph in text.split("## Description\n", 1)[1].strip().split("\n\n"):
-        lines = paragraph.split("\n")
-        # A sentence's (iOS) marker follows its full stop, so keep the marker with the sentence it marks.
-        body = [" ".join(s for s in re.split(r"(?<=\.) (?!\(iOS\))", line) if "(iOS)" not in s) for line in lines[1:]]
-        body = [line for line in body if line.strip()]
-        if body or len(lines) == 1:
-            kept.append("\n".join([lines[0]] + body))
-    return {"title": field("Name / title"), "shortDescription": field("Google Play short description (80)"),
-            "fullDescription": "\n\n".join(kept)}
+    """The approved copy for Google Play (store_copy.py): the (iOS) lines are left out."""
+    copy = store_copy.copy_for("android")
+    return {"title": copy["name"], "shortDescription": copy["shortDescription"], "fullDescription": copy["description"]}
 
 
 def upload(auth, path, url):
@@ -156,7 +146,7 @@ def release(auth, bundle, fraction):
     version_code = upload(auth, bundle, f"{upload_api}/edits/{edit}/bundles?uploadType=media")["versionCode"]
     call("PUT", f"/edits/{edit}/tracks/production", auth, {"track": "production", "releases": [{
         "versionCodes": [str(version_code)], "status": "inProgress", "userFraction": float(fraction),
-        "releaseNotes": [{"language": "en-US", "text": RELEASE_NOTES}]}]})
+        "releaseNotes": [{"language": "en-US", "text": store_copy.copy_for("android")["releaseNotes"]}]}]})
     listing = play_listing()
     call("PATCH", f"/edits/{edit}/listings/en-US", auth, dict(listing, language="en-US"))
     for kind, files in (("phoneScreenshots", sorted((MEDIA / "phone").glob("*.png"))),

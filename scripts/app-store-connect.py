@@ -39,6 +39,7 @@ import urllib.request
 from pathlib import Path
 
 import jwt
+import store_copy
 
 BUNDLE_ID = "com.tgts.tanksvstank"
 LEADERBOARD = {
@@ -183,12 +184,9 @@ def create_profile(api, kind, certificate_serial, udid=None):
 
 
 def listing_copy():
-    """The approved App Store copy from Store/listing-en-US.md; the (iOS) markers are for Google Play."""
-    text = (Path(__file__).resolve().parent.parent / "Store/listing-en-US.md").read_text()
-    field = lambda label: text.split(f"**{label}:** ", 1)[1].split("\n", 1)[0].strip()
-    description = text.split("## Description\n", 1)[1].strip().replace(" (iOS)", "")
-    return {"subtitle": field("App Store subtitle (30)"), "promotionalText": field("App Store promotional text (170)"),
-            "keywords": field("App Store keywords (100)"), "description": description}
+    """The approved App Store copy (store_copy.py): the (Android) lines are left out, What's New included."""
+    copy = store_copy.copy_for("ios")
+    return {key: copy[key] for key in ("subtitle", "promotionalText", "keywords", "description", "whatsNew")}
 
 
 def listing(api, version):
@@ -209,7 +207,7 @@ def listing(api, version):
     for loc in api.call("GET", f"/v1/appStoreVersions/{target['id']}/appStoreVersionLocalizations?limit=50")["data"]:
         if loc["attributes"]["locale"] == "en-US":
             api.call("PATCH", f"/v1/appStoreVersionLocalizations/{loc['id']}", {"data": {"type": "appStoreVersionLocalizations", "id": loc["id"],
-                     "attributes": {k: copy[k] for k in ("description", "keywords", "promotionalText")}}})
+                     "attributes": {k: copy[k] for k in ("description", "keywords", "promotionalText", "whatsNew")}}})
         else:
             api.call("DELETE", f"/v1/appStoreVersionLocalizations/{loc['id']}")
             removed += 1
