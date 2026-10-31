@@ -12,12 +12,80 @@ public static class ApplyTreadShredStartScreen
     private const string BackdropPath = "Assets/Image/TreadShredCommandBaseBackdrop.png";
     private const string BasePath = "Assets/Image/TreadShredBaseIcon.png";
     private const string AdvancePath = "Assets/Image/TreadShredAdvanceIcon.png";
+    // The original game's plain white play triangle and back arrow (D-013-AC-02 replaces them everywhere).
+    public const string LegacyPlayPath = "Assets/Image/png/shopPlayButton.png";
+    public const string LegacyBackPath = "Assets/Image/png/back_button.png";
     private const string SettingsPath = "Assets/Image/TreadShredSettingsIcon.png";
     private const string RedeployPath = "Assets/Image/TreadShredRedeployIcon.png";
     private const string CameraPath = "Assets/Image/TreadShredCameraOpticsIcon.png";
     private const string SoundPath = "Assets/Image/TreadShredSoundIcon.png";
     private const string MusicPath = "Assets/Image/TreadShredMusicIcon.png";
     private const string FontPath = "Assets/Art/BlackOpsOne-Regular.ttf";
+
+    /// <summary>
+    /// D-013-AC-02: wherever a build scene or prefab still shows the original white play triangle or back arrow,
+    /// it becomes the authored Advance chevron; back is the same chevron turned around, as on the settings panel.
+    /// </summary>
+    [MenuItem("Tread Shred/Replace legacy play and back icons")]
+    public static void ReplaceLegacyNavigationIcons()
+    {
+        var advance = AssetDatabase.LoadAssetAtPath<Sprite>(AdvancePath);
+        var legacyPlay = AssetDatabase.LoadAssetAtPath<Sprite>(LegacyPlayPath);
+        var legacyBack = AssetDatabase.LoadAssetAtPath<Sprite>(LegacyBackPath);
+        if (advance == null || legacyPlay == null || legacyBack == null)
+            throw new System.InvalidOperationException("Advance, legacy play or legacy back sprite not found");
+
+        var total = 0;
+        foreach (var entry in EditorBuildSettings.scenes)
+        {
+            if (!entry.enabled)
+                continue;
+            var scene = EditorSceneManager.OpenScene(entry.path, OpenSceneMode.Single);
+            var replaced = 0;
+            foreach (var root in scene.GetRootGameObjects())
+                replaced += ReplaceIn(root, advance, legacyPlay, legacyBack);
+            if (replaced == 0)
+                continue;
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log("[Icons] " + entry.path + ": " + replaced + " replaced");
+            total += replaced;
+        }
+        foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets" }))
+        {
+            var path = AssetDatabase.GUIDToAssetPath(guid);
+            var contents = PrefabUtility.LoadPrefabContents(path);
+            var replaced = ReplaceIn(contents, advance, legacyPlay, legacyBack);
+            if (replaced > 0)
+            {
+                PrefabUtility.SaveAsPrefabAsset(contents, path);
+                Debug.Log("[Icons] " + path + ": " + replaced + " replaced");
+                total += replaced;
+            }
+            PrefabUtility.UnloadPrefabContents(contents);
+        }
+        Debug.Log("[Icons] legacy play and back icons replaced: " + total);
+    }
+
+    private static int ReplaceIn(GameObject root, Sprite advance, Sprite legacyPlay, Sprite legacyBack)
+    {
+        var replaced = 0;
+        foreach (var image in root.GetComponentsInChildren<Image>(true))
+        {
+            if (image.sprite != legacyPlay && image.sprite != legacyBack)
+                continue;
+            var back = image.sprite == legacyBack;
+            image.sprite = advance;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = true;
+            image.color = Color.white;
+            if (back)
+                image.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 180f);
+            EditorUtility.SetDirty(image);
+            replaced++;
+        }
+        return replaced;
+    }
 
     public static void Run()
     {
