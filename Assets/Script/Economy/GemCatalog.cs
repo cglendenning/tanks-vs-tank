@@ -11,14 +11,18 @@ namespace TreadShred.Economy
 
     public sealed class GemPack
     {
-        public GemPack(string productId, int gems)
+        public GemPack(string productId, int gems, int usdCents)
         {
             ProductId = productId;
             Gems = gems;
+            UsdCents = usdCents;
         }
 
         public string ProductId { get; }
         public int Gems { get; }
+
+        // The reference US price tier set in both store consoles (R-GEM-PACKS); players pay local prices.
+        public int UsdCents { get; }
     }
 
     public readonly struct OfferPlan
@@ -46,9 +50,9 @@ namespace TreadShred.Economy
         // Google Play Console exactly. Ordered smallest to largest.
         public static readonly IReadOnlyList<GemPack> Packs = new[]
         {
-            new GemPack("treadshred.gems100", 100),
-            new GemPack("treadshred.gems550", 550),
-            new GemPack("treadshred.gems1200", 1200)
+            new GemPack("treadshred.gems100", 100, 99),
+            new GemPack("treadshred.gems550", 550, 499),
+            new GemPack("treadshred.gems1200", 1200, 999)
         };
 
         public static int Cost(GemOffer offer)

@@ -238,6 +238,8 @@ public static class TankBuildAutomation
         var plist = new PlistDocument();
         plist.ReadFromFile(plistPath);
         plist.root.SetBoolean("ITSAppUsesNonExemptEncryption", false);
+        // D-023-AC-04: Apple copies each SKAdNetwork install postback to Tenjin.
+        plist.root.SetString(AttributionBuildPolicy.SkanReportEndpointKey, AttributionBuildPolicy.SkanReportEndpoint);
         File.WriteAllText(plistPath, plist.WriteToString());
     }
 

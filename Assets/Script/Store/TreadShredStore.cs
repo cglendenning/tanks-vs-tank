@@ -19,6 +19,10 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
     private StoreController storeController;
     private PurchaseFlow purchases;
 
+    // Credited orders not yet confirmed, by transaction ID, so attribution reports each once it is acknowledged.
+    private readonly Dictionary<string, (string ProductId, double Price, string Currency)> awaitingAttribution =
+        new Dictionary<string, (string ProductId, double Price, string Currency)>();
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
     {
@@ -217,8 +221,12 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
 
         Debug.Log("[Store] " + result + " " + product.definition.id + "; balance " + Wallet.Balance);
         if (result == CreditResult.Credited)
+        {
             TreadShredAnalytics.Log(TreadShred.Analytics.GameEvents.GemPackPurchased(product.definition.id,
                 (double)product.metadata.localizedPrice, product.metadata.isoCurrencyCode, order.Info.TransactionID));
+            awaitingAttribution[order.Info.TransactionID] =
+                (product.definition.id, (double)product.metadata.localizedPrice, product.metadata.isoCurrencyCode);
+        }
         storeController.ConfirmPurchase(order);
     }
 
@@ -228,7 +236,16 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
         {
             // Gems were already credited; the store will redeliver the order
             // and the wallet's transaction history prevents a double credit.
+            // The order stays awaiting attribution until a confirmation succeeds.
             Debug.LogWarning("[Store] Purchase confirmation failed: " + failed.FailureReason + " " + failed.Details);
+            return;
+        }
+
+        // D-023-AC-02: attribution hears of a credited purchase only once the store has it acknowledged.
+        if (awaitingAttribution.TryGetValue(order.Info.TransactionID, out var credited))
+        {
+            awaitingAttribution.Remove(order.Info.TransactionID);
+            TreadShredAttribution.PurchaseConfirmed(credited.ProductId, credited.Price, credited.Currency, order.Info.Receipt);
         }
     }
 

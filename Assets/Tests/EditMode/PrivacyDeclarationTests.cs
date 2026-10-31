@@ -14,7 +14,7 @@ namespace TreadShred.Economy.Tests
             var manifest = File.ReadAllText(Path.Combine(Root, "Packages/manifest.json"));
             var answers = File.ReadAllText(Path.Combine(Root, "Store/privacy-answers.md"));
             StringAssert.Contains("com.google.firebase.analytics", manifest, "the declared analytics SDK");
-            StringAssert.Contains("Google Analytics for Firebase only", answers);
+            StringAssert.Contains("Google Analytics for Firebase on both platforms, plus Tenjin attribution on Android", answers);
             foreach (var undeclared in new[] { "com.unity.analytics", "com.unity.ads", "com.unity.services.analytics", "applovin", "appsflyer", "com.google.ads" })
                 StringAssert.DoesNotContain(undeclared, manifest.ToLowerInvariant(), undeclared + " would need new privacy declarations");
             StringAssert.Contains("Contains ads: **No**", answers);

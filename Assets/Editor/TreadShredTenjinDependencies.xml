@@ -1,0 +1,8 @@
+<dependencies>
+  <!-- D-023: Tenjin attribution, called from Plugins/Android/TreadShredTenjin.java; the ad ID and app set ID libraries are the ones Tenjin's own Unity package adds. -->
+  <androidPackages>
+    <androidPackage spec="com.tenjin:android-sdk:2.0.2"/>
+    <androidPackage spec="com.google.android.gms:play-services-ads-identifier:18.1.0"/>
+    <androidPackage spec="com.google.android.gms:play-services-appset:16.1.0"/>
+  </androidPackages>
+</dependencies>

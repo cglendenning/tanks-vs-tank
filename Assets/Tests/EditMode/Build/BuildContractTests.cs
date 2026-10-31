@@ -34,12 +34,13 @@ namespace TreadShred.BuildPolicy.Tests
                 "productName = FirebaseAnalytics;", "the unpatched export is caught");
         }
 
-        [Test(Description = "D-021-AC-01: the Android build removes the advertising-ID permission and turns off ad-ID collection")]
-        public void AndroidManifestExcludesAdvertisingId()
+        [Test(Description = "D-021-AC-01: Firebase never collects the Android advertising ID; the permission stays only for Tenjin's attribution (D-005, D-023)")]
+        public void AndroidAdvertisingIdIsForTenjinOnly()
         {
             var manifest = Read("Assets/Plugins/Android/AndroidManifest.xml");
 
-            StringAssert.Contains("<uses-permission android:name=\"com.google.android.gms.permission.AD_ID\" tools:node=\"remove\" />", manifest);
+            StringAssert.Contains("<uses-permission android:name=\"com.google.android.gms.permission.AD_ID\" />", manifest);
+            StringAssert.DoesNotContain("tools:node=\"remove\"", manifest, "Tenjin needs the advertising ID permission");
             StringAssert.Contains("<meta-data android:name=\"google_analytics_adid_collection_enabled\" android:value=\"false\" />", manifest);
             StringAssert.Contains("\"com.google.firebase.analytics\"", Read("Packages/manifest.json"), "the Firebase Analytics Unity SDK is integrated");
         }

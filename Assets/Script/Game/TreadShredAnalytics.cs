@@ -15,6 +15,9 @@ public static class TreadShredAnalytics
 {
     private static readonly AnalyticsDispatcher dispatcher = new AnalyticsDispatcher(Send, Debug.LogWarning);
 
+    // User properties set before Firebase is ready, applied once it is (attribution can answer first).
+    private static readonly Dictionary<string, string> pendingProperties = new Dictionary<string, string>();
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Initialize()
     {
@@ -27,6 +30,9 @@ public static class TreadShredAnalytics
             }
             Debug.Log("[Analytics] Firebase ready; sending " + dispatcher.Queued + " queued events");
             dispatcher.MarkReady();
+            foreach (var property in pendingProperties)
+                ApplyUserProperty(property.Key, property.Value);
+            pendingProperties.Clear();
         });
     }
 
@@ -38,7 +44,15 @@ public static class TreadShredAnalytics
     public static void SetUserProperty(string name, string value)
     {
         if (!dispatcher.Ready)
+        {
+            pendingProperties[name] = value;
             return;
+        }
+        ApplyUserProperty(name, value);
+    }
+
+    private static void ApplyUserProperty(string name, string value)
+    {
         try
         {
             FirebaseAnalytics.SetUserProperty(name, value);
