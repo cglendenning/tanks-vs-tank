@@ -44,6 +44,8 @@ namespace TreadShred.Economy
         // made Armored Redeploy look like a worse deal than a free button; missions relabel it on load.
         public const string Retry = "RETRY";
         public const string SceneRetryLabel = "REDEPLOY";
+        // A retry ends the SCORE run; the failure screen says so under RETRY (D-032-AC-06).
+        public const string RetryCaption = "SCORE STARTS OVER";
 
         /// <summary>How long Overdrive lasts (D-009-AC-03).</summary>
         public const string OverdriveLasts = "UNTIL YOUR TANK GOES DOWN";

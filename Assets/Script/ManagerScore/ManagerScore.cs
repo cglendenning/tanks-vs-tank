@@ -329,6 +329,7 @@ public class ManagerScore : MonoBehaviour
             CombatBoosts.RedeployExtraHits + " EXTRA HIT. " + SalesPitches.RunContinues,
             "REDEPLOY",
             () => ConfirmThen(GemOffer.ArmoredRedeploy, RedeemArmoredRedeploy));
+        ArrangeRetry(false);
     }
 
     private void BuildVictoryRewardActions()
@@ -339,6 +340,7 @@ public class ManagerScore : MonoBehaviour
             OfferLabels.OverdriveEffect,
             "ACTIVATE",
             () => ConfirmThen(GemOffer.Overdrive, RedeemOverdrive));
+        ArrangeRetry(true);
         // D-033-AC-03: only a victory screen may ask for a store rating, after real play.
         TreadShredReviewPrompt.VictoryScreenOpened();
     }
@@ -459,6 +461,51 @@ public class ManagerScore : MonoBehaviour
         TreadShredBoosts.Current.TankLost();
         TreadShredReviewPrompt.MissionEnded(false);
         TreadShredOverdriveBadge.Hide();
+    }
+
+    // D-032-AC-06: a retry ends the SCORE run, so the victory screen offers none (COMMAND and NEXT MISSION share
+    // the bar), and the failure screen says what RETRY costs.
+    private void ArrangeRetry(bool won)
+    {
+        var retry = VictoryofFail.transform.Find("ButtonRetry") as RectTransform;
+        if (retry == null)
+        {
+            Debug.LogWarning("[Results] ButtonRetry not found; retry left as the scene has it.");
+            return;
+        }
+        if (won)
+        {
+            retry.gameObject.SetActive(false);
+            PlaceAcross(VictoryofFail.transform.Find("ButtonMenu"), 1f / 3f);
+            PlaceAcross(VictoryObj.transform.Find("ButtonNext"), 2f / 3f);
+            HideDividers(VictoryObj.transform.Find("CommandStrip"));
+            return;
+        }
+        // Above the RETRY icon, in the open space under the offer: legible, and read before tapping.
+        var caption = TreadShredUi.CreateText(OfferLabels.RetryCaption, retry, new Vector2(0f, 104f), new Vector2(340f, 36f), 26,
+            rewardFont);
+        caption.color = TreadShredUi.TitleColor;
+        caption.raycastTarget = false;
+    }
+
+    private static void PlaceAcross(Transform button, float x)
+    {
+        if (!(button is RectTransform rect))
+            return;
+        rect.anchorMin = new Vector2(x, rect.anchorMin.y);
+        rect.anchorMax = new Vector2(x, rect.anchorMax.y);
+    }
+
+    // The bar's thin dividers split it into three slots; with two commands they would cut through them.
+    private static void HideDividers(Transform strip)
+    {
+        if (strip == null)
+            return;
+        foreach (RectTransform part in strip)
+        {
+            if (part.rect.width <= 12f && part.rect.height > part.rect.width * 4f)
+                part.gameObject.SetActive(false);
+        }
     }
 
     private void OnBalanceChanged(int balance) => RefreshOfferControls(null);
