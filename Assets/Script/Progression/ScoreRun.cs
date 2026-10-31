@@ -57,17 +57,6 @@ namespace TreadShred.Progression
 
         public static string ClearCallout(int points) => "MISSION CLEAR +" + CountText.Format(points);
 
-        /// <summary>What this mission added, with the parts that make it: "THIS MISSION: 800 (3 KILLS 300 + CLEAR 500)".</summary>
-        public static string MissionLine(MissionScore mission)
-        {
-            if (mission.MissionPoints == 0)
-                return "THIS MISSION: 0";
-            var parts = mission.Kills + (mission.Kills == 1 ? " KILL " : " KILLS ") + CountText.Format(mission.KillPoints);
-            if (mission.ClearPoints > 0)
-                parts += " + CLEAR " + CountText.Format(mission.ClearPoints);
-            return "THIS MISSION: " + CountText.Format(mission.MissionPoints) + " (" + parts + ")";
-        }
-
     }
 
     /// <summary>What one finished mission added to the run.</summary>

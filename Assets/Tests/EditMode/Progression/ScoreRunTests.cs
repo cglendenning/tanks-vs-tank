@@ -56,11 +56,6 @@ namespace TreadShred.Progression.Tests
 
             Assert.AreEqual("TARGET DESTROYED +100", ScoreRules.KillCallout(100));
             Assert.AreEqual("MISSION CLEAR +500", ScoreRules.ClearCallout(500));
-            Assert.AreEqual("THIS MISSION: 800 (3 KILLS 300 + CLEAR 500)",
-                ScoreRules.MissionLine(new MissionScore(true, 3, 300, 500, 800)));
-            Assert.AreEqual("THIS MISSION: 600 (1 KILL 100 + CLEAR 500)",
-                ScoreRules.MissionLine(new MissionScore(true, 1, 100, 500, 600)));
-            Assert.AreEqual("THIS MISSION: 200 (2 KILLS 200)", ScoreRules.MissionLine(new MissionScore(false, 2, 200, 0, 1000)));
             Assert.AreEqual("SCORE: 3,520", ScoreRules.ScoreLine(3520));
             Assert.AreEqual("NEW HIGH SCORE: 3,520", ScoreRules.HighScoreLine(3520, true));
         }
