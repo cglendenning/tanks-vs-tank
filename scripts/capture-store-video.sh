@@ -134,7 +134,8 @@ value_ad() {
   segment "$clips/trailer.mp4" 9 3 "FREE. NO ADS." $w $h zoom "$work/free-30.mp4"
   segment "$clips/upgrades.mp4" 0.5 5 "UPGRADES THAT LAST" $w $h fit "$work/upgrades-30.mp4"
   segment "$clips/mission-select.mp4" 0.4 5 "40 MISSIONS. THREE TIERS." $w $h fit "$work/tiers-30.mp4"
-  image_segment "$endcard" 4 $w $h "$work/end-30.mp4"
+  # 3.96 s, not 4: the segments round up a frame each, and AppLovin's limit is 30 s; one encode, no trim pass.
+  image_segment "$endcard" 3.96 $w $h "$work/end-30.mp4"
   assemble "$out/ad-value-30s-9x16.mp4" "$work/dream-30.mp4" "$work/time-30.mp4" "$work/win-30.mp4" "$work/free-30.mp4" \
     "$work/upgrades-30.mp4" "$work/tiers-30.mp4" "$work/end-30.mp4"
   rm -rf "$work"
