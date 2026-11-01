@@ -38,6 +38,14 @@ namespace TreadShred.Progression
         // The button opens Play Games' settings; the hint names the controls there exactly as Google labels them.
         public const string MakePublicButton = "GO PUBLIC AND COMPETE";
         public const string MakePublicHint = "THEN TAP PRIVACY & SETTINGS AND TURN OFF MAKE PROFILE PRIVATE";
+
+        // The how-to dialog GO PUBLIC AND COMPETE opens before Play Games' settings, beside pictures of both screens.
+        public const string ProfileHelpIntro = "PLAY GAMES MAKES NEW PROFILES PRIVATE, SO OTHER PLAYERS CAN'T SEE YOUR SCORE. TWO TAPS FIX IT:";
+        public const string ProfileHelpStepOne = "1. TAP PRIVACY & SETTINGS";
+        public const string ProfileHelpStepTwo = "2. TURN OFF MAKE PROFILE PRIVATE";
+        public const string ProfileHelpStepThree = "3. COME BACK HERE TO SEE YOUR RANK";
+        public const string OpenPlayGames = "OPEN PLAY GAMES";
+        public const string NotNow = "NOT NOW";
         public const string Unavailable = "LEADERBOARD UNAVAILABLE. TRY AGAIN SOON";
         public const string Back = "BACK";
 

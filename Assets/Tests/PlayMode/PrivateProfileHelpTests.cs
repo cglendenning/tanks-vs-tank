@@ -51,8 +51,12 @@ namespace TreadShred.Screens.Tests
             Assert.IsTrue(Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
                 .Any(b => b.GetComponentInChildren<Text>()?.text == LeaderboardRules.Back), "BACK stays on screen");
 
-            // No Play Games screen opens in the editor, so the tap shows the written steps in place of the hint.
+            // The button opens the how-to dialog. No Play Games screen opens in the editor, so OPEN PLAY GAMES there
+            // shows the written steps.
             button.onClick.Invoke();
+            yield return null;
+            Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
+                .Single(b => b.GetComponentInChildren<Text>()?.text == LeaderboardRules.OpenPlayGames).onClick.Invoke();
             Assert.IsTrue(Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Any(t => t.text == LeaderboardRules.MakeProfilePublic));
             foreach (var shape in ScreenAudit.Shapes)
             {

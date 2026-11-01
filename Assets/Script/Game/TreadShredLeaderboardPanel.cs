@@ -133,23 +133,25 @@ public sealed class TreadShredLeaderboardPanel : MonoBehaviour
         note.color = TreadShredUi.DetailColor;
         ((RectTransform)back.transform).anchoredPosition = new Vector2(-280f, -445f);
         Track(TreadShredUi.CreateButton(LeaderboardRules.MakePublicButton, root, new Vector2(270f, -445f),
-            new Vector2(560f, 100f), 34, font, OpenProfileSettings));
+            new Vector2(560f, 100f), 34, font, () => TreadShredProfileHelp.Show(font, OpenProfileSettings)));
         hint = Track(TreadShredUi.CreateText(LeaderboardRules.MakePublicHint, root, new Vector2(0f, -514f),
             new Vector2(1400f, 30f), 20, font));
         hint.color = TreadShredUi.DetailColor;
     }
 
-    private void OpenProfileSettings()
+    // OPEN PLAY GAMES in the how-to dialog. False when neither Play Games screen opened, and the steps to do it by hand
+    // replace the hint.
+    private bool OpenProfileSettings()
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (TreadShredPlayGames.OpenProfileSettings())
         {
             awaitingProfile = true;
-            return;
+            return true;
         }
 #endif
-        // Neither Play Games screen opened: the steps to do it by hand instead.
         hint.text = LeaderboardRules.MakeProfilePublic;
+        return false;
     }
 
     // Back from Play Games' settings: reload, so a player who made the profile public sees their name on the board.
