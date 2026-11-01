@@ -13,8 +13,9 @@ public sealed class TreadShredFireHint : MonoBehaviour
 
     public static TreadShredFireHint Show(Font font, Transform player)
     {
-        // Taps pass through it: the player fires by tapping the battlefield, and taps on UI do not fire.
-        var root = TreadShredUi.CreateOverlay("TreadShredFireHint", 6, receivesTaps: false);
+        // Taps pass through it: the player fires by tapping the battlefield, and taps on UI do not fire. It draws
+        // under the GET READY card, faint during the countdown and clear once play starts.
+        var root = TreadShredUi.CreateOverlay("TreadShredFireHint", -2, receivesTaps: false);
         var hint = root.gameObject.AddComponent<TreadShredFireHint>();
         hint.root = root;
         hint.player = player;

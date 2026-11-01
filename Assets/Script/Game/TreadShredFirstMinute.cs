@@ -19,9 +19,17 @@ public static class TreadShredFirstMinute
     // Set by a PlayMode test to play the first minute in the editor.
     private static bool editorPreview;
     private static bool launchChecked;
+    private static bool firstPlay;
+    private static float lastEnemyShot;
 
-    /// <summary>Enemy guns hold fire for the mission in play; set as each mission starts (D-035-AC-03).</summary>
-    public static bool EnemiesHoldFire { get; private set; }
+    /// <summary>The mission in play is the first minute; set as each mission starts.</summary>
+    public static bool FirstPlay => firstPlay;
+
+    /// <summary>D-035-AC-03: on a first play, enemy guns hold fire until the interval since the last enemy shell passes.</summary>
+    public static bool EnemiesHoldFire => firstPlay && !FirstMinute.EnemyMayFire(Time.time, lastEnemyShot);
+
+    /// <summary>An enemy fired: the next first-play shell waits a full interval.</summary>
+    public static void EnemyFired() => lastEnemyShot = Time.time;
 
     private static bool Applies => !TreadShredStoreCaptureMode.IsInstalled && (!Application.isEditor || editorPreview);
 
@@ -42,13 +50,14 @@ public static class TreadShredFirstMinute
         return true;
     }
 
-    /// <summary>Called as a mission starts: whether it plays as the first minute, with enemy fire set to match.</summary>
+    /// <summary>Called as a mission starts: whether it plays as the first minute. The first enemy shell can come one
+    /// interval into play (game time stands still during the countdown).</summary>
     public static bool BeginMission(int mission)
     {
-        var firstPlay = Applies && (Preview
+        firstPlay = Applies && (Preview
             ? mission == FirstMinute.Mission
             : FirstMinute.IsFirstPlay(mission, TreadShredProgress.Ensure().SelectedTier, MissionOneCleared));
-        EnemiesHoldFire = firstPlay;
+        lastEnemyShot = Time.time;
         return firstPlay;
     }
 }

@@ -69,7 +69,11 @@ public class PlayerMoverment : MonoBehaviour {
         if (overdriveActive)
             TreadShredOverdriveBadge.Show(TreadShredUi.FindFont(GameObject.Find("Canvas")));
         if (firstPlay)
-            TreadShredFireHint.Show(TreadShredUi.FindFont(GameObject.Find("Canvas")), transform);
+        {
+            var font = TreadShredUi.FindFont(GameObject.Find("Canvas"));
+            TreadShredFireHint.Show(font, transform);
+            TreadShredFirstMinuteCues.Show(font, joystick);
+        }
         Speed *= progress.SpeedMultiplier;
        if (StyteBullet == null)
         {
@@ -599,7 +603,8 @@ public class PlayerMoverment : MonoBehaviour {
             ManagerScore.instance.CurHeath++;
         }
 
-        countdie -= index;
+        // D-035-AC-03: on a first play a hit never takes the last armor.
+        countdie = TreadShred.Progression.FirstMinute.ArmorAfterHit(countdie, index, TreadShredFirstMinute.FirstPlay);
         TreadShredImpact.HitTaken();
         StartCoroutine(DelayHeath());
 

@@ -49,6 +49,7 @@ public class BulletEmnemy : MonoBehaviour {
             if (gameObject.tag != "emnemyred")
             {
                 canbullet = false;
+                TreadShredFirstMinute.EnemyFired();
                 GameObject obj = Instantiate(Bullet, pointbullet.position, pointbullet.rotation) as GameObject;
                 Vector3 dir = tower.position - pointbullet.position;
 
@@ -79,6 +80,9 @@ public class BulletEmnemy : MonoBehaviour {
    IEnumerator BulletPlayerLan2(float delay)
    {
        yield return new WaitForSeconds(delay);
+       // D-035-AC-03: no follow-up shell on a first play.
+       if (TreadShredFirstMinute.FirstPlay)
+           yield break;
        GameObject obj = Instantiate(Bullet, pointbullet.position, pointbullet.rotation) as GameObject;
 
        Vector3 dir = tower.position - pointbullet.position;
