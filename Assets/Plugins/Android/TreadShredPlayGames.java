@@ -5,6 +5,7 @@ import android.util.Log;
 import com.google.android.gms.games.AnnotatedData;
 import com.google.android.gms.games.AuthenticationResult;
 import com.google.android.gms.games.LeaderboardsClient;
+import com.google.android.gms.games.Player;
 import com.google.android.gms.games.PlayGames;
 import com.google.android.gms.games.PlayGamesSdk;
 import com.google.android.gms.games.SnapshotsClient;
@@ -122,7 +123,7 @@ public final class TreadShredPlayGames {
             if (scores != null) {
                 try {
                     for (LeaderboardScore score : scores.getScores())
-                        entries.put(row(score, player != null && score.getRank() == player.getRank()));
+                        entries.put(row(score, samePlayer(score, player)));
                 } finally {
                     scores.release();
                 }
@@ -135,6 +136,17 @@ public final class TreadShredPlayGames {
             Log.e(TAG, "Leaderboard page could not be written", error);
             return "{\"ok\":false}";
         }
+    }
+
+    // By player ID: a private profile's own entry has no rank (-1), so ranks cannot identify the player's row.
+    private static boolean samePlayer(LeaderboardScore score, LeaderboardScore player) {
+        if (player == null)
+            return false;
+        Player holder = score.getScoreHolder();
+        Player self = player.getScoreHolder();
+        if (holder != null && self != null)
+            return holder.getPlayerId().equals(self.getPlayerId());
+        return player.getRank() > 0 && score.getRank() == player.getRank();
     }
 
     private static JSONObject row(LeaderboardScore score, boolean isPlayer) throws JSONException {

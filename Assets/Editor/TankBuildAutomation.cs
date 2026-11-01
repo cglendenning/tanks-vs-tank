@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using TreadShred.BuildPolicy;
 using UnityEditor;
+using UnityEditor.Android;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor.iOS.Xcode;
@@ -151,6 +152,39 @@ public static class TankBuildAutomation
 
         // iOS keeps its App Store artwork in a separate Store icon kind.
         SetIconsForKind(BuildTargetGroup.iOS, icon, IconKind.Store);
+        ConfigureAndroidLauncherIcons();
+    }
+
+    // D-013-AC-02: Android launchers mask icons to their own shape, so the same tank artwork ships as an adaptive
+    // icon (the art filling the shape over a blurred battlefield layer) and a round icon, not a square picture
+    // shrunk inside the launcher's mask. The legacy icon stays for launchers without adaptive icons.
+    public const string AndroidAdaptiveBackground = "Assets/Art/UI-Game/Android/adaptive-icon-background.png";
+    public const string AndroidAdaptiveForeground = "Assets/Art/UI-Game/Android/adaptive-icon-foreground.png";
+    public const string AndroidRoundIcon = "Assets/Art/UI-Game/Android/round-icon.png";
+
+    private static void ConfigureAndroidLauncherIcons()
+    {
+        var background = LoadIcon(AndroidAdaptiveBackground);
+        var foreground = LoadIcon(AndroidAdaptiveForeground);
+        var round = LoadIcon(AndroidRoundIcon);
+
+        var adaptive = PlayerSettings.GetPlatformIcons(NamedBuildTarget.Android, AndroidPlatformIconKind.Adaptive);
+        foreach (var slot in adaptive)
+            slot.SetTextures(background, foreground);
+        PlayerSettings.SetPlatformIcons(NamedBuildTarget.Android, AndroidPlatformIconKind.Adaptive, adaptive);
+
+        var rounds = PlayerSettings.GetPlatformIcons(NamedBuildTarget.Android, AndroidPlatformIconKind.Round);
+        foreach (var slot in rounds)
+            slot.SetTextures(round);
+        PlayerSettings.SetPlatformIcons(NamedBuildTarget.Android, AndroidPlatformIconKind.Round, rounds);
+    }
+
+    private static Texture2D LoadIcon(string path)
+    {
+        var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        if (texture == null)
+            throw new BuildFailedException("Tread Shred launcher icon not found: " + path);
+        return texture;
     }
 
     private static void SetIconsForKind(BuildTargetGroup platform, Texture2D icon, IconKind kind)

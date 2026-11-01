@@ -198,9 +198,11 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
                 var rows = new List<LeaderboardEntry>();
                 foreach (var row in top.entries ?? new RowJson[0])
                     rows.Add(new LeaderboardEntry(row.rank, row.name, row.score, row.isPlayer));
+                // The player's own score counts even unranked: Play Games reports private profiles' scores with
+                // rank -1, and the screen still shows them (rank 0 reads YOU).
                 LeaderboardEntry? player = null;
-                if (top.player != null && top.player.rank > 0)
-                    player = new LeaderboardEntry(top.player.rank, top.player.name, top.player.score, true);
+                if (top.player != null && top.player.score > 0)
+                    player = new LeaderboardEntry(Math.Max(top.player.rank, 0), top.player.name, top.player.score, true);
                 page = new LeaderboardPage(rows, player);
             }
         }

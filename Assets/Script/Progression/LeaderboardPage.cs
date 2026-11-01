@@ -1,3 +1,4 @@
+using System;
 using TreadShred.Economy;
 using System.Collections.Generic;
 
@@ -50,9 +51,45 @@ namespace TreadShred.Progression
             }
         }
 
+        /// <summary>
+        /// The player has a score the public board leaves out although it has room for it: Google Play Games keeps
+        /// private profiles off public leaderboards, and reports their own entry without a rank.
+        /// </summary>
+        public bool PlayerHidden
+        {
+            get
+            {
+                if (!Player.HasValue || Player.Value.Score <= 0 || Player.Value.Rank > 0 || PlayerListed)
+                    return false;
+                if (Top.Count < TopCount)
+                    return true;
+                var lowest = long.MaxValue;
+                foreach (var entry in Top)
+                    lowest = Math.Min(lowest, entry.Score);
+                return Player.Value.Score > lowest;
+            }
+        }
+
+        /// <summary>The player's own row goes under the list: ranked below it, or holding a score the list leaves out.</summary>
+        public bool ShowsPlayerRow => PlayerBelowTop || (Player.HasValue && Player.Value.Score > 0 && !PlayerListed);
+
+        private bool PlayerListed
+        {
+            get
+            {
+                foreach (var entry in Top)
+                {
+                    if (entry.IsPlayer)
+                        return true;
+                }
+                return false;
+            }
+        }
+
+        // An entry without a rank (the player's own, when the platform will not rank it) reads YOU.
         public static string RankText(LeaderboardEntry entry)
         {
-            return "#" + CountText.Format(entry.Rank);
+            return entry.Rank > 0 ? "#" + CountText.Format(entry.Rank) : "YOU";
         }
 
         public static string ScoreText(LeaderboardEntry entry)

@@ -86,7 +86,7 @@ public sealed class TreadShredLeaderboardPanel : MonoBehaviour
                 return;
             if (page == null)
                 ShowStatus(LeaderboardRules.Unavailable);
-            else if (page.Top.Count == 0)
+            else if (page.Top.Count == 0 && !page.ShowsPlayerRow)
                 ShowStatus(LeaderboardRules.Empty);
             else
                 ShowPage(page);
@@ -106,9 +106,15 @@ public sealed class TreadShredLeaderboardPanel : MonoBehaviour
             var column = i / RowsPerColumn == 0 ? -ColumnX : ColumnX;
             AddRow(page.Top[i], column, FirstRowY - (i % RowsPerColumn) * RowHeight, 0f);
         }
-        if (page.PlayerBelowTop)
+        if (page.ShowsPlayerRow)
             // Ranks below the top 25 run to several digits, so this row's rank gets more room.
             AddRow(page.Player.Value, 0f, FirstRowY - RowsPerColumn * RowHeight - 28f, 140f);
+        if (page.PlayerHidden && Application.platform == RuntimePlatform.Android)
+        {
+            var note = TreadShredUi.CreateText(LeaderboardRules.PrivateProfile + "\n" + LeaderboardRules.MakeProfilePublic, root,
+                new Vector2(0f, FirstRowY - RowsPerColumn * RowHeight - 82f), new Vector2(1500f, 56f), 22, font);
+            note.color = TreadShredUi.DetailColor;
+        }
     }
 
     // Rank, platform nickname and score; the player's own row is gold.

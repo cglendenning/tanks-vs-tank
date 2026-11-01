@@ -30,6 +30,10 @@ namespace TreadShred.Progression
         public const string Subtitle = "HIGH SCORE: TOP 25";
         public const string Loading = "LOADING SCORES";
         public const string Empty = "NO SCORES YET. FINISH A MISSION TO RANK";
+
+        // Shown under the player's own row when Google Play Games keeps a private profile off the public board.
+        public const string PrivateProfile = "YOUR PLAY GAMES PROFILE IS PRIVATE, SO OTHER PLAYERS CAN'T SEE YOUR SCORE";
+        public const string MakeProfilePublic = "TO SHOW IT: PLAY STORE > PROFILE > SETTINGS > GENERAL > PLAY GAMES PROFILE > PUBLIC";
         public const string Unavailable = "LEADERBOARD UNAVAILABLE. TRY AGAIN SOON";
         public const string Back = "BACK";
 
