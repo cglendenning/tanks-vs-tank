@@ -12,6 +12,8 @@ combat instead of the menu, and every caption states something true of the game.
 | `google-play/feature-graphic-1024x500.png` | Play feature graphic; also the promo video's thumbnail, so the centre stays clear for Google's play button | 1024x500 PNG | `play-console.py listing` / `release` |
 | `app-store/iphone/*.png` | App Store iPhone 6.7-inch screenshots | 2796x1290 PNG | `app-store-connect.py media` |
 | `app-store/ipad/*.png` | App Store iPad 12.9-inch screenshots | 2732x2048 PNG | `app-store-connect.py media` |
+| `app-store/iphone-duo-outer/*.png` | App Store iPhone Duo screenshots, outer display (optional until April 2027; shows a Duo badge). The App Store Connect API (spec 4.5.1) has no Duo type, so they are added by hand in App Store Connect | 2034x1398 PNG | by hand |
+| `app-store/iphone-duo-inner/*.png` | App Store iPhone Duo screenshots, inner display | 2853x2007 PNG | by hand |
 | `app-store/header-21x9-3840x1646.mp4` | App Store product page header (iOS 27+), Asset Library | 21:9, 30 fps, 13 s, muted | `app-store-connect.py creative-assets` |
 | `app-store/search-results-3x2-1980x1320.mp4` | App Store search results asset (iOS 27+), Asset Library | 3:2, 30 fps, 13 s, muted | `app-store-connect.py creative-assets` |
 
