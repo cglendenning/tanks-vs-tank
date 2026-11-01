@@ -120,7 +120,7 @@ def check_upload_key(auth, bundle):
 
 
 ROOT = Path(__file__).resolve().parent.parent
-MEDIA = ROOT / "Store/media/1.9.2/google-play"
+MEDIA = ROOT / "Store/media/1.9.3/google-play"
 # The listing's promo video: Store/media/1.9.0/creatives/play-promo-1920x1080.mp4 on Craig's YouTube channel.
 PROMO_VIDEO = "https://www.youtube.com/watch?v=PawgvD2AA10"
 

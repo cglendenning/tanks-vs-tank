@@ -7,15 +7,15 @@ against the build before every submission. Lines marked (iOS) appear only on the
 ## Both stores
 
 - **Name / title:** Tread Shred
-- **App Store subtitle (30):** Tank combat. Permanent power.
-- **Google Play short description (80):** Tank combat with permanent upgrades. 40 missions, three tiers, no ads.
-- **App Store promotional text (170):** Forty missions. Three tiers. Every win upgrades your tank for good. Clear Recruit, then prove it on Veteran and Elite.
+- **App Store subtitle (30):** Tank battle in seconds. No ads
+- **Google Play short description (80):** In battle in seconds. Blast tanks, keep every upgrade, climb the board. No ads.
+- **App Store promotional text (170):** Become unstoppable. Install and you're in battle within seconds, with your first win under a minute away. Free, no ads, no sign-up. Every win upgrades your tank for good.
 - **App Store keywords (100):** tank,combat,shooter,missions,armor,upgrade,arcade,action,war,battle,tactical,tiers
 
-## What's new (1.9.2)
+## What's new (1.9.3)
 
-- **App Store What's New:** Tread Shred 1.9.2: permanent armor, firepower and speed upgrades, Veteran and Elite tiers, a Game Center high score leaderboard, iCloud progress backup, and no more ads. Watch every boost and upgrade in action before you buy, and Overdrive now lasts until your tank goes down.
-- **Google Play release notes:** Permanent armor, firepower and speed upgrades. Veteran and Elite tiers. A high score to chase on Google Play Games, with your progress saved there too. Watch every boost and upgrade in action before you buy. Overdrive lasts until your tank goes down. No more ads.
+- **App Store What's New:** Tread Shred 1.9.3: install it and you're in battle within seconds, with your first win under a minute away. Plus permanent armor, firepower and speed upgrades, Veteran and Elite tiers, a Game Center high score leaderboard, iCloud progress backup, and no more ads. Watch every boost and upgrade in action before you buy.
+- **Google Play release notes:** Install it and you're in battle within seconds, with your first win under a minute away. Permanent armor, firepower and speed upgrades. Veteran and Elite tiers. A high score to chase on Google Play Games, with your progress saved there too. Watch every boost and upgrade in action before you buy. No more ads.
 
 ## Description
 
