@@ -13,6 +13,7 @@
     ... app-store-connect.py resubmit <version>
     ... app-store-connect.py cancel-review <version>
     ... app-store-connect.py status <version>
+    ... app-store-connect.py creative-assets <video>...
 listing: finds or creates that iOS version (it stays invisible until submitted),
 writes the approved English copy from Store/listing-en-US.md (D-030) and removes
 every other language from that version and its app info.
@@ -24,6 +25,10 @@ Profiles and prints its UUID. Capabilities enabled since the last profile
 (iCloud) are only signed into profiles created afterwards. With a bundle ID and
 app name it makes the profile for that App ID instead, registering it first:
 used for the admin app, which is installed over OTA and never sold.
+
+creative-assets: uploads videos to the app's Asset Library as creative assets (the
+product page header and search results placements, iOS 27+) and submits them for
+review on their own, apart from any app version, so they can be placed once approved.
 
 game-center: enables Game Center for the app, creates the HIGH SCORE
 leaderboard with its score limits (D-032) and archives retired boards. Safe to
@@ -243,19 +248,62 @@ def en_us_localization(api, version):
     return app, target, loc
 
 
-def upload_asset(api, resource, set_type, set_id, path):
-    """Reserves an asset, uploads its parts to Apple's upload operations and commits it with its MD5."""
+def upload_asset(api, resource, set_type, set_id, path, relationship=None, attributes=None, checksum=True):
+    """Reserves an asset, uploads its parts to Apple's upload operations and commits it (with its MD5 where the
+    resource takes one; Asset Library assets do not). Returns the asset's ID."""
     data = Path(path).read_bytes()
-    reserved = api.create(resource, {"fileName": Path(path).name, "fileSize": len(data)},
-                          {set_type[:-1]: {"data": {"type": set_type, "id": set_id}}})
+    reserved = api.create(resource, {"fileName": Path(path).name, "fileSize": len(data), **(attributes or {})},
+                          {relationship or set_type[:-1]: {"data": {"type": set_type, "id": set_id}}})
     for op in reserved["attributes"]["uploadOperations"]:
         chunk = data[op["offset"]:op["offset"] + op["length"]]
         request = urllib.request.Request(op["url"], data=chunk, method=op["method"])
         for header in op.get("requestHeaders", []):
             request.add_header(header["name"], header["value"])
         urllib.request.urlopen(request, timeout=120).read()
+    commit = {"uploaded": True}
+    if checksum:
+        commit["sourceFileChecksum"] = hashlib.md5(data).hexdigest()
     api.call("PATCH", f"/v1/{resource}/{reserved['id']}", {"data": {"type": resource, "id": reserved["id"],
-             "attributes": {"uploaded": True, "sourceFileChecksum": hashlib.md5(data).hexdigest()}}})
+             "attributes": commit}})
+    return reserved["id"]
+
+
+def creative_assets(api, paths):
+    """Uploads videos to the Asset Library as creative assets, waits until Apple has processed them, and submits them in
+    a review submission of their own: App Review allows one beside a submission that holds an app version. Safe to
+    rerun: a video already in the library under the same name is reused, as is an empty draft submission."""
+    app = api.call("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"][0]["id"]
+    library = api.call("GET", f"/v1/apps/{app}/assetLibrary")["data"]["id"]
+    existing = {v["attributes"].get("referenceName"): v["id"] for v in api.call("GET", f"/v1/appAssetLibraries/{library}/videos")["data"]
+                if v["attributes"]["state"] not in ("ARCHIVED", "FAILED", "REJECTED")}
+    videos = [existing.get(Path(path).stem) or upload_asset(
+                  api, "appAssetLibraryVideos", "appAssetLibraries", library, path, relationship="assetLibrary",
+                  attributes={"category": "CREATIVE_ASSETS", "referenceName": Path(path).stem}, checksum=False)
+              for path in paths]
+    # COMPLETE means uploaded but still post-processing; App Review accepts the asset from PREPARE_FOR_SUBMISSION on.
+    for video, path in zip(videos, paths):
+        for _ in range(60):
+            attributes = api.call("GET", f"/v1/appAssetLibraryVideos/{video}")["data"]["attributes"]
+            if attributes["state"] == "FAILED":
+                raise SystemExit(f"Apple could not process {Path(path).name}: {attributes.get('stateDetails')}")
+            if attributes["state"] not in ("AWAITING_UPLOAD", "UPLOAD_COMPLETE", "COMPLETE"):
+                break
+            time.sleep(10)
+        else:
+            raise SystemExit(f"{Path(path).name} still processing after 10 minutes; run it again later")
+        print(f"{Path(path).name}: {attributes['state']}", flush=True)
+    drafts = [s for s in api.call("GET", f"/v1/reviewSubmissions?filter[app]={app}&filter[platform]=IOS"
+                                         f"&filter[state]=READY_FOR_REVIEW&include=items")["data"]
+              if not s["relationships"]["items"].get("data")]
+    submission = drafts[0] if drafts else api.create("reviewSubmissions", {"platform": "IOS"},
+                                                     {"app": {"data": {"type": "apps", "id": app}}})
+    for video in videos:
+        api.create("reviewSubmissionItems", None, {
+            "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": submission["id"]}},
+            "appAssetLibraryVideo": {"data": {"type": "appAssetLibraryVideos", "id": video}}})
+    submitted = api.call("PATCH", f"/v1/reviewSubmissions/{submission['id']}", {"data": {
+        "type": "reviewSubmissions", "id": submission["id"], "attributes": {"submitted": True}}})["data"]
+    print(f"submitted {len(videos)} creative assets for review on their own: {submitted['attributes'].get('state')}")
 
 
 def media(api, version, iphone_dir, ipad_dir, preview):
@@ -372,11 +420,14 @@ def submit(api, version):
 
 
 def cancel_review(api, version):
-    """Cancels the version's open review and waits for Apple to hand it back (DEVELOPER_REJECTED, editable)."""
+    """Cancels the version's open review and waits for Apple to hand it back (DEVELOPER_REJECTED, editable). Only the
+    submission holding this version is cancelled: creative assets reviewed on their own keep their place."""
     app, target, _ = en_us_localization(api, version)
-    submissions = lambda: api.call("GET", f"/v1/reviewSubmissions?filter[app]={app}&filter[platform]=IOS")["data"]
+    submissions = lambda: api.call("GET", f"/v1/reviewSubmissions?filter[app]={app}&filter[platform]=IOS"
+                                          "&include=appStoreVersionForReview")["data"]
+    holds_version = lambda s: ((s["relationships"].get("appStoreVersionForReview") or {}).get("data") or {}).get("id") == target["id"]
     for s in submissions():
-        if s["attributes"].get("state") in ("WAITING_FOR_REVIEW", "IN_REVIEW", "UNRESOLVED_ISSUES"):
+        if s["attributes"].get("state") in ("WAITING_FOR_REVIEW", "IN_REVIEW", "UNRESOLVED_ISSUES") and holds_version(s):
             api.call("PATCH", f"/v1/reviewSubmissions/{s['id']}", {"data": {"type": "reviewSubmissions", "id": s["id"],
                      "attributes": {"canceled": True}}})
     deadline = time.time() + 180
@@ -449,6 +500,8 @@ def main():
         resubmit(api, sys.argv[2])
     elif command == ["status"] and len(sys.argv) == 3:
         status(api, sys.argv[2])
+    elif command == ["creative-assets"] and len(sys.argv) >= 3:
+        creative_assets(api, sys.argv[2:])
     elif command == ["full-release"] and len(sys.argv) == 3:
         full_release(api, sys.argv[2])
     else:
