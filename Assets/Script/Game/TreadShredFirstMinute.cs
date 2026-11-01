@@ -3,11 +3,14 @@ using UnityEngine;
 
 /// <summary>
 /// D-035: applies the first-minute rules in the game. Store capture runs and the editor never get them (the screen
-/// tests start from fresh saves and expect the start screen); an owner preview build gets them on every launch.
+/// tests start from fresh saves and expect the start screen). An owner preview build plays a first-time install on a
+/// device that has already played: it keeps its own record of clearing mission 1, so the first minute comes once.
 /// </summary>
 public static class TreadShredFirstMinute
 {
     public const string InstantStartUsedKey = "TreadShredInstantStartUsed";
+    // D-035-AC-04: a preview build's stand-in for "mission 1 cleared", local to the install like the instant-start flag.
+    public const string PreviewMissionOneClearedKey = "TreadShredPreviewMissionOneCleared";
 
     // D-035-AC-04: TankBuildAutomation adds this define only to a build made with TREAD_SHRED_FIRST_MINUTE_PREVIEW=1.
 #if TREADSHRED_FIRST_MINUTE_PREVIEW
@@ -28,13 +31,24 @@ public static class TreadShredFirstMinute
     /// <summary>D-035-AC-03: on a first play, enemy guns hold fire until the interval since the last enemy shell passes.</summary>
     public static bool EnemiesHoldFire => firstPlay && !FirstMinute.EnemyMayFire(Time.time, lastEnemyShot);
 
+    /// <summary>A mission was won. A real first-time player's clear is in their progress; a preview records its own.</summary>
+    public static void MissionWon(int mission)
+    {
+        if (Preview && firstPlay && mission == FirstMinute.Mission)
+        {
+            PlayerPrefs.SetInt(PreviewMissionOneClearedKey, 1);
+            PlayerPrefs.Save();
+        }
+    }
+
     /// <summary>An enemy fired: the next first-play shell waits a full interval.</summary>
     public static void EnemyFired() => lastEnemyShot = Time.time;
 
     private static bool Applies => !TreadShredStoreCaptureMode.IsInstalled && (!Application.isEditor || editorPreview);
 
-    private static bool MissionOneCleared =>
-        TreadShredProgress.Ensure().Progression.IsCleared(DifficultyTier.Recruit, FirstMinute.Mission);
+    private static bool MissionOneCleared => Preview
+        ? PlayerPrefs.GetInt(PreviewMissionOneClearedKey, 0) == 1
+        : TreadShredProgress.Ensure().Progression.IsCleared(DifficultyTier.Recruit, FirstMinute.Mission);
 
     /// <summary>Asked by the start screen once per launch: true when it should open mission 1 instead (D-035-AC-01).</summary>
     public static bool TakeInstantStart()
@@ -42,7 +56,7 @@ public static class TreadShredFirstMinute
         if (launchChecked || !Applies)
             return false;
         launchChecked = true;
-        if (!Preview && !FirstMinute.InstantStart(MissionOneCleared, PlayerPrefs.GetInt(InstantStartUsedKey, 0) == 1))
+        if (!FirstMinute.InstantStart(MissionOneCleared, PlayerPrefs.GetInt(InstantStartUsedKey, 0) == 1))
             return false;
         PlayerPrefs.SetInt(InstantStartUsedKey, 1);
         PlayerPrefs.Save();
@@ -54,9 +68,7 @@ public static class TreadShredFirstMinute
     /// interval into play (game time stands still during the countdown).</summary>
     public static bool BeginMission(int mission)
     {
-        firstPlay = Applies && (Preview
-            ? mission == FirstMinute.Mission
-            : FirstMinute.IsFirstPlay(mission, TreadShredProgress.Ensure().SelectedTier, MissionOneCleared));
+        firstPlay = Applies && FirstMinute.IsFirstPlay(mission, TreadShredProgress.Ensure().SelectedTier, MissionOneCleared);
         lastEnemyShot = Time.time;
         return firstPlay;
     }

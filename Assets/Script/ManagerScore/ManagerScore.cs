@@ -281,6 +281,7 @@ public class ManagerScore : MonoBehaviour
                 wf = true;
                 // D-032-AC-01: the clear points show on the final kill, before the result screen opens over them.
                 TreadShredImpact.MissionClear(ScoreRules.ClearValue(TreadShredProgress.Ensure().SelectedTier));
+                TreadShredFirstMinute.MissionWon(TreadShredProgress.CurrentMission());
                 LogMissionEnd(TreadShredProgress.Ensure().CompleteCurrentMission(true), true);
                 VictoryObj.SetActive(true);
                 StartCoroutine(DelayVictotory());
