@@ -5,6 +5,7 @@
 #   scripts/capture-store-video.sh compose <clips-dir> <out-dir>
 #   scripts/capture-store-video.sh screenshots <simulator-udid> <TreadShred.app> <WxH> <out-dir>
 #   scripts/capture-store-video.sh clips <clips-dir> <out-dir>
+#   scripts/capture-store-video.sh value-ad <clips-dir> <opening.mp4> <endcard.jpg> <out-dir>
 #
 # Each scene runs the game's own store capture mode (TreadShredStoreCaptureMode, enabled through its
 # PlayerPrefs key) and is recorded with `simctl io recordVideo`, so every frame is genuine gameplay.
@@ -14,6 +15,9 @@
 # music. TRAILER_IN sets where the action starts in trailer.mp4 (seconds after the countdown).
 # clips cuts the in-game sales clips (D-034, R-SALES-CLIPS) from captures of modes 18-22: 5 s, 640x360,
 # silent, centred 16:9. CLIP_STARTS sets where each clip starts in its capture, as name:seconds.
+# value-ad cuts the value-equation creative (P-6, D-031-AC-09) in portrait, the shape AppLovin accepts:
+# the dream outcome, the time delay cut (a screen recording of the real first-minute opening; OPENING_IN
+# is where GET READY appears in it), the first win, the cost removed, then the end card image.
 set -euo pipefail
 
 BUNDLE_ID="com.tgts.tanksvstank"
@@ -106,6 +110,36 @@ assemble() {
   echo "$(basename "$out"): $(ffprobe -v error -show_entries stream=width,height -show_entries format=duration -of csv=p=0 "$out" | tr '\n' ' ')"
 }
 
+# A still image held for a segment (the end card with the store badges).
+image_segment() {
+  local img="$1" dur="$2" w="$3" h="$4" out="$5"
+  ffmpeg -loglevel error -y -loop 1 -t "$dur" -i "$img" -vf "fps=30,scale=$w:$h,setsar=1" -an "${ENCODE[@]}" "$out"
+}
+
+value_ad() {
+  local clips="$1" opening="$2" endcard="$3" out="$4" at="${OPENING_IN:-9}" work w=1080 h=1920
+  mkdir -p "$out"
+  work="$(mktemp -d)"
+  # The opening is a 2400x1080 phone recording: cropped to the trailer's 2868:1320 frame so "fit" keeps its shape.
+  ffmpeg -loglevel error -y -i "$opening" -vf "crop=2346:1080:27:0,fps=30" -an "${ENCODE[@]}" "$work/opening.mp4"
+  segment "$clips/trailer.mp4" 5.6 3 "BECOME UNSTOPPABLE" $w $h zoom "$work/dream-15.mp4"
+  segment "$work/opening.mp4" "$at" 4 "IN BATTLE IN SECONDS" $w $h fit "$work/time-15.mp4"
+  segment "$clips/trailer.mp4" 13.6 3 "WIN YOUR FIRST BATTLE" $w $h zoom "$work/win-15.mp4"
+  segment "$clips/trailer.mp4" 9 2 "FREE. NO ADS." $w $h zoom "$work/free-15.mp4"
+  image_segment "$endcard" 3 $w $h "$work/end-15.mp4"
+  assemble "$out/ad-value-15s-9x16.mp4" "$work/dream-15.mp4" "$work/time-15.mp4" "$work/win-15.mp4" "$work/free-15.mp4" "$work/end-15.mp4"
+  segment "$clips/trailer.mp4" 5 4 "BECOME UNSTOPPABLE" $w $h zoom "$work/dream-30.mp4"
+  segment "$work/opening.mp4" "$(add "$at" -0.4)" 5 "IN BATTLE IN SECONDS" $w $h fit "$work/time-30.mp4"
+  segment "$clips/trailer.mp4" 13 4 "WIN YOUR FIRST BATTLE" $w $h zoom "$work/win-30.mp4"
+  segment "$clips/trailer.mp4" 9 3 "FREE. NO ADS." $w $h zoom "$work/free-30.mp4"
+  segment "$clips/upgrades.mp4" 0.5 5 "UPGRADES THAT LAST" $w $h fit "$work/upgrades-30.mp4"
+  segment "$clips/mission-select.mp4" 0.4 5 "40 MISSIONS. THREE TIERS." $w $h fit "$work/tiers-30.mp4"
+  image_segment "$endcard" 4 $w $h "$work/end-30.mp4"
+  assemble "$out/ad-value-30s-9x16.mp4" "$work/dream-30.mp4" "$work/time-30.mp4" "$work/win-30.mp4" "$work/free-30.mp4" \
+    "$work/upgrades-30.mp4" "$work/tiers-30.mp4" "$work/end-30.mp4"
+  rm -rf "$work"
+}
+
 compose() {
   local clips="$1" out="$2" in="${TRAILER_IN:-2}" work
   mkdir -p "$out"
@@ -177,6 +211,7 @@ case "${1:-}" in
   capture) [ $# -eq 4 ] || { echo "usage: $0 capture <simulator-udid> <app> <clips-dir>" >&2; exit 2; }; capture "$2" "$3" "$4" ;;
   compose) [ $# -eq 3 ] || { echo "usage: $0 compose <clips-dir> <out-dir>" >&2; exit 2; }; compose "$2" "$3" ;;
   clips) [ $# -eq 3 ] || { echo "usage: $0 clips <clips-dir> <out-dir>" >&2; exit 2; }; clips "$2" "$3" ;;
+  value-ad) [ $# -eq 5 ] || { echo "usage: $0 value-ad <clips-dir> <opening.mp4> <endcard.jpg> <out-dir>" >&2; exit 2; }; value_ad "$2" "$3" "$4" "$5" ;;
   screenshots) [ $# -eq 5 ] || { echo "usage: $0 screenshots <simulator-udid> <app> <WxH> <out-dir>" >&2; exit 2; }; screenshots "$2" "$3" "$4" "$5" ;;
   *) sed -n '2,16p' "$0" >&2; exit 2 ;;
 esac
