@@ -16,7 +16,7 @@ public class EmnemyRed : MonoBehaviour {
     public void DeadPlayer(int index)
     {
         countdie -= Mathf.Max(1, Mathf.RoundToInt(index * HitScale * TreadShredProgress.Ensure().DamageMultiplier));
-        if (countdie < 1 && completed)
+        if (countdie < 1 && completed && ManagerScore.instance.ClaimKill(gameObject))
         {
             ManagerScore.instance.Rung();
             MusicManager.instance.ExplosionTank();

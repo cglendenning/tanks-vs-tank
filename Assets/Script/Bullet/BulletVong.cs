@@ -23,7 +23,7 @@ public class BulletVong : MonoBehaviour {
             Destroy(gameObject);
         }
 
-        if (other.gameObject.tag == "emnemyred")
+        if (other.gameObject.tag == "emnemyred" && ManagerScore.instance.ClaimKill(other.gameObject))
         {
             
             PlayerPrefs.SetFloat("CountKill", (PlayerPrefs.GetFloat("CountKill") + 1));
@@ -45,7 +45,7 @@ public class BulletVong : MonoBehaviour {
         }
 
 
-        if (other.gameObject.tag == "targetMask")
+        if (other.gameObject.tag == "targetMask" && ManagerScore.instance.ClaimKill(other.gameObject))
         {
             PlayerPrefs.SetFloat("CountKill", (PlayerPrefs.GetFloat("CountKill") + 1));
             PlayerPrefs.Save();

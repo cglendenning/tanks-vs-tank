@@ -32,6 +32,15 @@ public class ManagerScore : MonoBehaviour
 
     public int CountEmnemy;
 
+    // D-032-AC-01: each enemy's kill counts once, however many rounds or colliders report it.
+    private readonly TreadShred.Progression.MissionKills kills = new TreadShred.Progression.MissionKills();
+
+    /// <summary>True for an enemy's first reported death; false when it was already counted this frame or earlier.</summary>
+    public bool ClaimKill(GameObject enemy)
+    {
+        return kills.Claim(enemy.GetInstanceID());
+    }
+
     public GameObject Medel;
 
     void Start()

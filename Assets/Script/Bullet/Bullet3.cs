@@ -47,7 +47,13 @@ public class Bullet3 : MonoBehaviour {
                 Destroy(gameObject);
             }
 
-            if (other.gameObject.tag == "targetMask")
+            if (other.gameObject.tag == "targetMask" && !ManagerScore.instance.ClaimKill(other.gameObject))
+            {
+                // D-032-AC-01: already counted (a second collider or Overdrive round in the same frame).
+                Instantiate(PrefabExplosionBullet, transform.position, Quaternion.Euler(-90, 0, 0));
+                Destroy(gameObject);
+            }
+            else if (other.gameObject.tag == "targetMask")
             {
                 PlayerPrefs.SetFloat("CountKill", (PlayerPrefs.GetFloat("CountKill") + 1));
                 PlayerPrefs.Save();

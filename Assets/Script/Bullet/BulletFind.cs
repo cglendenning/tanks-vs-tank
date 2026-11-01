@@ -104,7 +104,8 @@ public class BulletFind : MonoBehaviour {
                 Destroy(gameObject);
             }
 
-            if (other.gameObject.tag == "targetMask" && completed)
+            // D-032-AC-01: completed stops this round counting twice; ClaimKill stops two rounds counting one enemy.
+            if (other.gameObject.tag == "targetMask" && completed && ManagerScore.instance.ClaimKill(other.gameObject))
             {
                 completed = false;
 
