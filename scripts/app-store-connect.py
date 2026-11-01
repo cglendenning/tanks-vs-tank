@@ -6,7 +6,7 @@
     ... app-store-connect.py adhoc-profile <certificate serial> <device UDID> [<bundle ID> "<app name>"]
     ... app-store-connect.py appstore-profile <certificate serial>
     ... app-store-connect.py listing <version>
-    ... app-store-connect.py media <version> <iphone-shots-dir> <ipad-shots-dir> <iphone-preview.mp4>
+    ... app-store-connect.py media <version> <iphone-shots-dir> <ipad-shots-dir> [<iphone-preview.mp4>]
     ... app-store-connect.py attach-build <version> <build-number>
     ... app-store-connect.py submit <version>
     ... app-store-connect.py full-release <version>
@@ -306,7 +306,8 @@ def creative_assets(api, paths):
     print(f"submitted {len(videos)} creative assets for review on their own: {submitted['attributes'].get('state')}")
 
 
-def media(api, version, iphone_dir, ipad_dir, preview):
+def media(api, version, iphone_dir, ipad_dir, preview=None):
+    """Replaces the version's iPhone and iPad screenshots, and its app preview when one is given."""
     _, _, loc = en_us_localization(api, version)
     sets = {s["attributes"]["screenshotDisplayType"]: s["id"]
             for s in api.call("GET", f"/v1/appStoreVersionLocalizations/{loc['id']}/appScreenshotSets")["data"]}
@@ -319,6 +320,21 @@ def media(api, version, iphone_dir, ipad_dir, preview):
         for shot in shots:
             upload_asset(api, "appScreenshots", "appScreenshotSets", set_id, shot)
         print(f"{display}: {len(shots)} screenshots uploaded")
+    # App Review refuses a version whose screenshots are still being processed (ASSET_IN_POST_PROCESSING).
+    for _ in range(60):
+        states = [shot["attributes"].get("assetDeliveryState", {}).get("state")
+                  for s in api.call("GET", f"/v1/appStoreVersionLocalizations/{loc['id']}/appScreenshotSets")["data"]
+                  for shot in api.call("GET", f"/v1/appScreenshotSets/{s['id']}/appScreenshots")["data"]]
+        if "FAILED" in states:
+            raise SystemExit("Apple could not process a screenshot; check the version page in App Store Connect")
+        if all(state == "COMPLETE" for state in states):
+            print(f"all {len(states)} screenshots processed")
+            break
+        time.sleep(10)
+    else:
+        raise SystemExit("screenshots still processing after 10 minutes; run submit again later")
+    if preview is None:
+        return
     previews = {s["attributes"]["previewType"]: s["id"]
                 for s in api.call("GET", f"/v1/appStoreVersionLocalizations/{loc['id']}/appPreviewSets")["data"]}
     for preview_type, set_id in previews.items():
@@ -488,6 +504,8 @@ def main():
         create_profile(api, "appstore", sys.argv[2])
     elif command == ["listing"] and len(sys.argv) == 3:
         listing(api, sys.argv[2])
+    elif command == ["media"] and len(sys.argv) == 5:
+        media(api, sys.argv[2], sys.argv[3], sys.argv[4])
     elif command == ["media"] and len(sys.argv) == 6:
         media(api, *sys.argv[2:6])
     elif command == ["attach-build"] and len(sys.argv) == 4:

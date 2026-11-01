@@ -5,7 +5,7 @@
     python3 scripts/play-console.py check-upload-key <aab>    # upload into a throwaway edit: does Google accept its signing key?
     python3 scripts/play-console.py release <aab> <fraction>  # one edit: bundle, staged production rollout, listing text and images
     python3 scripts/play-console.py rollout <fraction>        # change the live production rollout; 1 completes it for everyone
-    python3 scripts/play-console.py listing                   # write the listing text and promo video alone (no bundle)
+    python3 scripts/play-console.py listing                   # write the listing text, promo video and images alone (no bundle)
     python3 scripts/play-console.py status                    # Google's review state of each production release
     python3 scripts/play-console.py games-leaderboard <id>    # Play Games HIGH SCORE board with score limits (D-032-AC-04)
 
@@ -120,7 +120,7 @@ def check_upload_key(auth, bundle):
 
 
 ROOT = Path(__file__).resolve().parent.parent
-MEDIA = ROOT / "Store/media/1.9.0/google-play"
+MEDIA = ROOT / "Store/media/1.9.2/google-play"
 # The listing's promo video: Store/media/1.9.0/creatives/play-promo-1920x1080.mp4 on Craig's YouTube channel.
 PROMO_VIDEO = "https://www.youtube.com/watch?v=PawgvD2AA10"
 
@@ -154,8 +154,15 @@ def release(auth, bundle, fraction):
     call("PUT", f"/edits/{edit}/tracks/production", auth, {"track": "production", "releases": [dict(rollout,
         versionCodes=[str(version_code)],
         releaseNotes=[{"language": "en-US", "text": store_copy.copy_for("android")["releaseNotes"]}])]})
-    listing = play_listing()
-    call("PATCH", f"/edits/{edit}/listings/en-US", auth, dict(listing, language="en-US"))
+    write_listing(auth, edit)
+    call("POST", f"/edits/{edit}:commit", auth)
+    print(f"Released version code {version_code} to production at {min(float(fraction), 1):.0%} with the approved listing.")
+
+
+def write_listing(auth, edit):
+    """Writes the approved listing text and promo video into the edit and replaces its screenshots and feature graphic."""
+    upload_api = API.replace("/androidpublisher/v3/", "/upload/androidpublisher/v3/")
+    call("PATCH", f"/edits/{edit}/listings/en-US", auth, dict(play_listing(), language="en-US"))
     for kind, files in (("phoneScreenshots", sorted((MEDIA / "phone").glob("*.png"))),
                         ("sevenInchScreenshots", sorted((MEDIA / "tablet").glob("*.png"))),
                         ("tenInchScreenshots", sorted((MEDIA / "tablet").glob("*.png"))),
@@ -164,17 +171,15 @@ def release(auth, bundle, fraction):
         for image in files:
             upload(auth, image, f"{upload_api}/edits/{edit}/listings/en-US/{kind}?uploadType=media")
         print(f"{kind}: {len(files)} uploaded")
-    call("POST", f"/edits/{edit}:commit", auth)
-    print(f"Released version code {version_code} to production at {min(float(fraction), 1):.0%} with the approved listing.")
 
 
 def listing(auth):
-    """Writes the listing text and promo video in an edit of its own. Google reviews it, together with anything
+    """Writes the listing (text, promo video, images) in an edit of its own. Google reviews it, together with anything
     already in review."""
     edit = call("POST", "/edits", auth, {})["id"]
-    call("PATCH", f"/edits/{edit}/listings/en-US", auth, dict(play_listing(), language="en-US"))
+    write_listing(auth, edit)
     call("POST", f"/edits/{edit}:commit", auth)
-    print(f"Listing written with promo video {PROMO_VIDEO}")
+    print(f"Listing written from {MEDIA.relative_to(ROOT)} with promo video {PROMO_VIDEO}")
 
 
 def rollout(auth, fraction):
