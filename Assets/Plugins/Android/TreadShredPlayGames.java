@@ -1,6 +1,9 @@
 package com.tgts.treadshred;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.net.Uri;
 import android.util.Log;
 import com.google.android.gms.games.AnnotatedData;
 import com.google.android.gms.games.AuthenticationResult;
@@ -30,6 +33,10 @@ public final class TreadShredPlayGames {
     private static final String TAG = "TreadShredPlayGames";
     private static final String LEADERBOARD_RECEIVER = "TreadShredGameCenter";
     private static final String CLOUD_RECEIVER = "TreadShredCloudSave";
+    // Play Games' own settings screen, whose Privacy & settings page holds "Make profile private". Google documents no
+    // call for it, so the Play Store's Play Games profile page is the fallback.
+    private static final String GAMES_SETTINGS = "com.google.android.gms.games.ui.settings.LAUNCH_GAMES_SETTINGS_V2";
+    private static final String PLAY_GAMES_PROFILE = "https://play.google.com/games/profile";
     private static final String SAVE_NAME = "tread-shred-progress";
 
     private static Activity activity;
@@ -67,6 +74,27 @@ public final class TreadShredPlayGames {
         activity.runOnUiThread(() -> PlayGames.getGamesSignInClient(activity).signIn()
             .addOnCompleteListener(TreadShredPlayGames::onSignInResult));
         return true;
+    }
+
+    /**
+     * D-032-AC-02: opens the screen where the player makes a private Play Games profile public. False when neither
+     * screen opens, and the game shows the steps instead.
+     */
+    public static boolean openProfileSettings() {
+        if (activity == null)
+            return false;
+        return open(new Intent(GAMES_SETTINGS).setPackage("com.google.android.gms"))
+            || open(new Intent(Intent.ACTION_VIEW, Uri.parse(PLAY_GAMES_PROFILE)).setPackage("com.android.vending"));
+    }
+
+    private static boolean open(Intent intent) {
+        try {
+            activity.startActivity(intent);
+            return true;
+        } catch (ActivityNotFoundException | SecurityException error) {
+            Log.w(TAG, "Screen unavailable: " + intent, error);
+            return false;
+        }
     }
 
     private static void onSignInResult(Task<AuthenticationResult> task) {

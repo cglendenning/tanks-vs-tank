@@ -30,5 +30,6 @@ public static class TreadShredPlayGames
     public static void LoadRank(string board) => Plugin.CallStatic("loadRank", board);
     public static void LoadTop(string board, int count) => Plugin.CallStatic("loadTop", board, count);
     public static void WriteSave(string json) => Plugin.CallStatic("writeSave", json);
+    public static bool OpenProfileSettings() => Plugin.CallStatic<bool>("openProfileSettings");
 #endif
 }

@@ -34,6 +34,10 @@ namespace TreadShred.Progression
         // Shown under the player's own row when Google Play Games keeps a private profile off the public board.
         public const string PrivateProfile = "YOUR PLAY GAMES PROFILE IS PRIVATE, SO OTHER PLAYERS CAN'T SEE YOUR SCORE";
         public const string MakeProfilePublic = "TO SHOW IT: PLAY STORE > PROFILE > SETTINGS > GENERAL > PLAY GAMES PROFILE > PUBLIC";
+
+        // The button opens Play Games' settings; the hint names the controls there exactly as Google labels them.
+        public const string MakePublicButton = "GO PUBLIC AND COMPETE";
+        public const string MakePublicHint = "THEN TAP PRIVACY & SETTINGS AND TURN OFF MAKE PROFILE PRIVATE";
         public const string Unavailable = "LEADERBOARD UNAVAILABLE. TRY AGAIN SOON";
         public const string Back = "BACK";
 
