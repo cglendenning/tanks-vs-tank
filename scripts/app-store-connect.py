@@ -57,7 +57,7 @@ LEADERBOARD = {
     "submissionType": "BEST_SCORE",
     "scoreSortType": "DESC",
     "scoreRangeStart": "0",
-    "scoreRangeEnd": "250800",  # ScoreRules.MaxRunScore: (218 kills x 100 + 40 clears x 500) x (1 + 2 + 3)
+    "scoreRangeEnd": "253200",  # ScoreRules.MaxRunScore: (222 kills x 100 + 40 clears x 500) x (1 + 2 + 3)
 }
 LEADERBOARD_NAME = {"locale": "en-US", "name": "HIGH SCORE"}
 # Boards the game no longer submits to; archived (reversible), never deleted.

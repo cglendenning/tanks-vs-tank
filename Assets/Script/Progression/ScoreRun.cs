@@ -13,9 +13,9 @@ namespace TreadShred.Progression
         public const int KillPoints = 100;
         public const int ClearPoints = 500;
 
-        // Enemies across missions 1-40, read from each Lv scene's ManagerScore.CountEmnemy (2026-10-30).
-        // Update with the scenes: the leaderboard's score limit comes from it.
-        public const int EnemiesPerPass = 218;
+        // Enemies across missions 1-40, read from each Lv scene's ManagerScore.CountEmnemy (2026-11-01: mission 1
+        // has five, D-035). Update with the scenes: the leaderboard's score limit comes from it.
+        public const int EnemiesPerPass = 222;
         public const int TierCount = (int)DifficultyTier.Elite + 1;
 
         public static int TierMultiplier(DifficultyTier tier)

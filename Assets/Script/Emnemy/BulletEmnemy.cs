@@ -41,6 +41,9 @@ public class BulletEmnemy : MonoBehaviour {
    public GameObject Bullet;
    public void BulletPlayer()
     {
+        // D-035-AC-03: enemies hold fire during a first-time player's first play of mission 1.
+        if (TreadShredFirstMinute.EnemiesHoldFire)
+            return;
         if (canbullet && gameObject.GetComponent<BoxCollider>().enabled)
         {
             if (gameObject.tag != "emnemyred")

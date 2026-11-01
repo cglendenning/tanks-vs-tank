@@ -33,7 +33,7 @@ LEADERBOARD = {
     "token": "treadshred.best_run",
     "scoreOrder": "LARGER_IS_BETTER",
     "scoreMin": "0",
-    "scoreMax": "250800",  # ScoreRules.MaxRunScore: (218 kills x 100 + 40 clears x 500) x (1 + 2 + 3)
+    "scoreMax": "253200",  # ScoreRules.MaxRunScore: (222 kills x 100 + 40 clears x 500) x (1 + 2 + 3)
 }
 # R-GEM-PACKS: the same product IDs and USD prices as App Store Connect (GemCatalog.Packs).
 PACKS = [("treadshred.gems100", 100, "0.99"), ("treadshred.gems550", 550, "4.99"), ("treadshred.gems1200", 1200, "9.99")]

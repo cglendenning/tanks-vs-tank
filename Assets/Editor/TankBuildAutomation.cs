@@ -23,9 +23,9 @@ public static class TankBuildAutomation
     // Screenshot-only App Store metadata update. The live 1.8.0 build remains
     // unchanged; App Store Connect requires a new version/build to replace
     // screenshots after a version is approved.
-    private const string ReleaseVersion = "1.9.2";
-    private const int ReleaseBuildNumber = 21;
-    private const int AndroidReleaseBuildNumber = 9;
+    private const string ReleaseVersion = "1.9.3";
+    private const int ReleaseBuildNumber = 22;
+    private const int AndroidReleaseBuildNumber = 10;
 
     [MenuItem("Tread Shred/Build/iOS device project")]
     public static void BuildIosDeviceProject()
@@ -71,7 +71,8 @@ public static class TankBuildAutomation
             scenes = ScenePaths(),
             locationPathName = output,
             target = BuildTarget.iOS,
-            options = BuildOptions.None
+            options = BuildOptions.None,
+            extraScriptingDefines = PreviewDefines()
         });
         AssertBuildSucceeded(report, "iOS");
         PatchIosInfoPlist(output);
@@ -100,11 +101,19 @@ public static class TankBuildAutomation
             scenes = ScenePaths(),
             locationPathName = output,
             target = BuildTarget.Android,
-            options = BuildOptions.None
+            options = BuildOptions.None,
+            extraScriptingDefines = PreviewDefines()
         });
         AssertBuildSucceeded(report, "Android");
         Debug.Log("Tread Shred Android build created at " + output);
     }
+
+    // D-035-AC-04: an owner preview build plays the first minute on every launch. The define reaches only a build
+    // made with TREAD_SHRED_FIRST_MINUTE_PREVIEW=1 and is never saved to the project, so store builds cannot carry it.
+    private static string[] PreviewDefines() =>
+        Environment.GetEnvironmentVariable("TREAD_SHRED_FIRST_MINUTE_PREVIEW") == "1"
+            ? new[] { "TREADSHRED_FIRST_MINUTE_PREVIEW" }
+            : new string[0];
 
     private static void PreparePlayerSettings()
     {
@@ -112,6 +121,9 @@ public static class TankBuildAutomation
         EditorBuildSettings.scenes = scenes.Select(path => new EditorBuildSettingsScene(path, true)).ToArray();
 
         PlayerSettings.companyName = "TGT Studios";
+        // Unity 6 lets every plan turn off the Made with Unity splash, so the game opens on its own screen.
+        PlayerSettings.SplashScreen.show = false;
+        PlayerSettings.SplashScreen.showUnityLogo = false;
         PlayerSettings.productName = ProductName;
         ConfigureApplicationIcons();
         PlayerSettings.bundleVersion = ReleaseVersion;

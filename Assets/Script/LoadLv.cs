@@ -30,6 +30,13 @@ public class LoadLv : MonoBehaviour {
     {
        // PlayerPrefs.DeleteAll();
         instance = this;
+        // D-035-AC-01: a first-time player's first launch opens straight into mission 1.
+        if (TreadShredFirstMinute.TakeInstantStart())
+        {
+            ManagerScore.BeginNewRun();
+            Application.LoadLevel("Lv" + TreadShred.Progression.FirstMinute.Mission);
+            return;
+        }
         anim = GetComponent<Animator>();
 
         if (PlayerPrefs.HasKey("Sound") == false)

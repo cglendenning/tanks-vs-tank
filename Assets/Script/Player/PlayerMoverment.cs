@@ -63,9 +63,13 @@ public class PlayerMoverment : MonoBehaviour {
         var loadout = TreadShredBoosts.Current.ConsumeForMission(progress.ArmorHits);
         countdie = loadout.ArmorHits;
         missionArmorHits = loadout.ArmorHits;
-        overdriveActive = loadout.RoundsPerTap > 1;
+        // D-035-AC-03: a first-time player's first play of mission 1 has Overdrive free for that mission and a fire hint.
+        var firstPlay = TreadShredFirstMinute.BeginMission(TreadShredProgress.CurrentMission());
+        overdriveActive = loadout.RoundsPerTap > 1 || firstPlay;
         if (overdriveActive)
             TreadShredOverdriveBadge.Show(TreadShredUi.FindFont(GameObject.Find("Canvas")));
+        if (firstPlay)
+            TreadShredFireHint.Show(TreadShredUi.FindFont(GameObject.Find("Canvas")), transform);
         Speed *= progress.SpeedMultiplier;
        if (StyteBullet == null)
         {

@@ -57,12 +57,16 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     // The Armor clip shows real hits landing on a fully armored tank: its armor is not padded.
     private bool EnemiesFire => mode == ClipArmor;
 
+    /// <summary>True when a capture run drives the game; the first minute (D-035) stays out of its footage.</summary>
+    public static bool IsInstalled { get; private set; }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void InstallIfEnabled()
     {
         var mode = PlayerPrefs.GetInt(CaptureModeKey, 0);
         if (mode < CombatSingle || mode > ClipRedeploy)
             return;
+        IsInstalled = true;
 
         Debug.Log($"[STORE_CAPTURE] installing capture driver mode={mode}");
 
