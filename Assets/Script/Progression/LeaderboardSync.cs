@@ -38,17 +38,21 @@ namespace TreadShred.Progression
         private readonly IGameCenter gameCenter;
         private readonly Func<int> highScore;
         private readonly Action<float, Action> after;
+        private readonly Action<int> restoreHighScore;
         private readonly List<Action> afterSubmission = new List<Action>();
         private long? onGameCenter;
         private int acceptedThisSession;
         private bool submitting;
 
         /// <param name="after">Runs an action after a delay in seconds (a coroutine in the game).</param>
-        public LeaderboardSync(IGameCenter gameCenter, Func<int> highScore, Action<float, Action> after)
+        /// <param name="restoreHighScore">Raises HIGH SCORE to the service's record of the player when that is higher.</param>
+        public LeaderboardSync(IGameCenter gameCenter, Func<int> highScore, Action<float, Action> after,
+            Action<int> restoreHighScore = null)
         {
             this.gameCenter = gameCenter ?? throw new ArgumentNullException(nameof(gameCenter));
             this.highScore = highScore ?? throw new ArgumentNullException(nameof(highScore));
             this.after = after ?? throw new ArgumentNullException(nameof(after));
+            this.restoreHighScore = restoreHighScore;
         }
 
         /// <summary>After sign-in: learn what the service holds for the player, then submit if HIGH SCORE beats it.</summary>
@@ -57,6 +61,10 @@ namespace TreadShred.Progression
             gameCenter.LoadPlayerEntry((rank, score) =>
             {
                 onGameCenter = score;
+                // HIGH SCORE lives on the device, so a reinstall or a new phone starts it at zero while the service
+                // still holds the player's best; without this the next run would read as a NEW HIGH SCORE below it.
+                if (score > highScore() && score <= int.MaxValue)
+                    restoreHighScore?.Invoke((int)score);
                 SubmitIfRaised();
             });
         }

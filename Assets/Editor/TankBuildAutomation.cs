@@ -24,8 +24,8 @@ public static class TankBuildAutomation
     // unchanged; App Store Connect requires a new version/build to replace
     // screenshots after a version is approved.
     private const string ReleaseVersion = "1.9.2";
-    private const int ReleaseBuildNumber = 20;
-    private const int AndroidReleaseBuildNumber = 8;
+    private const int ReleaseBuildNumber = 21;
+    private const int AndroidReleaseBuildNumber = 9;
 
     [MenuItem("Tread Shred/Build/iOS device project")]
     public static void BuildIosDeviceProject()

@@ -50,7 +50,8 @@ public sealed class TreadShredLeaderboard : MonoBehaviour
 #endif
 
     private static readonly GameCenterPlugin plugin = new GameCenterPlugin();
-    private static readonly LeaderboardSync sync = new LeaderboardSync(plugin, () => TreadShredScores.HighScore, After);
+    private static readonly LeaderboardSync sync =
+        new LeaderboardSync(plugin, () => TreadShredScores.HighScore, After, score => TreadShredScores.RecordScore(score));
     private static TreadShredLeaderboard instance;
 
     /// <summary>Raised when Game Center finishes signing the player in.</summary>
