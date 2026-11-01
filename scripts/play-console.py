@@ -5,6 +5,7 @@
     python3 scripts/play-console.py check-upload-key <aab>    # upload into a throwaway edit: does Google accept its signing key?
     python3 scripts/play-console.py release <aab> <fraction>  # one edit: bundle, staged production rollout, listing text and images
     python3 scripts/play-console.py rollout <fraction>        # change the live production rollout; 1 completes it for everyone
+    python3 scripts/play-console.py listing                   # write the listing text and promo video alone (no bundle)
     python3 scripts/play-console.py status                    # Google's review state of each production release
     python3 scripts/play-console.py games-leaderboard <id>    # Play Games HIGH SCORE board with score limits (D-032-AC-04)
 
@@ -120,12 +121,15 @@ def check_upload_key(auth, bundle):
 
 ROOT = Path(__file__).resolve().parent.parent
 MEDIA = ROOT / "Store/media/1.9.0/google-play"
+# The listing's promo video: Store/media/1.9.0/creatives/play-promo-1920x1080.mp4 on Craig's YouTube channel.
+PROMO_VIDEO = "https://www.youtube.com/watch?v=PawgvD2AA10"
 
 
 def play_listing():
-    """The approved copy for Google Play (store_copy.py): the (iOS) lines are left out."""
+    """The approved copy for Google Play (store_copy.py), the (iOS) lines left out, with the promo video."""
     copy = store_copy.copy_for("android")
-    return {"title": copy["name"], "shortDescription": copy["shortDescription"], "fullDescription": copy["description"]}
+    return {"title": copy["name"], "shortDescription": copy["shortDescription"], "fullDescription": copy["description"],
+            "video": PROMO_VIDEO}
 
 
 def upload(auth, path, url):
@@ -162,6 +166,15 @@ def release(auth, bundle, fraction):
         print(f"{kind}: {len(files)} uploaded")
     call("POST", f"/edits/{edit}:commit", auth)
     print(f"Released version code {version_code} to production at {min(float(fraction), 1):.0%} with the approved listing.")
+
+
+def listing(auth):
+    """Writes the listing text and promo video in an edit of its own. Google reviews it, together with anything
+    already in review."""
+    edit = call("POST", "/edits", auth, {})["id"]
+    call("PATCH", f"/edits/{edit}/listings/en-US", auth, dict(play_listing(), language="en-US"))
+    call("POST", f"/edits/{edit}:commit", auth)
+    print(f"Listing written with promo video {PROMO_VIDEO}")
 
 
 def rollout(auth, fraction):
@@ -214,6 +227,8 @@ if __name__ == "__main__":
         release(token(), sys.argv[2], sys.argv[3])
     elif len(sys.argv) == 3 and sys.argv[1] == "games-leaderboard":
         games_leaderboard(token(), sys.argv[2])
+    elif len(sys.argv) == 2 and sys.argv[1] == "listing":
+        listing(token())
     elif len(sys.argv) == 2 and sys.argv[1] == "status":
         status(token())
     elif len(sys.argv) == 3 and sys.argv[1] == "rollout":
