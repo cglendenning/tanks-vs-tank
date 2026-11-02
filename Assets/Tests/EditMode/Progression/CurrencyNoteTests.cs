@@ -12,9 +12,10 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual("COINS AND GEMS", ProgressionLabels.CurrencyNoteTitle);
             CollectionAssert.AreEqual(new[]
             {
-                "COINS: EARNED IN EVERY MISSION, WIN OR LOSE. THEY BUY PERMANENT UPGRADES.",
-                "GEMS: BOUGHT IN THE STORE OR EARNED AT MILESTONES. THEY BUY BOOSTS AND REVIVES.",
-                "SHORT ON COINS? GEMS COVER THE GAP AT 1 GEM FOR 20 COINS."
+                "COINS: YOU EARN THEM IN EVERY MISSION, WIN OR LOSE. THEY BUY PERMANENT UPGRADES.",
+                "GEMS: BUY THEM OR EARN THEM AT MILESTONES. THEY BUY OVERDRIVE AND REVIVES.",
+                "AN UPGRADE USES YOUR COINS FIRST, THEN GEMS FOR THE REST: 1 GEM = 20 COINS.",
+                "A BUTTON SHOWING A PRICE BUYS IT AND APPLIES IT IN ONE TAP."
             }, ProgressionLabels.CurrencyNote());
             Assert.AreEqual(20, ProgressionRules.CoinsPerGem, "the rate in the note is the rule's");
             StringAssert.Contains("TreadShredNotePanel.Show(ProgressionLabels.CurrencyNoteTitle, ProgressionLabels.CurrencyNote(), font)",

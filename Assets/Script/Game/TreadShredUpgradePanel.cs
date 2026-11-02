@@ -92,18 +92,33 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
         Refresh();
     }
 
-    // D-017-AC-05: nothing is spent until the player confirms what the upgrade costs.
+    // D-036 (P-8): the tap is the player saying "I want this". Coins apply at once (UNDO UPGRADE reverses it), gems
+    // the player already holds are confirmed once, and a purchase goes straight to the store's own sheet.
     private void Upgrade(UpgradeTrack track)
     {
         if (Progression.IsMaxed(track))
             return;
-        var confirmation = ProgressionLabels.UpgradeConfirmation(track, Progression.Level(track) + 1,
-            Progression.Quote(track), TreadShredStore.Ensure().Wallet.Balance);
+        var quote = Progression.Quote(track);
+        var balance = TreadShredStore.Ensure().Wallet.Balance;
+        if (UpgradePurchase.Checkout(quote, balance) != UpgradeCheckout.ConfirmGems)
+        {
+            statusText.text = string.Empty;
+            shop.Buy(track);
+            return;
+        }
+        var confirmation = ProgressionLabels.UpgradeConfirmation(track, Progression.Level(track) + 1, quote, balance);
         TreadShredConfirmDialog.Show(confirmation, font, () =>
         {
             statusText.text = string.Empty;
             shop.Buy(track);
         });
+    }
+
+    // D-036-AC-01: one price on the row and on its sales screen alike.
+    private string ButtonLabel(UpgradeTrack track, bool maxed)
+    {
+        var store = TreadShredStore.Ensure();
+        return ProgressionLabels.UpgradeButton(Progression.Quote(track), maxed, store.Wallet.Balance, store.PriceFor);
     }
 
     private void Undo()
@@ -119,7 +134,7 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     {
         var maxed = Progression.IsMaxed(track);
         TreadShredSalesScreen.Show(SalesPitches.ForTrack(track), font,
-            ProgressionLabels.UpgradeButton(Progression.Quote(track), maxed),
+            ButtonLabel(track, maxed),
             ProgressionLabels.Preview(track, Progression.Level(track)),
             !maxed && !TreadShredStore.Ensure().PurchaseInProgress, () => Upgrade(track));
     }
@@ -155,7 +170,7 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
             var maxed = Progression.IsMaxed(track);
             levelTexts[track].text = "LEVEL " + level + " / " + ProgressionRules.LevelsPerTrack;
             effectTexts[track].text = ProgressionLabels.Preview(track, level);
-            TreadShredUi.SetLabel(buttons[track], ProgressionLabels.UpgradeButton(Progression.Quote(track), maxed));
+            TreadShredUi.SetLabel(buttons[track], ButtonLabel(track, maxed));
             // Locked while the store sheet is open, so a slow sheet never invites a second purchase.
             buttons[track].interactable = !maxed && !TreadShredStore.Ensure().PurchaseInProgress;
         }

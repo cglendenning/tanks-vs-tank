@@ -58,19 +58,18 @@ namespace TreadShred.Progression.Tests
                 (mixed.Title, mixed.Detail, mixed.ConfirmButton));
             var gemsOnly = ProgressionLabels.UpgradeConfirmation(UpgradeTrack.Speed, 1, new UpgradeQuote(200, 200), 10);
             Assert.AreEqual("LEVEL 1 FOR 10 GEMS", gemsOnly.Detail);
-            var short_ = ProgressionLabels.UpgradeConfirmation(UpgradeTrack.Armor, 2, new UpgradeQuote(400, 367), 2);
-            Assert.AreEqual(("LEVEL 2 FOR 33 COINS + 19 GEMS. YOU HAVE 2 GEMS", "BUY 100 GEMS"), (short_.Detail, short_.ConfirmButton));
         }
 
-        [Test(Description = "D-017-AC-05: tapping an upgrade only opens the confirmation; the upgrade runs from its confirm button")]
-        public void NothingIsSpentBeforeConfirming()
+        [Test(Description = "D-036-AC-03: only spending gems the player holds waits for the confirmation; a coins upgrade and a store purchase go ahead on the tap")]
+        public void OnlyHeldGemsWaitForConfirmation()
         {
             var panel = Script("Game/TreadShredUpgradePanel.cs");
+            var path = panel.IndexOf("if (UpgradePurchase.Checkout(quote, balance) != UpgradeCheckout.ConfirmGems)", System.StringComparison.Ordinal);
             var ask = panel.IndexOf("TreadShredConfirmDialog.Show(confirmation, font, () =>", System.StringComparison.Ordinal);
-            var buy = panel.IndexOf("shop.Buy(track);", System.StringComparison.Ordinal);
-            Assert.Greater(ask, 0, "the upgrade button opens the confirmation");
-            Assert.Greater(buy, ask, "the upgrade runs only inside the confirmation's callback");
-            Assert.AreEqual(1, panel.Split(new[] { "shop.Buy(" }, System.StringSplitOptions.None).Length - 1, "no other path buys");
+            Assert.Greater(path, 0, "the tap decides its path first");
+            Assert.Greater(ask, path, "the confirmation comes only after that check, for gems the player holds");
+            Assert.AreEqual(2, panel.Split(new[] { "shop.Buy(" }, System.StringSplitOptions.None).Length - 1,
+                "one buy on the tap, one from the confirmation; no other path buys");
         }
 
         [Test(Description = "D-017-AC-06: undo gives back exactly what an upgrade took, including coins converted from gems")]

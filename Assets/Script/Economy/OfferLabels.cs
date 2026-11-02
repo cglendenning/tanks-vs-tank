@@ -4,11 +4,15 @@ namespace TreadShred.Economy
     {
         // Plain-language copy for the result-screen offer and settings store.
 
+        // D-036-AC-01: one price for the outcome the player asked for: the gems it spends, or the store price of the
+        // pack that buys it (the pack's gems until the store reports a price).
         public static string ActionButton(string action, OfferPlan plan, string localizedPackPrice)
         {
             if (plan.CanSpendNow)
                 return action + " FOR " + CountText.Format(plan.Cost) + " GEMS";
-            return Pack(plan.PackToBuy, localizedPackPrice, "BUY ");
+            return action + ": " + (string.IsNullOrEmpty(localizedPackPrice)
+                ? "BUY " + CountText.Format(plan.PackToBuy.Gems) + " GEMS"
+                : localizedPackPrice);
         }
 
         public static string Owned(int balance)

@@ -1,3 +1,4 @@
+using System;
 using TreadShred.Economy;
 using System.Collections.Generic;
 
@@ -56,31 +57,30 @@ namespace TreadShred.Progression
         /// <summary>D-018: the upgrade screen's note on where each currency comes from and what it buys.</summary>
         public const string CurrencyNoteTitle = "COINS AND GEMS";
 
+        /// <summary>D-036-AC-04: what each currency is for, how an upgrade spends them, and what a priced button does.</summary>
         public static IReadOnlyList<string> CurrencyNote() => new[]
         {
-            "COINS: EARNED IN EVERY MISSION, WIN OR LOSE. THEY BUY PERMANENT UPGRADES.",
-            "GEMS: BOUGHT IN THE STORE OR EARNED AT MILESTONES. THEY BUY BOOSTS AND REVIVES.",
-            "SHORT ON COINS? GEMS COVER THE GAP AT 1 GEM FOR " + ProgressionRules.CoinsPerGem + " COINS."
+            "COINS: YOU EARN THEM IN EVERY MISSION, WIN OR LOSE. THEY BUY PERMANENT UPGRADES.",
+            "GEMS: BUY THEM OR EARN THEM AT MILESTONES. THEY BUY OVERDRIVE AND REVIVES.",
+            "AN UPGRADE USES YOUR COINS FIRST, THEN GEMS FOR THE REST: 1 GEM = " + ProgressionRules.CoinsPerGem + " COINS.",
+            "A BUTTON SHOWING A PRICE BUYS IT AND APPLIES IT IN ONE TAP."
         };
 
         /// <summary>
-        /// D-017-AC-05: what an upgrade will spend, asked before anything is spent. When gems fall short the
-        /// confirm button says it buys a pack, and the store's own sheet follows.
+        /// D-017-AC-05, D-036-AC-03: the one confirmation an upgrade can need, before it spends gems the player
+        /// already holds, naming the coins and gems it takes. When gems fall short the store's own sheet is the only
+        /// confirmation (D-036-AC-02), so there is no dialog to describe.
         /// </summary>
         public static GemConfirmation UpgradeConfirmation(UpgradeTrack track, int nextLevel, UpgradeQuote quote, int gemBalance)
         {
+            if (!quote.AffordableWithCoins && gemBalance < quote.GemsNeeded)
+                throw new ArgumentException("Gems fall short: the store's purchase sheet is the only confirmation (D-036-AC-02).",
+                    nameof(gemBalance));
             var coins = quote.CostCoins - quote.CoinShortfall;
             var cost = quote.AffordableWithCoins
                 ? CountText.Format(quote.CostCoins) + " COINS"
                 : (coins > 0 ? CountText.Format(coins) + " COINS + " : string.Empty) + CountText.Format(quote.GemsNeeded) + " GEMS";
-            var detail = "LEVEL " + nextLevel + " FOR " + cost;
-            var confirm = "UPGRADE";
-            if (!quote.AffordableWithCoins && gemBalance < quote.GemsNeeded)
-            {
-                detail += ". YOU HAVE " + CountText.Format(gemBalance) + " GEMS";
-                confirm = "BUY " + CountText.Format(GemCatalog.SmallestPackCovering(quote.GemsNeeded - gemBalance).Gems) + " GEMS";
-            }
-            return new GemConfirmation("UPGRADE " + Track(track) + "?", detail, confirm, "CANCEL");
+            return new GemConfirmation("UPGRADE " + Track(track) + "?", "LEVEL " + nextLevel + " FOR " + cost, "UPGRADE", "CANCEL");
         }
 
         /// <summary>D-017-AC-06: what an undone upgrade gave back.</summary>
@@ -95,16 +95,23 @@ namespace TreadShred.Progression
             return returned.Count == 0 ? back : back + ". " + string.Join(" AND ", returned) + " RETURNED";
         }
 
-        public static string UpgradeButton(UpgradeQuote quote, bool maxed)
+        /// <summary>
+        /// D-036-AC-01: the upgrade's one price. Coins when the player's coins cover it; the gems it spends when the
+        /// player's gems cover the rest (the coins it also takes are named in the confirmation); otherwise the store
+        /// price of the gem pack that buys it, or the pack's gems until the store reports a price.
+        /// </summary>
+        public static string UpgradeButton(UpgradeQuote quote, bool maxed, int gemBalance = int.MaxValue,
+            Func<GemPack, string> priceFor = null)
         {
             if (maxed)
                 return "MAXED";
             if (quote.AffordableWithCoins)
                 return "UPGRADE FOR " + CountText.Format(quote.CostCoins) + " COINS";
-            var coins = quote.CostCoins - quote.CoinShortfall;
-            return coins > 0
-                ? "UPGRADE FOR " + CountText.Format(coins) + " COINS + " + CountText.Format(quote.GemsNeeded) + " GEMS"
-                : "UPGRADE FOR " + CountText.Format(quote.GemsNeeded) + " GEMS";
+            if (gemBalance >= quote.GemsNeeded)
+                return "UPGRADE FOR " + CountText.Format(quote.GemsNeeded) + " GEMS";
+            var pack = GemCatalog.SmallestPackCovering(quote.GemsNeeded - gemBalance);
+            var price = priceFor?.Invoke(pack);
+            return "UPGRADE: " + (string.IsNullOrEmpty(price) ? "BUY " + CountText.Format(pack.Gems) + " GEMS" : price);
         }
 
         public static string Coins(int coins)

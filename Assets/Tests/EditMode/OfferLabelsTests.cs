@@ -17,7 +17,7 @@ namespace TreadShred.Economy.Tests
         {
             var plan = GemCatalog.Plan(GemOffer.Overdrive, 40);
 
-            Assert.AreEqual("BUY 100 GEMS FOR $0.99", OfferLabels.ActionButton("ACTIVATE", plan, "$0.99"));
+            Assert.AreEqual("ACTIVATE: $0.99", OfferLabels.ActionButton("ACTIVATE", plan, "$0.99"));
         }
 
         [Test(Description = "D-009-AC-01: the button omits the price until the store reports it")]
@@ -25,7 +25,7 @@ namespace TreadShred.Economy.Tests
         {
             var plan = GemCatalog.Plan(GemOffer.ArmoredRedeploy, 0);
 
-            Assert.AreEqual("BUY 100 GEMS", OfferLabels.ActionButton("REDEPLOY", plan, null));
+            Assert.AreEqual("REDEPLOY: BUY 100 GEMS", OfferLabels.ActionButton("REDEPLOY", plan, null));
         }
 
         [Test(Description = "D-009-AC-02: the balance line shows only the balance when affordable")]

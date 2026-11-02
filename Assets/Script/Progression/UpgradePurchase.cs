@@ -11,8 +11,24 @@ namespace TreadShred.Progression
     /// screen calls Release when it closes, so a purchase still arriving credits its gems and upgrades nothing (D-011).
     /// Until then, Undo gives back the upgrades made on the screen, latest first (D-017-AC-06).
     /// </summary>
+    /// <summary>D-036 (P-8): what a tap on an upgrade does.</summary>
+    public enum UpgradeCheckout
+    {
+        /// <summary>Coins cover it: it applies on the tap, and UNDO UPGRADE reverses it (D-036-AC-03).</summary>
+        ApplyNow,
+        /// <summary>The gems the player holds cover the rest: confirmed once (D-036-AC-03).</summary>
+        ConfirmGems,
+        /// <summary>Gems fall short: the store's purchase sheet is the only confirmation (D-036-AC-02).</summary>
+        BuyGems
+    }
+
     public sealed class UpgradePurchase
     {
+        public static UpgradeCheckout Checkout(UpgradeQuote quote, int gemBalance) =>
+            quote.AffordableWithCoins ? UpgradeCheckout.ApplyNow
+            : gemBalance >= quote.GemsNeeded ? UpgradeCheckout.ConfirmGems
+            : UpgradeCheckout.BuyGems;
+
         private readonly PlayerProgression progression;
         private readonly GemWallet wallet;
         private readonly PurchaseFlow purchases;

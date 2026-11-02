@@ -22,9 +22,13 @@ public sealed class TreadShredNotePanel : MonoBehaviour
         var heading = TreadShredUi.CreateText(title, panel, new Vector2(0f, 245f), new Vector2(1180f, 70f), 52, font);
         heading.color = TreadShredUi.TitleColor;
         TreadShredUi.ShrinkToFit(heading, 32);
+        // The lines share the room between the heading and BACK, centred, so any number of them fits (the COINS AND GEMS
+        // note has four, D-036-AC-04).
+        var step = Mathf.Min(105f, 360f / lines.Count);
+        var first = 10f + step * (lines.Count - 1) / 2f;
         for (var i = 0; i < lines.Count; i++)
         {
-            var line = TreadShredUi.CreateText(lines[i], panel, new Vector2(0f, 135f - i * 105f), new Vector2(1180f, 92f), 30, font);
+            var line = TreadShredUi.CreateText(lines[i], panel, new Vector2(0f, first - i * step), new Vector2(1180f, step - 13f), 30, font);
             line.color = i == lines.Count - 1 ? TreadShredUi.DetailColor : Color.white;
             TreadShredUi.ShrinkToFit(line, 20);
         }

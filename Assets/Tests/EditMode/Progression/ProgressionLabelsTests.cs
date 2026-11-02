@@ -33,7 +33,7 @@ namespace TreadShred.Progression.Tests
         public void UpgradeButtonNamesCurrencies()
         {
             Assert.AreEqual("UPGRADE FOR 200 COINS", ProgressionLabels.UpgradeButton(new UpgradeQuote(200, 0), false));
-            Assert.AreEqual("UPGRADE FOR 100 COINS + 5 GEMS", ProgressionLabels.UpgradeButton(new UpgradeQuote(200, 100), false));
+            Assert.AreEqual("UPGRADE FOR 5 GEMS", ProgressionLabels.UpgradeButton(new UpgradeQuote(200, 100), false));
             Assert.AreEqual("UPGRADE FOR 10 GEMS", ProgressionLabels.UpgradeButton(new UpgradeQuote(200, 200), false));
             Assert.AreEqual("MAXED", ProgressionLabels.UpgradeButton(new UpgradeQuote(0, 0), true));
         }

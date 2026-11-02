@@ -118,7 +118,7 @@ namespace TreadShred.Progression.Tests
             StringAssert.Contains("rewardButton.GetComponentInChildren<Text>().text, rewardBalanceText.text,", results);
             StringAssert.Contains("rewardButton.interactable && !rewardUsedThisScreen, onTap);", results);
             var upgrades = Script("Game/TreadShredUpgradePanel.cs");
-            StringAssert.Contains("ProgressionLabels.UpgradeButton(Progression.Quote(track), maxed),", upgrades);
+            StringAssert.Contains("ButtonLabel(track, maxed),", upgrades);
             StringAssert.Contains("!maxed && !TreadShredStore.Ensure().PurchaseInProgress, () => Upgrade(track));", upgrades);
         }
     }
