@@ -67,8 +67,8 @@ namespace TreadShred.Progression.Tests
         public void CopySaysHowLongOverdriveLasts()
         {
             Assert.AreEqual("2 SHOTS PER TAP UNTIL YOUR TANK GOES DOWN", OfferLabels.OverdriveEffect);
-            Assert.AreEqual("2 SHOTS PER TAP UNTIL YOUR TANK GOES DOWN. 60 GEMS SPENT", OfferLabels.OverdriveActiveDetail(60));
-            Assert.AreEqual(OfferLabels.OverdriveEffect, OfferLabels.OverdriveActiveDetail(0), "carried from an earlier mission");
+            Assert.AreEqual("60 GEMS SPENT", OfferLabels.OverdriveActiveDetail(60));
+            Assert.AreEqual("ON FROM AN EARLIER MISSION", OfferLabels.OverdriveActiveDetail(0), "carried from an earlier mission");
             CollectionAssert.Contains(SalesPitches.For(SaleItem.Overdrive).Points, "UNTIL YOUR TANK GOES DOWN");
             StringAssert.Contains("OfferLabels.OverdriveEffect,", Script("ManagerScore/ManagerScore.cs"));
         }

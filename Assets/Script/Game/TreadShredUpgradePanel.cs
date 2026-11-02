@@ -147,7 +147,7 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     }
 
     // Upgrades become final when the screen closes; only those are reported, so undone ones never count.
-    private static void LogPurchase(UpgradeReceipt receipt)
+    internal static void LogPurchase(UpgradeReceipt receipt)
     {
         var quote = receipt.Quote;
         TreadShredAnalytics.Log(GameEvents.UpgradePurchased(receipt.Track.ToString().ToLowerInvariant(), receipt.Level,

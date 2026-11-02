@@ -127,6 +127,21 @@ namespace TreadShred.Progression
             return Level(track) >= ProgressionRules.LevelsPerTrack;
         }
 
+        /// <summary>
+        /// D-009-AC-03: the next level that costs fewest coins, the one most likely to be a single tap; ties go to the
+        /// first track (armor, firepower, speed). Null when every track is maxed.
+        /// </summary>
+        public UpgradeTrack? CheapestNextUpgrade()
+        {
+            UpgradeTrack? cheapest = null;
+            foreach (UpgradeTrack track in Enum.GetValues(typeof(UpgradeTrack)))
+            {
+                if (!IsMaxed(track) && (cheapest == null || Quote(track).CostCoins < Quote(cheapest.Value).CostCoins))
+                    cheapest = track;
+            }
+            return cheapest;
+        }
+
         public UpgradeQuote Quote(UpgradeTrack track)
         {
             if (IsMaxed(track))

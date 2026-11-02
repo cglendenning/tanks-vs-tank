@@ -52,6 +52,9 @@ namespace TreadShred.Progression
         }
 
         public const string Undo = "UNDO UPGRADE";
+
+        /// <summary>The same undo on the victory screen's upgrade card, where the row is narrow (D-036-AC-03).</summary>
+        public const string UndoShort = "UNDO";
         public const string UpgradesButton = "UPGRADES";
 
         /// <summary>D-018: the upgrade screen's note on where each currency comes from and what it buys.</summary>

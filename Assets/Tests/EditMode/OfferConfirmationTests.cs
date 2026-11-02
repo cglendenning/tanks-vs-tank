@@ -32,7 +32,7 @@ namespace TreadShred.Economy.Tests
         public void OverdriveActiveStateIsExplicit()
         {
             Assert.AreEqual("OVERDRIVE ACTIVE", OfferLabels.OverdriveActive);
-            Assert.AreEqual("2 SHOTS PER TAP UNTIL YOUR TANK GOES DOWN. 60 GEMS SPENT", OfferLabels.OverdriveActiveDetail(60));
+            Assert.AreEqual("60 GEMS SPENT", OfferLabels.OverdriveActiveDetail(60));
         }
     }
 }

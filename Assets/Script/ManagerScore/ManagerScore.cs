@@ -109,6 +109,11 @@ public class ManagerScore : MonoBehaviour
     private Text rewardBalanceText;
     private Button rewardButton;
     private Font rewardFont;
+    // The victory card's upgrade offer while Overdrive carries over (D-009-AC-03, D-036).
+    private UpgradeTrack? upgradeCardTrack;
+    private UpgradePurchase cardShop;
+    private Text cardPreviewText;
+    private Button cardUndoButton;
     private bool scoreCommitted;
     // How this mission ended for SCORE, and whether it set a new HIGH SCORE (D-032-AC-01).
     private MissionScore lastMission;
@@ -344,12 +349,20 @@ public class ManagerScore : MonoBehaviour
 
     private void BuildVictoryRewardActions()
     {
-        BuildOfferPanel(
-            GemOffer.Overdrive,
-            "OVERDRIVE",
-            OfferLabels.OverdriveEffect,
-            "ACTIVATE",
-            () => ConfirmThen(GemOffer.Overdrive, RedeemOverdrive));
+        // D-009-AC-03, P-8: Overdrive still running from an earlier mission leaves nothing to sell here, so the card offers
+        // the cheapest next upgrade instead; with every track maxed it only says Overdrive is on.
+        var track = TreadShredBoosts.Current.OverdriveActive
+            ? TreadShredProgress.Ensure().Progression.CheapestNextUpgrade()
+            : null;
+        if (track.HasValue)
+            BuildUpgradeOfferPanel(track.Value);
+        else
+            BuildOfferPanel(
+                GemOffer.Overdrive,
+                "OVERDRIVE",
+                OfferLabels.OverdriveEffect,
+                "ACTIVATE",
+                () => ConfirmThen(GemOffer.Overdrive, RedeemOverdrive));
         ArrangeRetry(true);
         // D-033-AC-03: only a victory screen may ask for a store rating, after real play.
         TreadShredReviewPrompt.VictoryScreenOpened();
@@ -358,19 +371,11 @@ public class ManagerScore : MonoBehaviour
     private void BuildOfferPanel(GemOffer offer, string title, string detail, string action,
         UnityEngine.Events.UnityAction onTap)
     {
-        if (rewardedActionPanel != null || VictoryofFail == null)
+        var rootRect = CreateOfferCard();
+        if (rootRect == null)
             return;
-
-        rewardUsedThisScreen = false;
-        rewardFont = TreadShredUi.FindFont(VictoryofFail);
         activeOffer = offer;
         activeOfferAction = action;
-
-        var rootRect = TreadShredUi.CreateRect("TreadShredOffer", (RectTransform)VictoryofFail.transform,
-            new Vector2(0f, -18f), new Vector2(760f, 196f),
-            typeof(RectTransform), typeof(Image), typeof(Outline));
-        rewardedActionPanel = rootRect.gameObject;
-        TreadShredUi.StylePanel(rewardedActionPanel);
 
         // D-034: the boost working, looping beside the offer; tapping it opens the full sales screen.
         TreadShredSalesClip.Create(rootRect, new Vector2(-222f, 0f), new Vector2(284f, 160f),
@@ -402,6 +407,115 @@ public class ManagerScore : MonoBehaviour
             TreadShredAnalytics.Log(GameEvents.OfferShown(OfferName(offer), TreadShredStore.Ensure().Wallet.Balance));
         }
 
+        BuildResultExtras();
+    }
+
+    // The result screen's one offer card (D-009, D-034); null when it is already built or there is no result screen.
+    private RectTransform CreateOfferCard()
+    {
+        if (rewardedActionPanel != null || VictoryofFail == null)
+            return null;
+
+        rewardUsedThisScreen = false;
+        rewardFont = TreadShredUi.FindFont(VictoryofFail);
+        var rootRect = TreadShredUi.CreateRect("TreadShredOffer", (RectTransform)VictoryofFail.transform,
+            new Vector2(0f, -18f), new Vector2(760f, 196f),
+            typeof(RectTransform), typeof(Image), typeof(Outline));
+        rewardedActionPanel = rootRect.gameObject;
+        TreadShredUi.StylePanel(rewardedActionPanel);
+        return rootRect;
+    }
+
+    // D-009-AC-03, D-036: the cheapest next upgrade on the victory card, with D-036's one price and rules: coins apply on the
+    // tap (UNDO on the card reverses it), gems the player holds are confirmed once, money goes straight to the store sheet.
+    private void BuildUpgradeOfferPanel(UpgradeTrack track)
+    {
+        var rootRect = CreateOfferCard();
+        if (rootRect == null)
+            return;
+        upgradeCardTrack = track;
+        var store = TreadShredStore.Ensure();
+        var progression = TreadShredProgress.Ensure().Progression;
+        cardShop = new UpgradePurchase(progression, store.Wallet, store.Purchases,
+            (upgraded, quote) => RefreshUpgradeCard(ProgressionLabels.Track(upgraded) + " UPGRADED TO LEVEL " + progression.Level(upgraded)),
+            RefreshOfferControls);
+
+        TreadShredSalesClip.Create(rootRect, new Vector2(-222f, 0f), new Vector2(284f, 160f),
+            SalesPitches.ForTrack(track), rewardFont, OpenUpgradeSalesScreen);
+
+        const float column = 150f;
+        TreadShredUi.CreateText("UPGRADE " + ProgressionLabels.Track(track), rootRect, new Vector2(column, 70f),
+            new Vector2(430f, 34f), 26, rewardFont).color = TreadShredUi.TitleColor;
+        cardPreviewText = TreadShredUi.CreateText(string.Empty, rootRect, new Vector2(column, 36f), new Vector2(430f, 24f), 17, rewardFont);
+        cardPreviewText.color = Color.white;
+        TreadShredUi.ShrinkToFit(cardPreviewText, 12);
+        rewardBalanceText = TreadShredUi.CreateText(string.Empty, rootRect, new Vector2(column, 8f), new Vector2(430f, 22f), 15, rewardFont);
+        TreadShredUi.ShrinkToFit(rewardBalanceText, 11);
+
+        rewardButton = TreadShredUi.CreateButton(string.Empty, rootRect, new Vector2(90f, -50f), new Vector2(300f, 72f), 22,
+            rewardFont, UpgradeFromCard);
+        TreadShredUi.ShrinkToFit(rewardButton.GetComponentInChildren<Text>(), 14);
+        cardUndoButton = TreadShredUi.CreateButton(ProgressionLabels.UndoShort, rootRect, new Vector2(312f, -50f),
+            new Vector2(120f, 72f), 22, rewardFont, UndoCardUpgrade);
+        progression.Changed += RefreshCardOnProgress;
+        RefreshUpgradeCard(null);
+        TreadShredAnalytics.Log(GameEvents.OfferShown("upgrade_" + track.ToString().ToLowerInvariant(), store.Wallet.Balance));
+        BuildResultExtras();
+    }
+
+    private void UpgradeFromCard()
+    {
+        var track = upgradeCardTrack.Value;
+        var progression = TreadShredProgress.Ensure().Progression;
+        if (progression.IsMaxed(track))
+            return;
+        var quote = progression.Quote(track);
+        var balance = TreadShredStore.Ensure().Wallet.Balance;
+        if (UpgradePurchase.Checkout(quote, balance) != UpgradeCheckout.ConfirmGems)
+        {
+            cardShop.Buy(track);
+            return;
+        }
+        TreadShredConfirmDialog.Show(ProgressionLabels.UpgradeConfirmation(track, progression.Level(track) + 1, quote, balance),
+            rewardFont, () => cardShop.Buy(track));
+    }
+
+    private void UndoCardUpgrade()
+    {
+        var receipt = cardShop.LastUpgrade;
+        RefreshUpgradeCard(receipt.HasValue && cardShop.Undo() ? ProgressionLabels.Undone(receipt.Value) : null);
+    }
+
+    private void RefreshCardOnProgress() => RefreshUpgradeCard(null);
+
+    // Pass a status to replace the Overdrive line, or null to show it.
+    private void RefreshUpgradeCard(string status)
+    {
+        if (rewardButton == null || !upgradeCardTrack.HasValue)
+            return;
+        var track = upgradeCardTrack.Value;
+        var progression = TreadShredProgress.Ensure().Progression;
+        var store = TreadShredStore.Ensure();
+        var maxed = progression.IsMaxed(track);
+        TreadShredUi.SetLabel(rewardButton, ProgressionLabels.UpgradeButton(progression.Quote(track), maxed, store.Wallet.Balance, store.PriceFor));
+        rewardButton.interactable = !maxed && !store.PurchaseInProgress;
+        cardPreviewText.text = ProgressionLabels.Preview(track, progression.Level(track));
+        rewardBalanceText.text = status ?? OfferLabels.OverdriveStatus(0);
+        rewardBalanceText.color = status == null ? TreadShredUi.TitleColor : TreadShredUi.DetailColor;
+        cardUndoButton.gameObject.SetActive(cardShop.CanUndo);
+    }
+
+    // D-034: the upgrade's sales screen sells with the card's own button.
+    private void OpenUpgradeSalesScreen()
+    {
+        var track = upgradeCardTrack.Value;
+        TreadShredSalesScreen.Show(SalesPitches.ForTrack(track), rewardFont, rewardButton.GetComponentInChildren<Text>().text,
+            cardPreviewText.text, rewardButton.interactable, UpgradeFromCard);
+    }
+
+    // What every result screen shows around its offer card.
+    private void BuildResultExtras()
+    {
         // Coins, milestone gems and tier unlocks earned by this mission (D-018, D-026, D-019).
         var reward = TreadShredProgress.Ensure().LastReward;
         if (reward.HasValue)
@@ -524,6 +638,14 @@ public class ManagerScore : MonoBehaviour
     {
         if (TreadShredStore.Instance != null)
             TreadShredStore.Instance.Wallet.BalanceChanged -= OnBalanceChanged;
+        if (cardShop == null)
+            return;
+        // Upgrades become final when the screen closes; only those kept are reported (as on the upgrade screen).
+        foreach (var receipt in cardShop.Kept)
+            TreadShredUpgradePanel.LogPurchase(receipt);
+        cardShop.Release();
+        if (TreadShredProgress.Instance != null)
+            TreadShredProgress.Instance.Progression.Changed -= RefreshCardOnProgress;
     }
 
     // D-034: the sales screen's button is this offer's own, with the same label and the same purchase.
@@ -540,6 +662,11 @@ public class ManagerScore : MonoBehaviour
     // Pass a status to replace the balance line, or null to show the balance.
     private void RefreshOfferControls(string status)
     {
+        if (upgradeCardTrack.HasValue)
+        {
+            RefreshUpgradeCard(status);
+            return;
+        }
         // Once used, the panel keeps saying what was bought.
         if (rewardButton == null || rewardUsedThisScreen)
             return;
@@ -583,18 +710,18 @@ public class ManagerScore : MonoBehaviour
         }, RefreshOfferControls);
     }
 
+    // D-009-AC-03, P-8: a status where the button was, never a button that sells nothing.
     private void ShowOverdriveActive(int gemsSpent)
     {
-        TreadShredUi.SetLabel(rewardButton, OfferLabels.OverdriveActive);
-        // The tint multiplies the image color, so use a white image for a solid accent fill.
-        rewardButton.image.color = Color.white;
-        var colors = rewardButton.colors;
-        colors.disabledColor = TreadShredUi.AccentColor;
-        rewardButton.colors = colors;
         rewardButton.interactable = false;
+        rewardButton.gameObject.SetActive(false);
         if (UnityEngine.EventSystems.EventSystem.current != null)
             UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
-        rewardBalanceText.text = OfferLabels.OverdriveActiveDetail(gemsSpent);
+        var line = rewardBalanceText.rectTransform;
+        line.anchoredPosition = new Vector2(150f, -46f);
+        line.sizeDelta = new Vector2(430f, 60f);
+        rewardBalanceText.fontSize = 24;
+        rewardBalanceText.text = OfferLabels.OverdriveStatus(gemsSpent);
         rewardBalanceText.color = TreadShredUi.TitleColor;
     }
 

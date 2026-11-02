@@ -55,11 +55,17 @@ namespace TreadShred.Economy
         public const string OverdriveLasts = "UNTIL YOUR TANK GOES DOWN";
         public const string OverdriveEffect = "2 SHOTS PER TAP " + OverdriveLasts;
 
-        /// <summary>The victory screen while Overdrive runs: just bought (gems spent), or carried from earlier (0).</summary>
+        /// <summary>
+        /// The victory screen while Overdrive runs: just bought (gems spent), or carried from earlier (0). A status only:
+        /// the card's description already states the effect.
+        /// </summary>
         public static string OverdriveActiveDetail(int gemsSpent)
         {
-            return gemsSpent > 0 ? OverdriveEffect + ". " + CountText.Format(gemsSpent) + " GEMS SPENT" : OverdriveEffect;
+            return gemsSpent > 0 ? CountText.Format(gemsSpent) + " GEMS SPENT" : "ON FROM AN EARLIER MISSION";
         }
+
+        /// <summary>D-009-AC-03: the line that says Overdrive is on, in place of a button that would sell nothing.</summary>
+        public static string OverdriveStatus(int gemsSpent) => OverdriveActive + "  |  " + OverdriveActiveDetail(gemsSpent);
 
         public static string Pack(GemPack pack, string localizedPrice, string prefix = "")
         {
