@@ -1,0 +1,17 @@
+{
+  "end_card_seconds": 2.2,
+  "music_cues": [
+    {"file": "banjo.wav", "start": 0.0, "end": 8.6, "volume": 0.22},
+    {"file": "game", "start": 8.6, "volume": 0.28, "end_volume": 0.75}
+  ],
+  "cuts": [
+    {"shot": "1", "start": 0.0, "dur": 2.5, "game": 5.6, "captions": ["DALE. THREE HOURS ON", "THAT STUPID TANK GAME."]},
+    {"shot": "1", "start": 2.5, "dur": 1.9, "game": 8.1, "captions": ["AND THE POSSUM'S", "STILL IN THE DRYER!"]},
+    {"shot": "1", "start": 4.4, "dur": 0.6, "game": 10.0, "captions": ["MM-HM."]},
+    {"shot": "2", "start": 0.0, "dur": 1.9, "game": 10.6, "captions": ["HOLD UP... WHAT IN THE", "SAM HILL IS THAT?"]},
+    {"shot": "2", "start": 1.9, "dur": 1.7, "game": 12.5, "captions": ["GIMME THAT!"]},
+    {"shot": "insert", "dur": 1.6, "game": 13.9, "captions": ["FREE. NO ADS."]},
+    {"shot": "4", "start": 0.0, "dur": 1.8, "captions": ["YOU BEEN HIDIN'", "THIS FROM ME?"]},
+    {"shot": "4", "start": 1.8, "dur": 2.2, "captions": ["BLESS YOUR HEART...", "YOU DUMBASS."]}
+  ]
+}
