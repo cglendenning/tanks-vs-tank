@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Unity batch logs go in Logs/ (ignored), not the repository root.
+mkdir -p "$ROOT_DIR/Logs"
 UNITY_BIN="${UNITY_BIN:-/Users/craig/Unity/Hub/Editor/6000.3.24f1-arm64/Unity.app/Contents/MacOS/Unity}"
 IOS_DIR="$ROOT_DIR/Builds/iOSDevice"
 ARCHIVE_DIR="$IOS_DIR/archive"
@@ -15,7 +17,7 @@ IOS_BUNDLE_ID="com.tgts.tanksvstank"
 mkdir -p "$ARCHIVE_DIR" "$EXPORT_DIR"
 "$UNITY_BIN" -batchmode -quit -nographics -projectPath "$ROOT_DIR" \
   -executeMethod TankBuildAutomation.BuildIosFromCommandLine \
-  -logFile "$ROOT_DIR/tank-ios-release-unity.log"
+  -logFile "$ROOT_DIR/Logs/tank-ios-release-unity.log"
 pod install --project-directory="$IOS_DIR"
 
 rm -rf "$ARCHIVE_PATH" "$EXPORT_DIR"/TreadShred.app "$EXPORT_DIR"/TreadShred.ipa

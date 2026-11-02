@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Unity batch logs go in Logs/ (ignored), not the repository root.
+mkdir -p "$ROOT_DIR/Logs"
 UNITY_BIN="${UNITY_BIN:-/Users/craig/Unity/Hub/Editor/6000.3.24f1-arm64/Unity.app/Contents/MacOS/Unity}"
 
 : "${TREAD_SHRED_ANDROID_KEYSTORE:?Set the Android upload keystore path}"
@@ -16,6 +18,6 @@ export TREAD_SHRED_ANDROID_RELEASE=1
 mkdir -p "$ROOT_DIR/Builds/Android"
 "$UNITY_BIN" -batchmode -quit -nographics -projectPath "$ROOT_DIR" \
   -executeMethod TankBuildAutomation.BuildAndroidBundleFromCommandLine \
-  -logFile "$ROOT_DIR/tank-android-release-unity.log"
+  -logFile "$ROOT_DIR/Logs/tank-android-release-unity.log"
 
 echo "AAB=$ROOT_DIR/Builds/Android/TreadShred.aab"
