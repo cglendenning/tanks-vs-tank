@@ -1,0 +1,16 @@
+{
+  "end_card_seconds": 2.5,
+  "music_cues": [
+    {"file": "banjo.wav", "start": 0.0, "end": 7.7, "volume": 0.22},
+    {"file": "game", "start": 7.7, "volume": 0.28, "end_volume": 0.75}
+  ],
+  "cuts": [
+    {"shot": "a", "start": 0.0, "dur": 0.4, "game": 5.6, "captions": ["DALE!"]},
+    {"shot": "a", "start": 1.0, "dur": 3.5, "game": 6.0, "captions": ["DALE! THREE HOURS ON", "THAT STUPID TANK GAME?!"]},
+    {"shot": "b", "start": 0.0, "dur": 2.3, "game": 9.5, "captions": ["WAIT... WHAT IS THAT?", "GIMME THAT."]},
+    {"shot": "b", "start": 2.3, "dur": 0.5, "game": 11.8, "captions": ["HEY!"]},
+    {"shot": "b", "start": 3.5, "dur": 1.0, "game": 12.3, "captions": ["HEY!"]},
+    {"shot": "insert", "dur": 1.6, "game": 13.9, "audio": ["c", 0.0], "captions": ["IT'S FREE.", "THERE'S NO ADS."]},
+    {"shot": "c", "start": 1.6, "dur": 2.4, "captions": ["AND YOU HID THIS", "FROM ME? DUMBASS."]}
+  ]
+}
