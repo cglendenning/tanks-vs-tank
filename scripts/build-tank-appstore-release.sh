@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Unity batch logs go in Logs/ (ignored), not the repository root.
 mkdir -p "$ROOT_DIR/Logs"
-UNITY_BIN="${UNITY_BIN:-/Users/craig/Unity/Hub/Editor/6000.3.24f1-arm64/Unity.app/Contents/MacOS/Unity}"
+UNITY_BIN="${UNITY_BIN:-/Users/craig/Unity/Hub/Editor/6000.3.27f2/Unity.app/Contents/MacOS/Unity}"
 IOS_DIR="$ROOT_DIR/Builds/iOSDevice"
 ARCHIVE_DIR="$IOS_DIR/archive-appstore"
 ARCHIVE_PATH="$ARCHIVE_DIR/TreadShred.xcarchive"

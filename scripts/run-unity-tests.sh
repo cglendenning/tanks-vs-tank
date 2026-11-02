@@ -14,7 +14,7 @@
 # `spec_tools.py record --results`. Exits non-zero when any test fails or does not run.
 set -euo pipefail
 
-UNITY="${UNITY:-/Users/craig/Unity/Hub/Editor/6000.3.24f1-arm64/Unity.app/Contents/MacOS/Unity}"
+UNITY="${UNITY:-/Users/craig/Unity/Hub/Editor/6000.3.27f2/Unity.app/Contents/MacOS/Unity}"
 PROJECT="$(cd "$(dirname "$0")/.." && pwd)"
 CLONE="$PROJECT.playmode"
 PREFS_DOMAIN="unity.TGT Studios.Tread Shred"

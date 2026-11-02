@@ -38,7 +38,10 @@ Unity batch run, simulator or emulator session, device install or script run:
   reinstall, or update a Unity editor as an automatic fallback.
 - Unity Hub's editor inventory may be wrong. Reuse the known working editor
   directly at:
-  `/Users/craig/Unity/Hub/Editor/6000.3.24f1-arm64/Unity.app/Contents/MacOS/Unity`
+  `/Users/craig/Unity/Hub/Editor/6000.3.27f2/Unity.app/Contents/MacOS/Unity`
+  (6000.3.27f2, the 6.3 LTS patch the project moved to on 2026-11-01 with Craig's authorization).
+  6000.3.24f1 stays installed at `/Users/craig/Unity/Hub/Editor/6000.3.24f1-arm64/` as the rollback and
+  for `/Users/craig/superhero-game`.
 - Before assuming the editor is unavailable, inspect prior successful logs and
   the reference projects (`/Users/craig/greenpyramid` and
   `/Users/craig/superhero-game`) for the resolved executable and scripts.

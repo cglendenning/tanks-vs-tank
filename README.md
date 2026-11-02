@@ -4,7 +4,7 @@ Modern Unity 6 rebuild of the original tank game for iOS and Android from one so
 
 ## Toolchain
 
-- Unity `6000.3.24f1`
+- Unity `6000.3.27f2`
 - iOS device target: iOS 15+, ARM64, IL2CPP
 - Android target: API 36, min API 25, ARM64, IL2CPP
 - iOS bundle ID: `com.tgts.tanksvstank`
