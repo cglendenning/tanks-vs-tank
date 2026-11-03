@@ -116,7 +116,7 @@ namespace TreadShred.Screens.Tests
             Assert.IsEmpty(findings, ScreenAudit.Report(findings));
         }
 
-        [UnityTest(Description = "D-037-AC-04: while the Starter Pack is on sale the gem store shows STARTER PACK: 300 GEMS in the smallest pack's slot, the smallest pack returns once it is bought, and the store passes the screen audit")]
+        [UnityTest(Description = "D-037-AC-06: with the Starter Pack on sale the gem store, showing STARTER PACK: 300 GEMS in the smallest pack's slot, passes the screen audit on every screen shape, and the smallest pack returns once it is bought; the revive panel's audit runs in its own test")]
         public IEnumerator GemStoreShowsTheStarterPackInTheSmallestSlot()
         {
             var store = Store();
