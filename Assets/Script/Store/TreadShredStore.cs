@@ -50,7 +50,7 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
         DontDestroyOnLoad(gameObject);
         Wallet = new GemWallet(new PlayerPrefsWalletStore());
         Wallet.GrantStarterIfNeeded();
-        purchases = new PurchaseFlow(Wallet, this);
+        purchases = new PurchaseFlow(Wallet, this, () => IsAvailable(GemCatalog.StarterPack.ProductId));
         SceneManager.sceneLoaded += OnSceneLoaded;
         ConnectStore();
     }
@@ -66,8 +66,17 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
 
     public OfferPlan PlanFor(GemOffer offer)
     {
-        return GemCatalog.Plan(offer, Wallet.Balance);
+        return purchases.PlanFor(GemCatalog.Cost(offer));
     }
+
+    /// <summary>What a gem cost spends now, or the pack one tap buys for it, the Starter Pack included (D-037).</summary>
+    public OfferPlan PlanFor(int cost)
+    {
+        return purchases.PlanFor(cost);
+    }
+
+    /// <summary>D-037-AC-02: the player has not bought the Starter Pack and the store offers its product.</summary>
+    public bool StarterPackOnSale => purchases.StarterPackOnSale;
 
     public string PriceFor(GemPack pack)
     {
@@ -140,6 +149,12 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
         return storeController?.GetProducts().FirstOrDefault(p => p.definition.id == productId);
     }
 
+    private bool IsAvailable(string productId)
+    {
+        var product = FindProduct(productId);
+        return product != null && product.availableToPurchase;
+    }
+
     private async void ConnectStore()
     {
         storeController = UnityIAPServices.StoreController();
@@ -170,6 +185,7 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
     private void OnStoreConnected()
     {
         storeController.FetchProducts(GemCatalog.Packs
+            .Append(GemCatalog.StarterPack)
             .Select(pack => new ProductDefinition(pack.ProductId, ProductType.Consumable))
             .ToList());
     }

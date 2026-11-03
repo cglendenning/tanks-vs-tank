@@ -50,7 +50,7 @@ namespace TreadShred.Progression
         {
             if (TryUpgrade(track) != UpgradeResult.NotEnoughGems)
                 return;
-            var pack = GemCatalog.SmallestPackCovering(progression.Quote(track).GemsNeeded - wallet.Balance);
+            var pack = purchases.PackCovering(progression.Quote(track).GemsNeeded - wallet.Balance);
             purchases.Request(() => purchases.BuyPack(pack, () => AfterPack(track), onStatus), onStatus);
         }
 

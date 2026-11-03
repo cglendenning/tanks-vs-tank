@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TreadShred.Analytics;
 using TreadShred.Economy;
 using TreadShred.Progression;
 using UnityEngine;
@@ -23,7 +24,7 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
     private Text balanceText;
     private Text statusText;
     private System.Action<string> showStatus;
-    private readonly List<KeyValuePair<GemPack, Button>> packButtons = new List<KeyValuePair<GemPack, Button>>();
+    private readonly List<Button> packButtons = new List<Button>();
 
     public static TreadShredSettingsPanel Show(LoadLv menu, Font font)
     {
@@ -62,10 +63,9 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
 
         for (var i = 0; i < GemCatalog.Packs.Count; i++)
         {
-            var pack = GemCatalog.Packs[i];
-            var button = TreadShredUi.CreateButton(string.Empty, backdrop, new Vector2(ColumnOffset, RowY[i + 1]),
-                new Vector2(ColumnWidth, 96f), 32, font, () => BuyPack(pack));
-            packButtons.Add(new KeyValuePair<GemPack, Button>(pack, button));
+            var slot = i;
+            packButtons.Add(TreadShredUi.CreateButton(string.Empty, backdrop, new Vector2(ColumnOffset, RowY[i + 1]),
+                new Vector2(ColumnWidth, 96f), 32, font, () => BuyPack(SlotPack(slot))));
         }
 
         statusText = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(ColumnOffset, -200f),
@@ -78,8 +78,12 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
 
         TreadShredUi.CreateButton("BACK", backdrop, new Vector2(0f, -390f), new Vector2(440f, 120f), 52, font, Close);
 
-        TreadShredStore.Ensure().Wallet.BalanceChanged += OnBalanceChanged;
+        var store = TreadShredStore.Ensure();
+        store.Wallet.BalanceChanged += OnBalanceChanged;
         Refresh();
+        // D-037-AC-05: the gem store offering the Starter Pack counts as an offer, like the revive panel's.
+        if (store.StarterPackOnSale)
+            TreadShredAnalytics.Log(GameEvents.OfferShown("starter_pack", store.Wallet.Balance));
     }
 
     private Button CreateToggleRow(string label, float y, RectTransform parent, System.Action toggle)
@@ -93,6 +97,13 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
                 toggle();
                 Refresh();
             });
+    }
+
+    // D-037-AC-04: while the Starter Pack is on sale it takes the smallest pack's slot (the same price for a third of
+    // the gems); the smallest pack returns once it is bought.
+    private static GemPack SlotPack(int slot)
+    {
+        return slot == 0 && TreadShredStore.Ensure().StarterPackOnSale ? GemCatalog.StarterPack : GemCatalog.Packs[slot];
     }
 
     private void BuyPack(GemPack pack)
@@ -115,8 +126,14 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
 
         var store = TreadShredStore.Ensure();
         balanceText.text = OfferLabels.Owned(store.Wallet.Balance);
-        foreach (var entry in packButtons)
-            TreadShredUi.SetLabel(entry.Value, OfferLabels.Pack(entry.Key, store.PriceFor(entry.Key), "BUY "));
+        for (var slot = 0; slot < packButtons.Count; slot++)
+        {
+            var pack = SlotPack(slot);
+            var price = store.PriceFor(pack);
+            TreadShredUi.SetLabel(packButtons[slot], GemCatalog.IsStarterPack(pack)
+                ? OfferLabels.StarterPackStoreButton(price)
+                : OfferLabels.Pack(pack, price, "BUY "));
+        }
     }
 
     private void OnBalanceChanged(int balance)

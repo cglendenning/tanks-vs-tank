@@ -20,12 +20,10 @@ public static class TankBuildAutomation
     private const string IosSimulatorOutput = "Builds/iOSSimulator";
     private const string AndroidApkOutput = "Builds/Android/TreadShred.apk";
     private const string AndroidBundleOutput = "Builds/Android/TreadShred.aab";
-    // Screenshot-only App Store metadata update. The live 1.8.0 build remains
-    // unchanged; App Store Connect requires a new version/build to replace
-    // screenshots after a version is approved.
-    private const string ReleaseVersion = "1.9.4";
-    private const int ReleaseBuildNumber = 23;
-    private const int AndroidReleaseBuildNumber = 11;
+    // 1.9.5: the one-time Starter Pack (D-037). Every store release needs a new version and build number.
+    private const string ReleaseVersion = "1.9.5";
+    private const int ReleaseBuildNumber = 24;
+    private const int AndroidReleaseBuildNumber = 12;
 
     [MenuItem("Tread Shred/Build/iOS device project")]
     public static void BuildIosDeviceProject()

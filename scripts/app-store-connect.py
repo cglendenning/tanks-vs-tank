@@ -14,6 +14,7 @@
     ... app-store-connect.py cancel-review <version>
     ... app-store-connect.py status <version>
     ... app-store-connect.py creative-assets <video>...
+    ... app-store-connect.py starter-pack [<review-screenshot.png>]
 listing: finds or creates that iOS version (it stays invisible until submitted),
 writes the approved English copy from Store/listing-en-US.md (D-030) and removes
 every other language from that version and its app info.
@@ -368,6 +369,72 @@ def attach_build(api, version, build_number):
 AWAITING_REVIEW = ("PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "DEVELOPER_REJECTED")
 
 
+# D-037 R-STARTER-PACK: the one-time Starter Pack (GemCatalog.StarterPack). Consumable, so a reinstall never re-grants it.
+STARTER_PACK = {"product_id": "treadshred.starter300", "usd": "0.99", "name": "Starter Pack: 300 Gems",
+                "description": "One time only: 300 gems for boosts",
+                "review_note": "One-time pack of 300 gems for $0.99. It appears on the revive panel the first time the "
+                               "tank is destroyed, and in Settings (in place of the 100-gem pack) until it is bought."}
+
+
+def missing(api, path):
+    """GET that treats Apple's 404 for an unset relationship as nothing there."""
+    try:
+        return not api.call("GET", path).get("data")
+    except SystemExit as error:
+        if "HTTP 404" in str(error):
+            return True
+        raise
+
+
+def starter_pack(api, review_screenshot=None):
+    """Creates the Starter Pack in App Store Connect where anything is missing: the consumable product, its English
+    name and description, the $0.99 price in every territory and, when given, its review screenshot."""
+    app = api.call("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"][0]["id"]
+    found = api.call("GET", f"/v1/apps/{app}/inAppPurchasesV2?filter[productId]={STARTER_PACK['product_id']}")["data"]
+    iap = found[0] if found else api.call("POST", "/v2/inAppPurchases", {"data": {"type": "inAppPurchases",
+        "attributes": {"name": STARTER_PACK["name"], "productId": STARTER_PACK["product_id"], "inAppPurchaseType": "CONSUMABLE",
+                       "familySharable": False, "reviewNote": STARTER_PACK["review_note"]},
+        "relationships": {"app": {"data": {"type": "apps", "id": app}}}}})["data"]
+    iap_id = iap["id"]
+    print(f"{STARTER_PACK['product_id']}: {'found' if found else 'created'} ({iap_id})", flush=True)
+
+    if missing(api, f"/v2/inAppPurchases/{iap_id}/inAppPurchaseLocalizations"):
+        api.create("inAppPurchaseLocalizations", {"locale": "en-US", "name": STARTER_PACK["name"],
+                                                  "description": STARTER_PACK["description"]},
+                   {"inAppPurchaseV2": {"data": {"type": "inAppPurchases", "id": iap_id}}})
+        print("  en-US name and description written", flush=True)
+
+    if missing(api, f"/v2/inAppPurchases/{iap_id}/iapPriceSchedule"):
+        point, path = None, f"/v2/inAppPurchases/{iap_id}/pricePoints?filter[territory]=USA&limit=200"
+        while point is None and path:
+            page = api.call("GET", path)
+            point = next((p for p in page["data"] if p["attributes"]["customerPrice"] == STARTER_PACK["usd"]), None)
+            path = (page.get("links") or {}).get("next", "").replace("https://api.appstoreconnect.apple.com", "") or None
+        if point is None:
+            raise SystemExit(f"no US price point of ${STARTER_PACK['usd']}")
+        api.call("POST", "/v1/inAppPurchasePriceSchedules", {"data": {"type": "inAppPurchasePriceSchedules", "relationships": {
+            "inAppPurchase": {"data": {"type": "inAppPurchases", "id": iap_id}},
+            "baseTerritory": {"data": {"type": "territories", "id": "USA"}},
+            "manualPrices": {"data": [{"type": "inAppPurchasePrices", "id": "${base}"}]}}},
+            "included": [{"type": "inAppPurchasePrices", "id": "${base}", "attributes": {"startDate": None},
+                          "relationships": {"inAppPurchasePricePoint": {"data": {"type": "inAppPurchasePricePoints",
+                                                                                 "id": point["id"]}}}}]})
+        print(f"  US ${STARTER_PACK['usd']} price set, other territories at Apple's equivalents", flush=True)
+
+    if missing(api, f"/v2/inAppPurchases/{iap_id}/iapAvailability"):
+        territories = [t["id"] for t in api.call("GET", "/v1/territories?limit=200")["data"]]
+        api.create("inAppPurchaseAvailabilities", {"availableInNewTerritories": True},
+                   {"inAppPurchase": {"data": {"type": "inAppPurchases", "id": iap_id}},
+                    "availableTerritories": {"data": [{"type": "territories", "id": t} for t in territories]}})
+        print(f"  available in {len(territories)} territories", flush=True)
+
+    if review_screenshot and missing(api, f"/v2/inAppPurchases/{iap_id}/appStoreReviewScreenshot"):
+        upload_asset(api, "inAppPurchaseAppStoreReviewScreenshots", "inAppPurchases", iap_id, review_screenshot,
+                     relationship="inAppPurchaseV2")
+        print(f"  review screenshot uploaded: {Path(review_screenshot).name}", flush=True)
+    print(f"{STARTER_PACK['product_id']}: {api.call('GET', f'/v2/inAppPurchases/{iap_id}')['data']['attributes']['state']}")
+
+
 def review_items(api, app):
     """Every in-app purchase version and active leaderboard version with its review state. Apple reviews a
     first purchase or board only in the same submission as an app version; one left out is not live with it."""
@@ -520,6 +587,8 @@ def main():
         status(api, sys.argv[2])
     elif command == ["creative-assets"] and len(sys.argv) >= 3:
         creative_assets(api, sys.argv[2:])
+    elif command == ["starter-pack"] and len(sys.argv) in (2, 3):
+        starter_pack(api, sys.argv[2] if len(sys.argv) == 3 else None)
     elif command == ["full-release"] and len(sys.argv) == 3:
         full_release(api, sys.argv[2])
     else:

@@ -48,15 +48,27 @@ namespace TreadShred.Economy
 
         private readonly GemWallet wallet;
         private readonly IPurchaseGateway gateway;
+        private readonly Func<bool> starterPackAvailable;
         private Pending pending;
 
-        public PurchaseFlow(GemWallet wallet, IPurchaseGateway gateway)
+        /// <param name="starterPackAvailable">Whether the store reports the Starter Pack's product (D-037-AC-02).</param>
+        public PurchaseFlow(GemWallet wallet, IPurchaseGateway gateway, Func<bool> starterPackAvailable = null)
         {
             this.wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
             this.gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
+            this.starterPackAvailable = starterPackAvailable ?? (() => false);
         }
 
         public bool InProgress => pending != null;
+
+        /// <summary>D-037-AC-02: on sale until the player buys it, and only while the store offers its product.</summary>
+        public bool StarterPackOnSale => !wallet.StarterPackBought && starterPackAvailable();
+
+        /// <summary>What a gem cost spends now, or the pack one tap buys for it (D-010, D-037-AC-04).</summary>
+        public OfferPlan PlanFor(int cost) => GemCatalog.PlanFor(cost, wallet.Balance, StarterPackOnSale);
+
+        /// <summary>The pack one tap buys to cover a gem shortfall (D-036, D-037-AC-04).</summary>
+        public GemPack PackCovering(int shortfall) => GemCatalog.SmallestPackCovering(shortfall, StarterPackOnSale);
 
         /// <summary>Spends a gem cost, or buys the smallest covering pack and then spends.</summary>
         public void SpendOrBuy(int cost, Action onApplied, Action<string> onStatus)
@@ -67,7 +79,7 @@ namespace TreadShred.Economy
                 return;
             }
 
-            var plan = GemCatalog.PlanFor(cost, wallet.Balance);
+            var plan = PlanFor(cost);
             if (plan.CanSpendNow)
             {
                 if (wallet.TrySpend(plan.Cost))

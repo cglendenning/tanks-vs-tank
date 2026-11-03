@@ -10,6 +10,10 @@ namespace TreadShred.Economy
         public int balance;
         public bool starterGranted;
         public List<string> creditedTransactions = new List<string>();
+
+        // D-037: the Starter Pack was bought (it is never offered again) and was shown on the revive panel.
+        public bool starterPackBought;
+        public bool starterPackOffered;
     }
 
     public interface IWalletStore
@@ -46,6 +50,19 @@ namespace TreadShred.Economy
 
         public int Balance => state.balance;
 
+        public bool StarterPackBought => state.starterPackBought;
+
+        public bool StarterPackOffered => state.starterPackOffered;
+
+        /// <summary>D-037-AC-03: the revive panel showed the Starter Pack, which it does only once.</summary>
+        public void MarkStarterPackOffered()
+        {
+            if (state.starterPackOffered)
+                return;
+            state.starterPackOffered = true;
+            store.Save(state);
+        }
+
         public bool GrantStarterIfNeeded()
         {
             if (state.starterGranted)
@@ -73,6 +90,9 @@ namespace TreadShred.Economy
                     state.creditedTransactions.RemoveAt(0);
             }
 
+            // D-037-AC-01: a paid order always credits, even a second Starter Pack; buying it ends the offer.
+            if (GemCatalog.IsStarterPack(pack))
+                state.starterPackBought = true;
             state.balance += pack.Gems;
             Commit();
             return CreditResult.Credited;
@@ -113,6 +133,8 @@ namespace TreadShred.Economy
             state.balance = restored.balance;
             state.starterGranted = restored.starterGranted;
             state.creditedTransactions = new List<string>(restored.creditedTransactions ?? new List<string>());
+            state.starterPackBought = restored.starterPackBought;
+            state.starterPackOffered = restored.starterPackOffered;
             Commit();
         }
 

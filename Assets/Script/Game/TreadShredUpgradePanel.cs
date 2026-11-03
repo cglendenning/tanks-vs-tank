@@ -115,10 +115,17 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     }
 
     // D-036-AC-01: one price on the row and on its sales screen alike.
-    private string ButtonLabel(UpgradeTrack track, bool maxed)
+    private string ButtonLabel(UpgradeTrack track, bool maxed) => PricedLabel(track, maxed);
+
+    /// <summary>
+    /// D-036-AC-01, D-037-AC-04: an upgrade's one price, naming the Starter Pack's price while it is on sale.
+    /// Shared with the victory card's upgrade offer.
+    /// </summary>
+    internal static string PricedLabel(UpgradeTrack track, bool maxed)
     {
         var store = TreadShredStore.Ensure();
-        return ProgressionLabels.UpgradeButton(Progression.Quote(track), maxed, store.Wallet.Balance, store.PriceFor);
+        return ProgressionLabels.UpgradeButton(Progression.Quote(track), maxed, store.Wallet.Balance, store.PriceFor,
+            store.StarterPackOnSale);
     }
 
     private void Undo()

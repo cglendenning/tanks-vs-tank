@@ -497,7 +497,7 @@ public class ManagerScore : MonoBehaviour
         var progression = TreadShredProgress.Ensure().Progression;
         var store = TreadShredStore.Ensure();
         var maxed = progression.IsMaxed(track);
-        TreadShredUi.SetLabel(rewardButton, ProgressionLabels.UpgradeButton(progression.Quote(track), maxed, store.Wallet.Balance, store.PriceFor));
+        TreadShredUi.SetLabel(rewardButton, TreadShredUpgradePanel.PricedLabel(track, maxed));
         rewardButton.interactable = !maxed && !store.PurchaseInProgress;
         cardPreviewText.text = ProgressionLabels.Preview(track, progression.Level(track));
         rewardBalanceText.text = status ?? OfferLabels.OverdriveStatus(0);

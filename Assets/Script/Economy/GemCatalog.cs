@@ -55,6 +55,15 @@ namespace TreadShred.Economy
             new GemPack("treadshred.gems1200", 1200, 999)
         };
 
+        // D-037: the one-time Starter Pack (R-STARTER-PACK). Kept out of Packs so only a caller that knows it is on
+        // sale ever chooses it.
+        public static readonly GemPack StarterPack = new GemPack("treadshred.starter300", 300, 99);
+
+        public static bool IsStarterPack(GemPack pack)
+        {
+            return pack != null && string.Equals(pack.ProductId, StarterPack.ProductId, StringComparison.Ordinal);
+        }
+
         public static int Cost(GemOffer offer)
         {
             switch (offer)
@@ -75,25 +84,29 @@ namespace TreadShred.Economy
                 if (string.Equals(Packs[i].ProductId, productId, StringComparison.Ordinal))
                     return Packs[i];
             }
-            return null;
+            return string.Equals(StarterPack.ProductId, productId, StringComparison.Ordinal) ? StarterPack : null;
         }
 
-        public static OfferPlan Plan(GemOffer offer, int balance)
+        public static OfferPlan Plan(GemOffer offer, int balance, bool starterOnSale = false)
         {
-            return PlanFor(Cost(offer), balance);
+            return PlanFor(Cost(offer), balance, starterOnSale);
         }
 
         // Spend directly when the balance covers the gem cost, otherwise buy
         // the smallest pack that covers the shortfall.
-        public static OfferPlan PlanFor(int cost, int balance)
+        public static OfferPlan PlanFor(int cost, int balance, bool starterOnSale = false)
         {
             return balance >= cost
                 ? new OfferPlan(cost, null)
-                : new OfferPlan(cost, SmallestPackCovering(cost - balance));
+                : new OfferPlan(cost, SmallestPackCovering(cost - balance, starterOnSale));
         }
 
-        public static GemPack SmallestPackCovering(int shortfall)
+        // D-037-AC-04: while the Starter Pack is on sale it is the pack for any shortfall it covers, so no button
+        // sells fewer gems for the same price.
+        public static GemPack SmallestPackCovering(int shortfall, bool starterOnSale = false)
         {
+            if (starterOnSale && StarterPack.Gems >= shortfall)
+                return StarterPack;
             for (var i = 0; i < Packs.Count; i++)
             {
                 if (Packs[i].Gems >= shortfall)

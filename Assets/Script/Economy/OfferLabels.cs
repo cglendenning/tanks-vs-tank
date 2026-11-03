@@ -22,7 +22,22 @@ namespace TreadShred.Economy
 
         public static string BalanceLine(int balance, OfferPlan plan)
         {
-            return plan.CanSpendNow ? Owned(balance) : Owned(balance) + ". NEED " + CountText.Format(plan.Cost);
+            if (plan.CanSpendNow)
+                return Owned(balance);
+            // D-037-AC-04: the button will buy the Starter Pack, so the line under it says so.
+            return GemCatalog.IsStarterPack(plan.PackToBuy) ? StarterPackLine : Owned(balance) + ". NEED " + CountText.Format(plan.Cost);
+        }
+
+        // D-037: the one-time Starter Pack's copy.
+        public const string StarterPackTitle = "STARTER PACK";
+        public const string StarterPackLimit = "ONE TIME ONLY";
+        public static readonly string StarterPackLine =
+            StarterPackTitle + ": " + CountText.Format(GemCatalog.StarterPack.Gems) + " GEMS. " + StarterPackLimit;
+
+        /// <summary>D-037-AC-04: the gem store's Starter Pack button, in place of the smallest pack.</summary>
+        public static string StarterPackStoreButton(string localizedPrice)
+        {
+            return Pack(GemCatalog.StarterPack, localizedPrice, StarterPackTitle + ": ");
         }
 
         // Spending gems the player already holds is confirmed in a dialog first.
