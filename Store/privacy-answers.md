@@ -11,6 +11,10 @@ measure and optimize ad campaigns.
 iOS: no advertising ID, no tracking prompt, no attribution SDK. Apple's SKAdNetwork tells AppLovin, and
 Tenjin through `NSAdvertisingAttributionReportEndpoint`, which campaign drove an install, carrying only a
 conversion value for purchase revenue; Apple sends it without any device identifier.
+Unity IAP (`com.unity.purchasing`) can attach the vendor ID (IDFV) to the purchase events it reports to Unity, which
+Device ID and Purchase History below cover; it reads the advertising ID only under Unity's ads-intent consent, which
+the game never grants. App Review rejected 1.9.3 on 2026-11-03 (Guideline 5.1.2(i)) because the App Privacy label in
+App Store Connect said Device ID and Product Interaction were used to track; the label must match this file.
 Game Center scores and iCloud saves go to Apple under the player's own Apple account; the developer
 does not receive them. Purchases are processed by Apple and Google.
 Re-check this file whenever an SDK is added.
