@@ -14,7 +14,7 @@ namespace TreadShred.Economy.Tests
         private static readonly string[] ValueEquationOrder =
         {
             "1-become-unstoppable.png", "2-in-battle-in-seconds.png", "3-win-your-first-battle.png",
-            "4-free-no-ads.png", "5-upgrades-that-last.png", "6-climb-the-leaderboard.png",
+            "4-no-ads-no-sign-up.png", "5-upgrades-that-last.png", "6-climb-the-leaderboard.png",
         };
 
         // The Play listing's art folder, as play-console.py publishes it; the App Store sets sit beside it.
@@ -39,17 +39,30 @@ namespace TreadShred.Economy.Tests
             }
         }
 
-        [Test(Description = "D-030-AC-06: the first lines a browser reads state the offer: in battle in seconds, a first win within a minute, free, no ads")]
+        [Test(Description = "D-030-AC-06: the first lines a browser reads state the offer: in battle in seconds, a first win within a minute, no ads, no sign-up")]
         public void FirstLinesStateTheOffer()
         {
             StringAssert.Contains("in seconds", Field("App Store subtitle (30)").ToLowerInvariant());
             StringAssert.Contains("no ads", Field("App Store subtitle (30)").ToLowerInvariant());
             var promo = Field("App Store promotional text (170)").ToLowerInvariant();
-            foreach (var claim in new[] { "in battle within seconds", "first win under a minute", "free", "no ads" })
+            foreach (var claim in new[] { "in battle within seconds", "first win under a minute", "no ads", "no sign-up" })
                 StringAssert.Contains(claim, promo);
             var play = Field("Google Play short description (80)").ToLowerInvariant();
             StringAssert.Contains("in battle in seconds", play);
             StringAssert.Contains("no ads", play);
+        }
+
+        // App Review treats "free" as a price reference anywhere but the description (Guideline 2.3.7, 1.9.3 rejection).
+        private static readonly Regex PriceWords = new Regex(@"\bfree\b|[$\u00a3\u20ac]\s?\d|\bprice\b|\bdiscount|\bsale\b", RegexOptions.IgnoreCase);
+
+        [Test(Description = "D-030-AC-07: no screenshot caption, subtitle, promotional text or keyword names a price or says free")]
+        public void NoPriceOutsideTheDescription()
+        {
+            foreach (var label in new[] { "App Store subtitle (30)", "App Store promotional text (170)", "App Store keywords (100)", "Google Play short description (80)" })
+                Assert.IsFalse(PriceWords.IsMatch(Field(label)), label + ": " + Field(label));
+            foreach (var set in new[] { "google-play/phone", "google-play/tablet", "app-store/iphone", "app-store/ipad" })
+                foreach (var shot in Directory.GetFiles(Path.Combine(Root, ListingMedia(), set), "*.png").Select(Path.GetFileNameWithoutExtension))
+                    Assert.IsFalse(PriceWords.IsMatch(shot.Replace('-', ' ')), set + "/" + shot);
         }
     }
 }
