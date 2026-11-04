@@ -156,6 +156,8 @@ public class LoadLv : MonoBehaviour {
             }
         }
         TreadShredTierSelector.Attach(PanelMenu, font);
+        // D-037-AC-04: and on reaching the start screen (after the first launch's straight-into-battle start, D-035).
+        TreadShredStarterOffer.ShowIfOnSale(font);
     }
 
     // UPGRADES and LEADERBOARD; hidden while the stats view is open so they never cover its lines.

@@ -315,6 +315,8 @@ public class ManagerScore : MonoBehaviour
             BuildFailureRewardActions();
         else
             BuildVictoryRewardActions();
+        // D-037-AC-04: while the Starter Pack is on sale its interstitial opens over every result screen.
+        TreadShredStarterOffer.ShowIfOnSale(TreadShredUi.FindFont(VictoryofFail));
     }
     public void Failure()
     {

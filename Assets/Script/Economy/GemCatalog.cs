@@ -59,6 +59,9 @@ namespace TreadShred.Economy
         // sale ever chooses it.
         public static readonly GemPack StarterPack = new GemPack("treadshred.starter300", 300, 99);
 
+        // R-STARTER-PACK offer_minutes: how long after the player's first launch the Starter Pack is on sale.
+        public static readonly TimeSpan StarterPackWindow = TimeSpan.FromMinutes(15);
+
         public static bool IsStarterPack(GemPack pack)
         {
             return pack != null && string.Equals(pack.ProductId, StarterPack.ProductId, StringComparison.Ordinal);

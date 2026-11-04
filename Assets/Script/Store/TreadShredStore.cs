@@ -50,6 +50,7 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
         DontDestroyOnLoad(gameObject);
         Wallet = new GemWallet(new PlayerPrefsWalletStore());
         Wallet.GrantStarterIfNeeded();
+        Wallet.OpenStarterPackWindow(DateTime.UtcNow);
         purchases = new PurchaseFlow(Wallet, this, () => IsAvailable(GemCatalog.StarterPack.ProductId));
         SceneManager.sceneLoaded += OnSceneLoaded;
         ConnectStore();
@@ -77,6 +78,9 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
 
     /// <summary>D-037-AC-02: the player has not bought the Starter Pack and the store offers its product.</summary>
     public bool StarterPackOnSale => purchases.StarterPackOnSale;
+
+    /// <summary>D-037-AC-07: the Starter Pack's countdown; zero when it is not on sale.</summary>
+    public TimeSpan StarterPackTimeLeft => purchases.StarterPackTimeLeft;
 
     public string PriceFor(GemPack pack)
     {

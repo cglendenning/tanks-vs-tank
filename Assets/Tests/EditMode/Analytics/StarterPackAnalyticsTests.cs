@@ -12,7 +12,7 @@ namespace TreadShred.Analytics.Tests
         private static string Script(string relative) =>
             File.ReadAllText(Path.Combine(Application.dataPath, "Script", relative));
 
-        [Test(Description = "D-037-AC-05: each Starter Pack offer is recorded as offer_shown with offer starter_pack, and its purchase as gem_pack_purchased with its product ID")]
+        [Test(Description = "D-037-AC-05: each Starter Pack offer (revive panel, interstitial, gem store) is recorded as offer_shown with offer starter_pack, and its purchase as gem_pack_purchased with its product ID")]
         public void OffersAndPurchasesAreRecorded()
         {
             var shown = GameEvents.OfferShown("starter_pack", 0);
@@ -21,6 +21,7 @@ namespace TreadShred.Analytics.Tests
             Assert.AreEqual(("gem_pack_purchased", StarterProductId), (bought.Name, (string)bought.Parameters["product_id"]));
             StringAssert.Contains("GameEvents.OfferShown(\"starter_pack\", store.Wallet.Balance)", Script("Game/TreadShredRevivePanel.cs"));
             StringAssert.Contains("GameEvents.OfferShown(\"starter_pack\", store.Wallet.Balance)", Script("TreadShredSettingsPanel.cs"));
+            StringAssert.Contains("GameEvents.OfferShown(\"starter_pack\", store.Wallet.Balance)", Script("Game/TreadShredStarterOffer.cs"));
         }
     }
 }

@@ -11,9 +11,9 @@ namespace TreadShred.Economy
         public bool starterGranted;
         public List<string> creditedTransactions = new List<string>();
 
-        // D-037: the Starter Pack was bought (it is never offered again) and was shown on the revive panel.
+        // D-037: the Starter Pack was bought (it is never offered again), and when its window opened (UTC ticks; 0 = not yet).
         public bool starterPackBought;
-        public bool starterPackOffered;
+        public long starterPackWindowStartTicks;
     }
 
     public interface IWalletStore
@@ -52,15 +52,27 @@ namespace TreadShred.Economy
 
         public bool StarterPackBought => state.starterPackBought;
 
-        public bool StarterPackOffered => state.starterPackOffered;
-
-        /// <summary>D-037-AC-03: the revive panel showed the Starter Pack, which it does only once.</summary>
-        public void MarkStarterPackOffered()
+        /// <summary>D-037-AC-02: opens the Starter Pack's window at the player's first launch that sells it; never reopens it.</summary>
+        public void OpenStarterPackWindow(DateTime utcNow)
         {
-            if (state.starterPackOffered)
+            if (state.starterPackWindowStartTicks != 0)
                 return;
-            state.starterPackOffered = true;
+            state.starterPackWindowStartTicks = utcNow.Ticks;
             store.Save(state);
+        }
+
+        /// <summary>
+        /// D-037-AC-02, D-037-AC-07: time left to buy the Starter Pack: zero once it is bought, before its window opens and
+        /// after it ends. A device clock set back never shows more than the whole window.
+        /// </summary>
+        public TimeSpan StarterPackTimeLeft(DateTime utcNow)
+        {
+            if (state.starterPackBought || state.starterPackWindowStartTicks == 0)
+                return TimeSpan.Zero;
+            var left = new DateTime(state.starterPackWindowStartTicks, DateTimeKind.Utc) + GemCatalog.StarterPackWindow - utcNow;
+            if (left <= TimeSpan.Zero)
+                return TimeSpan.Zero;
+            return left > GemCatalog.StarterPackWindow ? GemCatalog.StarterPackWindow : left;
         }
 
         public bool GrantStarterIfNeeded()
@@ -134,7 +146,10 @@ namespace TreadShred.Economy
             state.starterGranted = restored.starterGranted;
             state.creditedTransactions = new List<string>(restored.creditedTransactions ?? new List<string>());
             state.starterPackBought = restored.starterPackBought;
-            state.starterPackOffered = restored.starterPackOffered;
+            // A save from before the Starter Pack has no window: the one this install opened stands, so a reinstall that
+            // restores a newer save adopts its original window and never reopens it (D-037-AC-02).
+            if (restored.starterPackWindowStartTicks != 0)
+                state.starterPackWindowStartTicks = restored.starterPackWindowStartTicks;
             Commit();
         }
 

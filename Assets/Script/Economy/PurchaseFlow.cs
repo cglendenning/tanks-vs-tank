@@ -49,20 +49,27 @@ namespace TreadShred.Economy
         private readonly GemWallet wallet;
         private readonly IPurchaseGateway gateway;
         private readonly Func<bool> starterPackAvailable;
+        private readonly Func<DateTime> utcNow;
         private Pending pending;
 
         /// <param name="starterPackAvailable">Whether the store reports the Starter Pack's product (D-037-AC-02).</param>
-        public PurchaseFlow(GemWallet wallet, IPurchaseGateway gateway, Func<bool> starterPackAvailable = null)
+        /// <param name="utcNow">The clock the Starter Pack's window runs on.</param>
+        public PurchaseFlow(GemWallet wallet, IPurchaseGateway gateway, Func<bool> starterPackAvailable = null,
+            Func<DateTime> utcNow = null)
         {
             this.wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
             this.gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
             this.starterPackAvailable = starterPackAvailable ?? (() => false);
+            this.utcNow = utcNow ?? (() => DateTime.UtcNow);
         }
 
         public bool InProgress => pending != null;
 
-        /// <summary>D-037-AC-02: on sale until the player buys it, and only while the store offers its product.</summary>
-        public bool StarterPackOnSale => !wallet.StarterPackBought && starterPackAvailable();
+        /// <summary>D-037-AC-02: on sale until bought, inside its window, and only while the store offers its product.</summary>
+        public bool StarterPackOnSale => StarterPackTimeLeft > TimeSpan.Zero;
+
+        /// <summary>D-037-AC-07: the countdown every Starter Pack offer shows; zero when it is not on sale.</summary>
+        public TimeSpan StarterPackTimeLeft => starterPackAvailable() ? wallet.StarterPackTimeLeft(utcNow()) : TimeSpan.Zero;
 
         /// <summary>What a gem cost spends now, or the pack one tap buys for it (D-010, D-037-AC-04).</summary>
         public OfferPlan PlanFor(int cost) => GemCatalog.PlanFor(cost, wallet.Balance, StarterPackOnSale);

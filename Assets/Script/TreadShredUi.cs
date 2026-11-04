@@ -126,6 +126,19 @@ public static class TreadShredUi
         return button;
     }
 
+    // The one button a screen most wants tapped (the Starter Pack's buy buttons, D-037): a solid accent fill.
+    public static void StylePrimary(Button button)
+    {
+        var fill = new Color(0.86f, 0.3f, 0.06f, 1f);
+        button.targetGraphic.color = fill;
+        var colors = button.colors;
+        colors.normalColor = fill;
+        colors.highlightedColor = new Color(1f, 0.42f, 0.12f, 1f);
+        colors.pressedColor = new Color(0.55f, 0.18f, 0.04f, 1f);
+        button.colors = colors;
+        button.GetComponent<Outline>().effectColor = TitleColor;
+    }
+
     // Text that could outgrow its box (button labels, nicknames, device-dependent values) shrinks
     // to fit, down to minSize, instead of spilling past it.
     public static void ShrinkToFit(Text text, int minSize)

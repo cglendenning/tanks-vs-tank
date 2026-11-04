@@ -1,3 +1,5 @@
+using System;
+
 namespace TreadShred.Economy
 {
     public static class OfferLabels
@@ -38,6 +40,29 @@ namespace TreadShred.Economy
         public static string StarterPackStoreButton(string localizedPrice)
         {
             return Pack(GemCatalog.StarterPack, localizedPrice, StarterPackTitle + ": ");
+        }
+
+        // D-037-AC-03/04: why it beats the regular packs, in numbers taken from the catalog.
+        public static readonly string StarterPackValue = GemCatalog.StarterPack.Gems / GemCatalog.Packs[0].Gems +
+            "X THE GEMS OF THE " + CountText.Format(GemCatalog.Packs[0].Gems) + "-GEM PACK";
+        public static readonly string StarterPackBuys = "THAT'S " +
+            GemCatalog.StarterPack.Gems / GemCatalog.Cost(GemOffer.Overdrive) + " OVERDRIVES OR " +
+            GemCatalog.StarterPack.Gems / GemCatalog.Cost(GemOffer.ArmoredRedeploy) + " ARMORED REDEPLOYS";
+        public static readonly string StarterPackReviveHeadline =
+            CountText.Format(GemCatalog.StarterPack.Gems) + " GEMS + THIS REVIVE FREE";
+
+        /// <summary>D-037-AC-07: the live countdown, rounded up so it never reads 0:00 while the pack is still on sale.</summary>
+        public static string StarterPackCountdown(TimeSpan left)
+        {
+            var seconds = Math.Max(0, (int)Math.Ceiling(left.TotalSeconds));
+            return "ENDS IN " + seconds / 60 + ":" + (seconds % 60).ToString("00");
+        }
+
+        /// <summary>D-037-AC-03: the revive panel's main button, which buys the pack and revives without spending gems.</summary>
+        public static string StarterPackReviveButton(string localizedPrice)
+        {
+            var label = "REVIVE + " + CountText.Format(GemCatalog.StarterPack.Gems) + " GEMS";
+            return string.IsNullOrEmpty(localizedPrice) ? label : label + ": " + localizedPrice;
         }
 
         // Spending gems the player already holds is confirmed in a dialog first.
