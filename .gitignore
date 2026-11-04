@@ -50,3 +50,6 @@ Assets/google-services.json
 Assets/google-services.json.meta
 Assets/StreamingAssets/google-services-desktop.json
 Assets/StreamingAssets/google-services-desktop.json.meta
+# Generated from google-services.json by the Firebase Unity plugin; carries the same API key.
+Assets/Plugins/Android/FirebaseApp.androidlib/res/values/google-services.xml
+Assets/Plugins/Android/FirebaseApp.androidlib/res/values/google-services.xml.meta

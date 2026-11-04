@@ -377,11 +377,11 @@ STARTER_PACK = {"product_id": "treadshred.starter300", "usd": "0.99", "name": "S
 
 
 def missing(api, path):
-    """GET that treats Apple's 404 for an unset relationship as nothing there."""
+    """GET that treats Apple's 404 for an unset relationship as nothing there; a mistyped path (PATH_ERROR) still fails."""
     try:
         return not api.call("GET", path).get("data")
     except SystemExit as error:
-        if "HTTP 404" in str(error):
+        if "HTTP 404" in str(error) and "PATH_ERROR" not in str(error):
             return True
         raise
 
@@ -421,7 +421,7 @@ def starter_pack(api, review_screenshot=None):
                                                                                  "id": point["id"]}}}}]})
         print(f"  US ${STARTER_PACK['usd']} price set, other territories at Apple's equivalents", flush=True)
 
-    if missing(api, f"/v2/inAppPurchases/{iap_id}/iapAvailability"):
+    if missing(api, f"/v2/inAppPurchases/{iap_id}/inAppPurchaseAvailability"):
         territories = [t["id"] for t in api.call("GET", "/v1/territories?limit=200")["data"]]
         api.create("inAppPurchaseAvailabilities", {"availableInNewTerritories": True},
                    {"inAppPurchase": {"data": {"type": "inAppPurchases", "id": iap_id}},
