@@ -4,6 +4,7 @@
     python3 scripts/play-console.py products                  # create or update the gem packs (D-007-AC-02) and activate them
     python3 scripts/play-console.py check-upload-key <aab>    # upload into a throwaway edit: does Google accept its signing key?
     python3 scripts/play-console.py release <aab> <fraction>  # one edit: bundle, staged production rollout, listing text and images
+    python3 scripts/play-console.py draft <aab>               # bundle as a production draft: not reviewed or shown until sent from Play Console
     python3 scripts/play-console.py rollout <fraction>        # change the live production rollout; 1 completes it for everyone
     python3 scripts/play-console.py listing                   # write the listing text, promo video and images alone (no bundle)
     python3 scripts/play-console.py status                    # Google's review state of each production release
@@ -147,20 +148,30 @@ def upload(auth, path, url):
         sys.exit(f"upload {Path(path).name}: HTTP {error.code}: {error.read().decode(errors='replace')[:300]}")
 
 
-def release(auth, bundle, fraction):
+def release(auth, bundle, fraction, draft=False):
     """One edit: uploads the bundle, releases it to production (fraction 1 is a full release, below 1 a staged
-    rollout), writes the listing and replaces its images."""
+    rollout), writes the listing and replaces its images. A draft only uploads the bundle with its release notes: the
+    listing is left alone, since a committed listing goes to review and live on its own."""
     upload_api = API.replace("/androidpublisher/v3/", "/upload/androidpublisher/v3/")
     edit = call("POST", "/edits", auth, {})["id"]
     version_code = upload(auth, bundle, f"{upload_api}/edits/{edit}/bundles?uploadType=media")["versionCode"]
     # Google takes a full release as "completed" with no fraction; a fraction must stay below 1.
-    rollout = {"status": "completed"} if float(fraction) >= 1 else {"status": "inProgress", "userFraction": float(fraction)}
+    if draft:
+        rollout = {"status": "draft"}
+    elif float(fraction) >= 1:
+        rollout = {"status": "completed"}
+    else:
+        rollout = {"status": "inProgress", "userFraction": float(fraction)}
     call("PUT", f"/edits/{edit}/tracks/production", auth, {"track": "production", "releases": [dict(rollout,
         versionCodes=[str(version_code)],
         releaseNotes=[{"language": "en-US", "text": store_copy.copy_for("android")["releaseNotes"]}])]})
-    write_listing(auth, edit)
+    if not draft:
+        write_listing(auth, edit)
     call("POST", f"/edits/{edit}:commit", auth)
-    print(f"Released version code {version_code} to production at {min(float(fraction), 1):.0%} with the approved listing.")
+    if draft:
+        print(f"Version code {version_code} saved as a production draft; nothing is reviewed or released until it is sent.")
+    else:
+        print(f"Released version code {version_code} to production at {min(float(fraction), 1):.0%} with the approved listing.")
 
 
 def write_listing(auth, edit):
@@ -234,6 +245,8 @@ if __name__ == "__main__":
         check_upload_key(token(), sys.argv[2])
     elif len(sys.argv) == 4 and sys.argv[1] == "release":
         release(token(), sys.argv[2], sys.argv[3])
+    elif len(sys.argv) == 3 and sys.argv[1] == "draft":
+        release(token(), sys.argv[2], 1, draft=True)
     elif len(sys.argv) == 3 and sys.argv[1] == "games-leaderboard":
         games_leaderboard(token(), sys.argv[2])
     elif len(sys.argv) == 2 and sys.argv[1] == "listing":

@@ -8,7 +8,8 @@
     ... app-store-connect.py listing <version>
     ... app-store-connect.py media <version> <iphone-shots-dir> <ipad-shots-dir> [<iphone-preview.mp4>]
     ... app-store-connect.py attach-build <version> <build-number>
-    ... app-store-connect.py submit <version>
+    ... app-store-connect.py submit <version> [--hold]
+    ... app-store-connect.py release <version>
     ... app-store-connect.py full-release <version>
     ... app-store-connect.py resubmit <version>
     ... app-store-connect.py cancel-review <version>
@@ -16,8 +17,13 @@
     ... app-store-connect.py creative-assets <video>...
     ... app-store-connect.py starter-pack [<review-screenshot.png>]
 listing: finds or creates that iOS version (it stays invisible until submitted),
-writes the approved English copy from Store/listing-en-US.md (D-030) and removes
-every other language from that version and its app info.
+writes the approved English copy from Store/listing-en-US.md (D-030) and the
+publisher's copyright, and removes every other language from that version and its
+app info.
+
+submit: sends the version to App Review, released to everyone on approval. With
+--hold it waits after approval (Pending Developer Release) until `release`; the
+hold is that version's own setting, so other versions and the app keep theirs.
 
 icloud: enables the iCloud capability on the App ID, for cloud save (D-025).
 adhoc-profile: creates an Ad Hoc profile for the App ID with that distribution
@@ -51,6 +57,8 @@ import jwt
 import store_copy
 
 BUNDLE_ID = "com.tgts.tanksvstank"
+# The publisher (Craig Glendenning); TGTStudios, the previous owner, is on versions up to 1.9.4.
+COPYRIGHT = "2026 Craig Glendenning"
 LEADERBOARD = {
     "vendorIdentifier": "treadshred.best_run",  # TreadShredLeaderboard.GameCenterId
     "referenceName": "High Score",
@@ -219,6 +227,8 @@ def listing(api, version):
     else:
         target = api.create("appStoreVersions", {"platform": "IOS", "versionString": version},
                             {"app": {"data": {"type": "apps", "id": app}}})
+    api.call("PATCH", f"/v1/appStoreVersions/{target['id']}", {"data": {"type": "appStoreVersions", "id": target["id"],
+                                                                      "attributes": {"copyright": COPYRIGHT}}})
     print(f"version {version}: {target['attributes'].get('appStoreState', 'PREPARE_FOR_SUBMISSION')} (not visible until submitted)")
     removed = 0
     for loc in api.call("GET", f"/v1/appStoreVersions/{target['id']}/appStoreVersionLocalizations?limit=50")["data"]:
@@ -388,7 +398,8 @@ def missing(api, path):
 
 def starter_pack(api, review_screenshot=None):
     """Creates the Starter Pack in App Store Connect where anything is missing: the consumable product, its English
-    name and description, the $0.99 price in every territory and, when given, its review screenshot."""
+    name and description and the $0.99 price in every territory. A review screenshot, when given, replaces the one
+    there."""
     app = api.call("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"][0]["id"]
     found = api.call("GET", f"/v1/apps/{app}/inAppPurchasesV2?filter[productId]={STARTER_PACK['product_id']}")["data"]
     iap = found[0] if found else api.call("POST", "/v2/inAppPurchases", {"data": {"type": "inAppPurchases",
@@ -428,7 +439,11 @@ def starter_pack(api, review_screenshot=None):
                     "availableTerritories": {"data": [{"type": "territories", "id": t} for t in territories]}})
         print(f"  available in {len(territories)} territories", flush=True)
 
-    if review_screenshot and missing(api, f"/v2/inAppPurchases/{iap_id}/appStoreReviewScreenshot"):
+    if review_screenshot:
+        old = api.call("GET", f"/v2/inAppPurchases/{iap_id}/appStoreReviewScreenshot").get("data")
+        if old:
+            api.call("DELETE", f"/v1/inAppPurchaseAppStoreReviewScreenshots/{old['id']}")
+            print("  previous review screenshot removed", flush=True)
         upload_asset(api, "inAppPurchaseAppStoreReviewScreenshots", "inAppPurchases", iap_id, review_screenshot,
                      relationship="inAppPurchaseV2")
         print(f"  review screenshot uploaded: {Path(review_screenshot).name}", flush=True)
@@ -463,9 +478,10 @@ def items_in(api, submission_id):
     return held
 
 
-def submit(api, version):
+def submit(api, version, hold=False):
     """Submits the version for App Review with every in-app purchase and leaderboard awaiting review, released
-    to all users on approval; its build declares exempt encryption only."""
+    to all users on approval, or with hold kept back after approval until `release`; its build declares exempt
+    encryption only."""
     app, target, _ = en_us_localization(api, version)
     build = api.call("GET", f"/v1/appStoreVersions/{target['id']}/build")["data"]
     if not build:
@@ -475,7 +491,7 @@ def submit(api, version):
         api.call("PATCH", f"/v1/builds/{build['id']}", {"data": {"type": "builds", "id": build["id"],
                  "attributes": {"usesNonExemptEncryption": False}}})
     api.call("PATCH", f"/v1/appStoreVersions/{target['id']}", {"data": {"type": "appStoreVersions", "id": target["id"],
-             "attributes": {"releaseType": "AFTER_APPROVAL"}}})
+             "attributes": {"releaseType": "MANUAL" if hold else "AFTER_APPROVAL"}}})
     # The build carries the Game Center entitlement, so the version must be linked to Game Center. Boards go
     # live through their versions in the submission; Apple refuses those while an old draft release exists.
     if not api.call("GET", f"/v1/appStoreVersions/{target['id']}/gameCenterAppVersion").get("data"):
@@ -499,7 +515,17 @@ def submit(api, version):
              "id": submission["id"], "attributes": {"submitted": True}}})
     state = api.call("GET", f"/v1/appStoreVersions/{target['id']}")["data"]["attributes"]["appStoreState"]
     print(f"{version} submitted for review with {', '.join(i[3] for i in extras) or 'no other items'}; "
-          f"releases to all users on approval; state: {state}")
+          + ("held after approval until `release`" if hold else "releases to all users on approval") + f"; state: {state}")
+
+
+def release_held(api, version):
+    """Releases a version that App Review approved and submit --hold kept back (Pending Developer Release)."""
+    _, target, _ = en_us_localization(api, version)
+    state = api.call("GET", f"/v1/appStoreVersions/{target['id']}")["data"]["attributes"]["appStoreState"]
+    if state != "PENDING_DEVELOPER_RELEASE":
+        raise SystemExit(f"{version} is {state}, not waiting for release")
+    api.create("appStoreVersionReleaseRequests", None, {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": target["id"]}}})
+    print(f"{version}: released; the App Store shows it once Apple finishes processing")
 
 
 def cancel_review(api, version):
@@ -579,6 +605,10 @@ def main():
         attach_build(api, sys.argv[2], sys.argv[3])
     elif command == ["submit"] and len(sys.argv) == 3:
         submit(api, sys.argv[2])
+    elif command == ["submit"] and len(sys.argv) == 4 and sys.argv[3] == "--hold":
+        submit(api, sys.argv[2], hold=True)
+    elif command == ["release"] and len(sys.argv) == 3:
+        release_held(api, sys.argv[2])
     elif command == ["cancel-review"] and len(sys.argv) == 3:
         cancel_review(api, sys.argv[2])
     elif command == ["resubmit"] and len(sys.argv) == 3:
