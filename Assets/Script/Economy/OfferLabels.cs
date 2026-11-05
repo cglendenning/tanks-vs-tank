@@ -118,6 +118,11 @@ namespace TreadShred.Economy
         /// <summary>D-009-AC-03: the line that says Overdrive is on, in place of a button that would sell nothing.</summary>
         public static string OverdriveStatus(int gemsSpent) => OverdriveActive + "  |  " + OverdriveActiveDetail(gemsSpent);
 
+        /// <summary>D-040-AC-05: why to take the pack beside an offer the player can already cover.</summary>
+        public const string StockUp = "MORE GEMS FOR OVERDRIVE, REDEPLOYS AND UPGRADES";
+
+        public static string GemsAdded(GemPack pack) => "+" + CountText.Format(pack.Gems) + " GEMS ADDED";
+
         public static string Pack(GemPack pack, string localizedPrice, string prefix = "")
         {
             var label = prefix + CountText.Format(pack.Gems) + " GEMS";

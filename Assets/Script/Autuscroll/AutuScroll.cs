@@ -7,49 +7,25 @@ public class AutuScroll : MonoBehaviour {
     public ScrollRect myScrollRect;
     public Scrollbar newScrollBar;
     public bool ismove;
-    int levels;
     public void Start()
     {
         instance = this;
-        levels = (int)PlayerPrefs.GetFloat("OpenLv");
         myScrollRect.verticalNormalizedPosition = 1f;
-        //Change the current vertical scroll position.
-        if (levels > 3)
-        {
-            StartCoroutine(Delay());
-        }
-        
+        StartCoroutine(Delay());
     }
-  
+
+    // D-041: glide to the selected mission's row (the next to play) unless the player moves the list first.
     IEnumerator Delay()
     {
         yield return new WaitForSeconds(0.5f);
-
-        if (levels < 20)
+        var target = Memory.instance.SelectedScrollPosition(myScrollRect);
+        while (ismove == false && Mathf.Abs(myScrollRect.verticalNormalizedPosition - target) > 0.001f)
         {
-            for (int i = 0; i < (int)((levels - 2) / (40 * 0.01f)); i++)
+            yield return new WaitForSeconds(0.03f);
+            if (ismove == false)
             {
-                yield return new WaitForSeconds(0.03f);
-                if (ismove == false)
-                {
-                    myScrollRect.verticalNormalizedPosition -= 0.01f;
-                }
-
+                myScrollRect.verticalNormalizedPosition = Mathf.MoveTowards(myScrollRect.verticalNormalizedPosition, target, 0.02f);
             }
         }
-        else
-        {
-            for (int i = 0; i < (int)((levels) / (40 * 0.01f)); i++)
-            {
-                yield return new WaitForSeconds(0.03f);
-                if (ismove == false)
-                {
-                    myScrollRect.verticalNormalizedPosition -= 0.01f;
-                }
-
-            }
-        }
-       
-      
     }
 }

@@ -111,7 +111,7 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
         statusText.text = string.Empty;
         showStatus ??= status => statusText.text = status;
         TreadShredStore.Ensure().BuyPack(pack,
-            () => statusText.text = "+" + TreadShred.Economy.CountText.Format(pack.Gems) + " GEMS ADDED",
+            () => statusText.text = OfferLabels.GemsAdded(pack),
             showStatus);
     }
 

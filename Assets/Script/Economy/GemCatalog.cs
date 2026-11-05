@@ -104,6 +104,16 @@ namespace TreadShred.Economy
                 : new OfferPlan(cost, SmallestPackCovering(cost - balance, starterOnSale));
         }
 
+        /// <summary>
+        /// D-040-AC-05: the pack an offer adds when its own price is covered by coins or gems the player already holds,
+        /// so every offer has something to buy: the Starter Pack while it is on sale, else the smallest pack. Null when
+        /// the offer's own button already buys a pack.
+        /// </summary>
+        public static GemPack PackAlongside(bool coveredByHeldCurrency, bool starterOnSale)
+        {
+            return coveredByHeldCurrency ? SmallestPackCovering(1, starterOnSale) : null;
+        }
+
         // D-037-AC-04: while the Starter Pack is on sale it is the pack for any shortfall it covers, so no button
         // sells fewer gems for the same price.
         public static GemPack SmallestPackCovering(int shortfall, bool starterOnSale = false)
