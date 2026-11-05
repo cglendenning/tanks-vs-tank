@@ -1,0 +1,49 @@
+{
+  "about": "D-042: App Store custom product pages, one per group of AppLovin iOS creative sets; Hook D keeps the default page. Screenshots are the approved store captures (real gameplay, D-030) in a new order; written by app-store-connect.py custom-pages.",
+  "pages": [
+    {
+      "name": "UNSTOPPABLE",
+      "hooks": ["A", "B", "C"],
+      "promotionalText": "Every win upgrades your tank for good. Max out armor, firepower and speed, then shred the missions that beat you. No ads, no sign-up.",
+      "iphone": [
+        "Store/media/1.9.3/app-store/iphone/5-upgrades-that-last.png",
+        "Store/media/1.9.3/app-store/iphone/1-become-unstoppable.png",
+        "Store/media/1.9.3/app-store/iphone/3-win-your-first-battle.png",
+        "Store/media/1.9.3/app-store/iphone/4-no-ads-no-sign-up.png",
+        "Store/media/1.9.3/app-store/iphone/6-climb-the-leaderboard.png",
+        "Store/media/1.9.3/app-store/iphone/2-in-battle-in-seconds.png"
+      ],
+      "ipad": [
+        "Store/media/1.9.3/app-store/ipad/5-upgrades-that-last.png",
+        "Store/media/1.9.3/app-store/ipad/1-become-unstoppable.png",
+        "Store/media/1.9.3/app-store/ipad/3-win-your-first-battle.png",
+        "Store/media/1.9.3/app-store/ipad/4-no-ads-no-sign-up.png",
+        "Store/media/1.9.3/app-store/ipad/6-climb-the-leaderboard.png",
+        "Store/media/1.9.3/app-store/ipad/2-in-battle-in-seconds.png"
+      ],
+      "preview": "Store/media/1.9.0/creatives/app-store-preview-1920x886.mp4"
+    },
+    {
+      "name": "BLOW STUFF UP",
+      "hooks": ["E", "F"],
+      "promotionalText": "Blow stuff up in walled tank arenas. Chain the explosions, shred every hostile and clear the mission. No ads, no sign-up.",
+      "iphone": [
+        "Store/media/1.9.4/custom-pages/1-blow-stuff-up-iphone.png",
+        "Store/media/1.9.3/app-store/iphone/4-no-ads-no-sign-up.png",
+        "Store/media/1.9.3/app-store/iphone/3-win-your-first-battle.png",
+        "Store/media/1.9.3/app-store/iphone/2-in-battle-in-seconds.png",
+        "Store/media/1.9.3/app-store/iphone/5-upgrades-that-last.png",
+        "Store/media/1.9.3/app-store/iphone/6-climb-the-leaderboard.png"
+      ],
+      "ipad": [
+        "Store/media/1.9.4/custom-pages/1-blow-stuff-up-ipad.png",
+        "Store/media/1.9.3/app-store/ipad/4-no-ads-no-sign-up.png",
+        "Store/media/1.9.3/app-store/ipad/3-win-your-first-battle.png",
+        "Store/media/1.9.3/app-store/ipad/2-in-battle-in-seconds.png",
+        "Store/media/1.9.3/app-store/ipad/5-upgrades-that-last.png",
+        "Store/media/1.9.3/app-store/ipad/6-climb-the-leaderboard.png"
+      ],
+      "preview": "Store/media/1.9.0/creatives/app-store-preview-1920x886.mp4"
+    }
+  ]
+}

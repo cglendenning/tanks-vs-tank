@@ -16,6 +16,7 @@
     ... app-store-connect.py status <version>
     ... app-store-connect.py creative-assets <video>...
     ... app-store-connect.py starter-pack [<review-screenshot.png>]
+    ... app-store-connect.py custom-pages [--submit]
 listing: finds or creates that iOS version (it stays invisible until submitted),
 writes the approved English copy from Store/listing-en-US.md (D-030) and the
 publisher's copyright, and removes every other language from that version and its
@@ -32,6 +33,11 @@ Profiles and prints its UUID. Capabilities enabled since the last profile
 (iCloud) are only signed into profiles created afterwards. With a bundle ID and
 app name it makes the profile for that App ID instead, registering it first:
 used for the admin app, which is installed over OTA and never sold.
+
+custom-pages: creates or updates the custom product pages listed in
+Store/custom-product-pages.json (D-042) with their promotional text, screenshots
+and preview, and prints each page's URL; --submit sends them to App Review on
+their own, apart from any app version.
 
 creative-assets: uploads videos to the app's Asset Library as creative assets (the
 product page header and search results placements, iOS 27+) and submits them for
@@ -56,6 +62,7 @@ from pathlib import Path
 import jwt
 import store_copy
 
+ROOT = Path(__file__).resolve().parents[1]
 BUNDLE_ID = "com.tgts.tanksvstank"
 # The publisher (Craig Glendenning); TGTStudios, the previous owner, is on versions up to 1.9.4.
 COPYRIGHT = "2026 Craig Glendenning"
@@ -320,42 +327,95 @@ def creative_assets(api, paths):
 def media(api, version, iphone_dir, ipad_dir, preview=None):
     """Replaces the version's iPhone and iPad screenshots, and its app preview when one is given."""
     _, _, loc = en_us_localization(api, version)
+    localization_media(api, "appStoreVersionLocalizations", loc["id"], sorted(Path(iphone_dir).glob("*.png")),
+                       sorted(Path(ipad_dir).glob("*.png")), preview)
+
+
+def localization_media(api, kind, loc_id, iphone_shots, ipad_shots, preview=None):
+    """Replaces the screenshots (in the order given) and, when given, the iPhone preview of a localization: a
+    version's (appStoreVersionLocalizations) or a custom product page's (appCustomProductPageLocalizations)."""
+    owner = {"appStoreVersionLocalization" if kind == "appStoreVersionLocalizations" else "appCustomProductPageLocalization":
+             {"data": {"type": kind, "id": loc_id}}}
     sets = {s["attributes"]["screenshotDisplayType"]: s["id"]
-            for s in api.call("GET", f"/v1/appStoreVersionLocalizations/{loc['id']}/appScreenshotSets")["data"]}
-    for display, folder in (("APP_IPHONE_67", iphone_dir), ("APP_IPAD_PRO_3GEN_129", ipad_dir), ("APP_IPAD_PRO_129", ipad_dir)):
-        set_id = sets.get(display) or api.create("appScreenshotSets", {"screenshotDisplayType": display},
-                                                 {"appStoreVersionLocalization": {"data": {"type": "appStoreVersionLocalizations", "id": loc["id"]}}})["id"]
+            for s in api.call("GET", f"/v1/{kind}/{loc_id}/appScreenshotSets")["data"]}
+    for display, shots in (("APP_IPHONE_67", iphone_shots), ("APP_IPAD_PRO_3GEN_129", ipad_shots), ("APP_IPAD_PRO_129", ipad_shots)):
+        set_id = sets.get(display) or api.create("appScreenshotSets", {"screenshotDisplayType": display}, owner)["id"]
         for old in api.call("GET", f"/v1/appScreenshotSets/{set_id}/appScreenshots")["data"]:
             api.call("DELETE", f"/v1/appScreenshots/{old['id']}")
-        shots = sorted(Path(folder).glob("*.png"))
         for shot in shots:
             upload_asset(api, "appScreenshots", "appScreenshotSets", set_id, shot)
         print(f"{display}: {len(shots)} screenshots uploaded")
-    # App Review refuses a version whose screenshots are still being processed (ASSET_IN_POST_PROCESSING).
+    # App Review refuses screenshots still being processed (ASSET_IN_POST_PROCESSING).
     for _ in range(60):
         states = [shot["attributes"].get("assetDeliveryState", {}).get("state")
-                  for s in api.call("GET", f"/v1/appStoreVersionLocalizations/{loc['id']}/appScreenshotSets")["data"]
+                  for s in api.call("GET", f"/v1/{kind}/{loc_id}/appScreenshotSets")["data"]
                   for shot in api.call("GET", f"/v1/appScreenshotSets/{s['id']}/appScreenshots")["data"]]
         if "FAILED" in states:
-            raise SystemExit("Apple could not process a screenshot; check the version page in App Store Connect")
+            raise SystemExit("Apple could not process a screenshot; check the page in App Store Connect")
         if all(state == "COMPLETE" for state in states):
             print(f"all {len(states)} screenshots processed")
             break
         time.sleep(10)
     else:
-        raise SystemExit("screenshots still processing after 10 minutes; run submit again later")
+        raise SystemExit("screenshots still processing after 10 minutes; run the command again later")
     if preview is None:
         return
     previews = {s["attributes"]["previewType"]: s["id"]
-                for s in api.call("GET", f"/v1/appStoreVersionLocalizations/{loc['id']}/appPreviewSets")["data"]}
+                for s in api.call("GET", f"/v1/{kind}/{loc_id}/appPreviewSets")["data"]}
     for preview_type, set_id in previews.items():
         for old in api.call("GET", f"/v1/appPreviewSets/{set_id}/appPreviews")["data"]:
             api.call("DELETE", f"/v1/appPreviews/{old['id']}")
             print(f"{preview_type}: removed {old['attributes'].get('fileName')}")
-    set_id = previews.get("IPHONE_67") or api.create("appPreviewSets", {"previewType": "IPHONE_67"},
-                                                     {"appStoreVersionLocalization": {"data": {"type": "appStoreVersionLocalizations", "id": loc["id"]}}})["id"]
+    set_id = previews.get("IPHONE_67") or api.create("appPreviewSets", {"previewType": "IPHONE_67"}, owner)["id"]
     upload_asset(api, "appPreviews", "appPreviewSets", set_id, preview)
     print("IPHONE_67 preview uploaded:", Path(preview).name)
+
+
+def custom_pages(api, submit=False):
+    """Creates or updates the custom product pages in Store/custom-product-pages.json (D-042): name, promotional
+    text, screenshots in the listed order and preview. With submit, sends their drafts to App Review in a submission
+    of their own, apart from any app version."""
+    manifest = json.loads((ROOT / "Store/custom-product-pages.json").read_text())
+    app = api.call("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"][0]["id"]
+    existing = {p["attributes"]["name"]: p for p in api.call("GET", f"/v1/apps/{app}/appCustomProductPages?limit=50")["data"]}
+    drafts = []
+    for page in manifest["pages"]:
+        found = existing.get(page["name"])
+        if not found:
+            found = api.call("POST", "/v1/appCustomProductPages", {
+                "data": {"type": "appCustomProductPages", "attributes": {"name": page["name"]},
+                         "relationships": {"app": {"data": {"type": "apps", "id": app}},
+                                           "appCustomProductPageVersions": {"data": [{"type": "appCustomProductPageVersions", "id": "${version}"}]}}},
+                "included": [
+                    {"type": "appCustomProductPageVersions", "id": "${version}", "relationships": {"appCustomProductPageLocalizations":
+                        {"data": [{"type": "appCustomProductPageLocalizations", "id": "${en}"}]}}},
+                    {"type": "appCustomProductPageLocalizations", "id": "${en}",
+                     "attributes": {"locale": "en-US", "promotionalText": page["promotionalText"]}}]})["data"]
+        versions = api.call("GET", f"/v1/appCustomProductPages/{found['id']}/appCustomProductPageVersions")["data"]
+        version = next((v for v in versions if v["attributes"].get("state") in ("PREPARE_FOR_SUBMISSION", "REJECTED")), None)
+        if version is None:
+            print(f"{page['name']}: no editable draft ({', '.join(v['attributes'].get('state') for v in versions)}); left as it is")
+            continue
+        loc = next(l for l in api.call("GET", f"/v1/appCustomProductPageVersions/{version['id']}/appCustomProductPageLocalizations")["data"]
+                   if l["attributes"]["locale"] == "en-US")
+        api.call("PATCH", f"/v1/appCustomProductPageLocalizations/{loc['id']}", {"data": {"type": "appCustomProductPageLocalizations",
+                 "id": loc["id"], "attributes": {"promotionalText": page["promotionalText"]}}})
+        print(f"{page['name']} (hooks {', '.join(page['hooks'])}): {found['id']}, promotional text written")
+        localization_media(api, "appCustomProductPageLocalizations", loc["id"], [ROOT / f for f in page["iphone"]],
+                           [ROOT / f for f in page["ipad"]], ROOT / page["preview"])
+        url = api.call("GET", f"/v1/appCustomProductPages/{found['id']}")["data"]["attributes"].get("url")
+        print(f"{page['name']}: {url}")
+        drafts.append((page["name"], version["id"]))
+    if not submit or not drafts:
+        return
+    submission = api.create("reviewSubmissions", {"platform": "IOS"}, {"app": {"data": {"type": "apps", "id": app}}})
+    for name, version_id in drafts:
+        api.create("reviewSubmissionItems", None, {
+            "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": submission["id"]}},
+            "appCustomProductPageVersion": {"data": {"type": "appCustomProductPageVersions", "id": version_id}}})
+    api.call("PATCH", f"/v1/reviewSubmissions/{submission['id']}", {"data": {"type": "reviewSubmissions",
+             "id": submission["id"], "attributes": {"submitted": True}}})
+    print(f"submitted for review: {', '.join(name for name, _ in drafts)}")
 
 
 def attach_build(api, version, build_number):
@@ -619,6 +679,10 @@ def main():
         creative_assets(api, sys.argv[2:])
     elif command == ["starter-pack"] and len(sys.argv) in (2, 3):
         starter_pack(api, sys.argv[2] if len(sys.argv) == 3 else None)
+    elif command == ["custom-pages"] and len(sys.argv) == 2:
+        custom_pages(api)
+    elif command == ["custom-pages"] and len(sys.argv) == 3 and sys.argv[2] == "--submit":
+        custom_pages(api, submit=True)
     elif command == ["full-release"] and len(sys.argv) == 3:
         full_release(api, sys.argv[2])
     else:
