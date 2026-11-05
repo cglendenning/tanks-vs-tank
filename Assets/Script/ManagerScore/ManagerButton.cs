@@ -16,9 +16,17 @@ public class ManagerButton : MonoBehaviour {
     public GameObject CountObj;
   
     
+    // D-040: NEXT MISSION is the strongest "more" a player gives, so an offer opens first; NO THANKS, PLAY (or a
+    // finished purchase) goes on to the mission.
     public void NextLv()
     {
+        if (TreadShredNextMissionOffer.ShowBeforeNext(TreadShredUi.FindFont(GameObject.Find("Canvas")), LoadNextMission))
+            return;
+        LoadNextMission();
+    }
 
+    private void LoadNextMission()
+    {
         string level = Application.loadedLevelName;
         level = level.Remove(2) + (int.Parse(level.Substring(2)) + 1).ToString();
         Application.LoadLevel(level);

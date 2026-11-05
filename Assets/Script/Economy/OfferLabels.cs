@@ -81,6 +81,14 @@ namespace TreadShred.Economy
                 "SPEND " + CountText.Format(cost) + " GEMS", "CANCEL");
         }
 
+        // D-017-AC-08 and D-040: Overdrive offered on the upgrade screen and before the next mission.
+        public const string ArmOverdrive = "ARM OVERDRIVE";
+        public const string ForNextMission = "FOR YOUR NEXT MISSION";
+        public const string OverdriveShots = "2 SHOTS PER TAP";
+        public const string OverdriveArmed = "OVERDRIVE ON FOR YOUR NEXT MISSION";
+        public const string Active = "ACTIVE";
+        public const string NoThanksPlay = "NO THANKS, PLAY";
+
         // D-035-AC-06: after the first play's free Overdrive, the victory card offers to keep it.
         public const string KeepOverdrive = "KEEP OVERDRIVE";
 

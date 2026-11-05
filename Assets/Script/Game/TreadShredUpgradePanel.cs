@@ -11,7 +11,8 @@ using UnityEngine.UI;
 public sealed class TreadShredUpgradePanel : MonoBehaviour
 {
     private static readonly UpgradeTrack[] Tracks = { UpgradeTrack.Armor, UpgradeTrack.Firepower, UpgradeTrack.Speed };
-    private static readonly float[] RowY = { 200f, 40f, -120f };
+    // Armor, Firepower and Speed, then Overdrive (D-017-AC-08).
+    private static readonly float[] RowY = { 230f, 95f, -40f, -175f };
 
     private Font font;
     private Text coinsText;
@@ -22,6 +23,8 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     private readonly Dictionary<UpgradeTrack, Button> buttons = new Dictionary<UpgradeTrack, Button>();
     private UpgradePurchase shop;
     private Button undoButton;
+    private Text overdriveState;
+    private Button overdriveButton;
 
     public static TreadShredUpgradePanel Show(Font font)
     {
@@ -76,7 +79,24 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
             TreadShredUi.ShrinkToFit(buttons[track].GetComponentInChildren<Text>(), 18);
         }
 
-        statusText = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(0f, -240f), new Vector2(1200f, 36f), 26, font);
+        // D-017-AC-08: Overdrive is in the list too, so a player who looks for more power here finds it.
+        var overdriveY = RowY[Tracks.Length];
+        TreadShredSalesClip.Create(backdrop, new Vector2(-595f, overdriveY), new Vector2(190f, 107f),
+            SalesPitches.ForOffer(GemOffer.Overdrive), font, OpenOverdriveSalesScreen);
+        var overdriveName = TreadShredUi.CreateText("OVERDRIVE", backdrop, new Vector2(-335f, overdriveY + 20f),
+            new Vector2(300f, 60f), 42, font);
+        overdriveName.alignment = TextAnchor.MiddleLeft;
+        overdriveState = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(-335f, overdriveY - 34f),
+            new Vector2(300f, 36f), 24, font);
+        overdriveState.alignment = TextAnchor.MiddleLeft;
+        overdriveState.color = TreadShredUi.DetailColor;
+        TreadShredUi.CreateText(OfferLabels.OverdriveShots, backdrop, new Vector2(25f, overdriveY), new Vector2(400f, 60f), 26,
+            font);
+        overdriveButton = TreadShredUi.CreateButton(string.Empty, backdrop, new Vector2(465f, overdriveY),
+            new Vector2(450f, 100f), 26, font, ActivateOverdrive);
+        TreadShredUi.ShrinkToFit(overdriveButton.GetComponentInChildren<Text>(), 18);
+
+        statusText = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(0f, -262f), new Vector2(1200f, 36f), 26, font);
         statusText.color = TreadShredUi.DetailColor;
         TreadShredUi.CreateButton("DONE", backdrop, new Vector2(0f, -390f), new Vector2(440f, 120f), 52, font,
             () => Destroy(gameObject));
@@ -94,7 +114,10 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
 
     // D-036 (P-8): the tap is the player saying "I want this". Coins apply at once (UNDO UPGRADE reverses it), gems
     // the player already holds are confirmed once, and a purchase goes straight to the store's own sheet.
-    private void Upgrade(UpgradeTrack track)
+    private void Upgrade(UpgradeTrack track) => Checkout(shop, track, font, () => statusText.text = string.Empty);
+
+    /// <summary>An upgrade tap's checkout (D-036), shared with the next-mission interstitial (D-040).</summary>
+    internal static void Checkout(UpgradePurchase shop, UpgradeTrack track, Font font, System.Action beforeBuy)
     {
         if (Progression.IsMaxed(track))
             return;
@@ -102,16 +125,29 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
         var balance = TreadShredStore.Ensure().Wallet.Balance;
         if (UpgradePurchase.Checkout(quote, balance) != UpgradeCheckout.ConfirmGems)
         {
-            statusText.text = string.Empty;
+            beforeBuy();
             shop.Buy(track);
             return;
         }
         var confirmation = ProgressionLabels.UpgradeConfirmation(track, Progression.Level(track) + 1, quote, balance);
         TreadShredConfirmDialog.Show(confirmation, font, () =>
         {
-            statusText.text = string.Empty;
+            beforeBuy();
             shop.Buy(track);
         });
+    }
+
+    private void ActivateOverdrive() => TreadShredOverdrive.Activate(font, "overdrive_upgrades", () =>
+    {
+        statusText.text = OfferLabels.OverdriveArmed;
+        Refresh();
+    }, ShowStatus);
+
+    private void OpenOverdriveSalesScreen()
+    {
+        TreadShredSalesScreen.Show(SalesPitches.ForOffer(GemOffer.Overdrive), font, TreadShredOverdrive.ButtonLabel(),
+            OfferLabels.Owned(TreadShredStore.Ensure().Wallet.Balance),
+            !TreadShredOverdrive.Active && !TreadShredStore.Ensure().PurchaseInProgress, ActivateOverdrive);
     }
 
     // D-036-AC-01: one price on the row and on its sales screen alike.
@@ -182,6 +218,9 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
             buttons[track].interactable = !maxed && !TreadShredStore.Ensure().PurchaseInProgress;
         }
         undoButton.gameObject.SetActive(shop != null && shop.CanUndo);
+        overdriveState.text = TreadShredOverdrive.Active ? OfferLabels.Active : OfferLabels.ForNextMission;
+        TreadShredUi.SetLabel(overdriveButton, TreadShredOverdrive.Active ? OfferLabels.Active : TreadShredOverdrive.ButtonLabel());
+        overdriveButton.interactable = !TreadShredOverdrive.Active && !TreadShredStore.Ensure().PurchaseInProgress;
     }
 
     private void OnBalanceChanged(int balance)
