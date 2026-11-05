@@ -21,9 +21,10 @@ public static class TankBuildAutomation
     private const string AndroidApkOutput = "Builds/Android/TreadShred.apk";
     private const string AndroidBundleOutput = "Builds/Android/TreadShred.aab";
     // 1.9.5: the one-time Starter Pack (D-037). Every store release needs a new version and build number.
+    // Builds 25 / 13 replace 24 / 12 in review, adding the six-wins rating prompt (owner decision 2026-11-05).
     private const string ReleaseVersion = "1.9.5";
-    private const int ReleaseBuildNumber = 24;
-    private const int AndroidReleaseBuildNumber = 12;
+    private const int ReleaseBuildNumber = 25;
+    private const int AndroidReleaseBuildNumber = 13;
 
     [MenuItem("Tread Shred/Build/iOS device project")]
     public static void BuildIosDeviceProject()
