@@ -12,10 +12,10 @@ against the build before every submission. Lines marked (iOS) appear only on the
 - **App Store promotional text (170):** Become unstoppable. Install and you're in battle within seconds, with your first win under a minute away. No ads, no sign-up. Every win upgrades your tank for good.
 - **App Store keywords (100):** tank,combat,shooter,missions,armor,upgrade,arcade,action,war,battle,tactical,tiers,offline
 
-## What's new (1.9.3)
+## What's new (1.9.5)
 
-- **App Store What's New:** Tread Shred 1.9.3: install it and you're in battle within seconds, with your first win under a minute away. Plus permanent armor, firepower and speed upgrades, Veteran and Elite tiers, a Game Center high score leaderboard, iCloud progress backup, and no more ads. Watch every boost and upgrade in action before you buy.
-- **Google Play release notes:** Install it and you're in battle within seconds, with your first win under a minute away. Permanent armor, firepower and speed upgrades. Veteran and Elite tiers. A high score to chase on Google Play Games, with your progress saved there too. Watch every boost and upgrade in action before you buy. No more ads.
+- **App Store What's New:** Tread Shred 1.9.5: a one-time Starter Pack for new commanders. Switch between your cannon and your mission's special weapon with one tap. The ground changes every five missions, so you can see how far you've come. Your upgrades now show on screen while you fight, and the mission list opens on your next mission. Fixes: the shell that arcs over walls now takes one hit of armor, and your shields clear when your tank is destroyed.
+- **Google Play release notes:** A one-time Starter Pack for new commanders. Switch between your cannon and your mission's special weapon with one tap. New ground every five missions. Your upgrades show on screen while you fight, and the mission list opens on your next mission. Fixes: the shell that arcs over walls takes one hit of armor, and shields clear when your tank is destroyed.
 
 ## Description
 
