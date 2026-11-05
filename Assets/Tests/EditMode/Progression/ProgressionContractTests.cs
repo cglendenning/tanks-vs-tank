@@ -104,8 +104,8 @@ namespace TreadShred.Progression.Tests
             for (var mission = 1; mission <= 10; mission++)
                 reward = progression.CompleteMission(DifficultyTier.Recruit, mission, true);
 
-            Assert.AreEqual("+100 COINS   +20 GEMS MILESTONE REWARD", ProgressionLabels.Reward(reward));
-            Assert.AreEqual("+100 COINS", ProgressionLabels.Reward(progression.CompleteMission(DifficultyTier.Recruit, 10, true)),
+            Assert.AreEqual("+50 COINS   +20 GEMS MILESTONE REWARD", ProgressionLabels.Reward(reward));
+            Assert.AreEqual("+50 COINS", ProgressionLabels.Reward(progression.CompleteMission(DifficultyTier.Recruit, 10, true)),
                 "a repeat clear pays no milestone and says nothing about one");
             StringAssert.Contains("ProgressionLabels.Reward(reward.Value)", Script("ManagerScore/ManagerScore.cs"));
         }

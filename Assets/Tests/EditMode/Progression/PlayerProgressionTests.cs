@@ -49,7 +49,7 @@ namespace TreadShred.Progression.Tests
         public void TracksHaveTenLevelsAndPersist()
         {
             // All 30 upgrades cost 33,000 coins.
-            EarnCoins(330);
+            EarnCoins(660);
             foreach (UpgradeTrack track in System.Enum.GetValues(typeof(UpgradeTrack)))
             {
                 for (var level = 0; level < ProgressionRules.LevelsPerTrack; level++)
@@ -67,7 +67,7 @@ namespace TreadShred.Progression.Tests
         [Test(Description = "D-017-AC-03: level n costs n times 200 coins")]
         public void LevelCostScalesWithLevel()
         {
-            EarnCoins(200);
+            EarnCoins(400);
             for (var level = 1; level <= ProgressionRules.LevelsPerTrack; level++)
             {
                 Assert.AreEqual(level * 200, progression.Quote(UpgradeTrack.Firepower).CostCoins);
@@ -93,13 +93,13 @@ namespace TreadShred.Progression.Tests
         [Test(Description = "D-018-AC-01: missions pay tier-scaled coins that persist")]
         public void MissionsPayCoinsScaledByTier()
         {
-            Assert.AreEqual(100, progression.CompleteMission(DifficultyTier.Recruit, 1, true).Coins);
-            Assert.AreEqual(20, progression.CompleteMission(DifficultyTier.Recruit, 2, false).Coins);
+            Assert.AreEqual(50, progression.CompleteMission(DifficultyTier.Recruit, 1, true).Coins);
+            Assert.AreEqual(10, progression.CompleteMission(DifficultyTier.Recruit, 2, false).Coins);
             ClearAll(DifficultyTier.Recruit);
-            Assert.AreEqual(200, progression.CompleteMission(DifficultyTier.Veteran, 1, true).Coins);
-            Assert.AreEqual(40, progression.CompleteMission(DifficultyTier.Veteran, 2, false).Coins);
+            Assert.AreEqual(100, progression.CompleteMission(DifficultyTier.Veteran, 1, true).Coins);
+            Assert.AreEqual(20, progression.CompleteMission(DifficultyTier.Veteran, 2, false).Coins);
             ClearAll(DifficultyTier.Veteran);
-            Assert.AreEqual(300, progression.CompleteMission(DifficultyTier.Elite, 1, true).Coins);
+            Assert.AreEqual(150, progression.CompleteMission(DifficultyTier.Elite, 1, true).Coins);
 
             var coins = progression.Coins;
             Assert.AreEqual(coins, new PlayerProgression(store, wallet).Coins);
@@ -109,7 +109,7 @@ namespace TreadShred.Progression.Tests
         public void GemsCoverCoinShortfall()
         {
             wallet.GrantStarterIfNeeded();
-            EarnCoins(1);
+            EarnCoins(2);
             // Level 1 costs 200; 100 coins short means 5 gems.
             Assert.AreEqual(5, progression.Quote(UpgradeTrack.Armor).GemsNeeded);
 

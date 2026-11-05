@@ -41,8 +41,8 @@ namespace TreadShred.Progression
         public const float DamageBonusPerLevel = 0.10f;
         public const float SpeedBonusPerLevel = 0.05f;
 
-        public const int CoinsPerWin = 100;
-        public const int CoinsPerLoss = 20;
+        public const int CoinsPerWin = 50;
+        public const int CoinsPerLoss = 10;
         public const int CoinsPerGem = 20;
 
         public static readonly int[] MilestoneMissions = { 10, 20, 30, 40 };

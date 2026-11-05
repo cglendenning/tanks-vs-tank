@@ -136,7 +136,7 @@ namespace TreadShred.Save.Tests
             phone.Progression.CompleteMission(DifficultyTier.Recruit, 2, true);
             phone.Wallet.CreditPurchase(Pack, "txn-offline");
             Assert.AreEqual(beforeOffline, cloud.ServerJson, "nothing reaches the server while offline");
-            Assert.AreEqual(200, phone.Progression.Coins, "play carries on with local data");
+            Assert.AreEqual(100, phone.Progression.Coins, "play carries on with local data");
 
             device.GoOnline();
 
