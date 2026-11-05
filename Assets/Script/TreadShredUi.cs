@@ -105,19 +105,10 @@ public static class TreadShredUi
         var rect = CreateRect(label, parent, position, size,
             typeof(RectTransform), typeof(Image), typeof(Button), typeof(Outline));
 
-        var image = rect.GetComponent<Image>();
-        image.color = ButtonColor;
-        var outline = rect.GetComponent<Outline>();
-        outline.effectColor = AccentColor;
-        outline.effectDistance = new Vector2(3f, 3f);
-
         var button = rect.GetComponent<Button>();
-        button.targetGraphic = image;
-        var colors = button.colors;
-        colors.normalColor = ButtonColor;
-        colors.highlightedColor = new Color(0.18f, 0.32f, 0.35f, 1f);
-        colors.pressedColor = new Color(0.4f, 0.16f, 0.06f, 1f);
-        button.colors = colors;
+        button.targetGraphic = rect.GetComponent<Image>();
+        rect.GetComponent<Outline>().effectDistance = new Vector2(3f, 3f);
+        StyleStandard(button);
         button.onClick.AddListener(action);
 
         var text = CreateText(label, rect, Vector2.zero, size - new Vector2(18f, 10f), fontSize, font);
@@ -126,13 +117,26 @@ public static class TreadShredUi
         return button;
     }
 
+    // Every button's own look; the D-038 weapon toggle returns a side to it when that weapon is put away.
+    public static void StyleStandard(Button button)
+    {
+        button.targetGraphic.color = ButtonColor;
+        var colors = button.colors;
+        colors.normalColor = ButtonColor;
+        colors.highlightedColor = new Color(0.18f, 0.32f, 0.35f, 1f);
+        colors.pressedColor = new Color(0.4f, 0.16f, 0.06f, 1f);
+        button.colors = colors;
+        button.GetComponent<Outline>().effectColor = AccentColor;
+    }
+
     // The one button a screen most wants tapped (the Starter Pack's buy buttons, D-037): a solid accent fill.
+    public static readonly Color PrimaryFill = new Color(0.86f, 0.3f, 0.06f, 1f);
+
     public static void StylePrimary(Button button)
     {
-        var fill = new Color(0.86f, 0.3f, 0.06f, 1f);
-        button.targetGraphic.color = fill;
+        button.targetGraphic.color = PrimaryFill;
         var colors = button.colors;
-        colors.normalColor = fill;
+        colors.normalColor = PrimaryFill;
         colors.highlightedColor = new Color(1f, 0.42f, 0.12f, 1f);
         colors.pressedColor = new Color(0.55f, 0.18f, 0.04f, 1f);
         button.colors = colors;

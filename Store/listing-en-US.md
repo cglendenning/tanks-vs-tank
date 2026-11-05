@@ -10,7 +10,7 @@ against the build before every submission. Lines marked (iOS) appear only on the
 - **App Store subtitle (30):** Tank battle in seconds. No ads
 - **Google Play short description (80):** In battle in seconds. Blast tanks, keep every upgrade, climb the board. No ads.
 - **App Store promotional text (170):** Become unstoppable. Install and you're in battle within seconds, with your first win under a minute away. No ads, no sign-up. Every win upgrades your tank for good.
-- **App Store keywords (100):** tank,combat,shooter,missions,armor,upgrade,arcade,action,war,battle,tactical,tiers
+- **App Store keywords (100):** tank,combat,shooter,missions,armor,upgrade,arcade,action,war,battle,tactical,tiers,offline
 
 ## What's new (1.9.3)
 
@@ -46,5 +46,6 @@ Features
 • Google Play Games leaderboard and saved games (Android)
 • Sound, music, vibration and camera settings
 • No ads
+• Missions play offline: no connection needed to fight
 
 Free to play. Optional in-app purchases: gem packs.

@@ -43,6 +43,18 @@ public class PlayerMoverment : MonoBehaviour {
         bandanduoi
     }
     public PlayerType typeplayer;
+
+    // D-038: the mission's own weapon; the HUD toggle switches typeplayer between it and the cannon.
+    private PlayerType missionType;
+    public TreadShred.Progression.Weapon MissionWeapon => (TreadShred.Progression.Weapon)(int)missionType;
+    public TreadShred.Progression.Weapon WeaponInHand => (TreadShred.Progression.Weapon)(int)typeplayer;
+
+    /// <summary>D-038-AC-03: the toggle's tap; only the cannon or the mission's own weapon can be in hand.</summary>
+    public void SelectWeapon(TreadShred.Progression.Weapon weapon)
+    {
+        if (weapon == TreadShred.Progression.Weapon.Cannon || weapon == MissionWeapon)
+            typeplayer = (PlayerType)(int)weapon;
+    }
 	// Use this for initialization
 	void Start () {
         instance = this;
@@ -75,28 +87,11 @@ public class PlayerMoverment : MonoBehaviour {
             TreadShredFirstMinuteCues.Show(font, joystick);
         }
         Speed *= progress.SpeedMultiplier;
-       if (StyteBullet == null)
-        {
-            StyteBullet = GameObject.Find("Canvas");
-        }
-       
-        switch (typeplayer)
-        {
-            case PlayerType.banthang:
-                StyteBullet.transform.GetChild(1).gameObject.transform.GetChild(0).gameObject.SetActive(true);
-                break;
-            case PlayerType.banvong:
-                StyteBullet.transform.GetChild(1).gameObject.transform.GetChild(1).gameObject.SetActive(true);
-                break;
-            case PlayerType.bandan3:
-                StyteBullet.transform.GetChild(1).gameObject.transform.GetChild(2).gameObject.SetActive(true);
-                break;
-            case PlayerType.bandanduoi:
-                StyteBullet.transform.GetChild(1).gameObject.transform.GetChild(3).gameObject.SetActive(true);
-                break;
-            default:
-                break;
-        }
+        // D-039: the mission's ground. D-038-AC-01: the old unlabeled weapon icon never shows; a special weapon gets the
+        // named toggle instead.
+        TreadShredGround.Apply(TreadShredProgress.CurrentMission());
+        missionType = typeplayer;
+        TreadShredWeaponToggle.Attach(this, MissionWeapon, TreadShredUi.FindFont(GameObject.Find("Canvas")));
 	}
   
     Vector2 destiny;

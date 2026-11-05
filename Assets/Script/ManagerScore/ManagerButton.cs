@@ -50,6 +50,7 @@ public class ManagerButton : MonoBehaviour {
             Heart.SetActive(false);
             PauseGameObj.SetActive(true);
             TreadShredOverdriveBadge.SetVisible(false);
+            TreadShredWeaponToggle.SetVisible(false);
             Time.timeScale = 0;
         }
         else
@@ -59,6 +60,7 @@ public class ManagerButton : MonoBehaviour {
             CountObj.GetComponent<Animator>().enabled = true;
             PauseGameObj.SetActive(false);
             TreadShredOverdriveBadge.SetVisible(true);
+            TreadShredWeaponToggle.SetVisible(true);
             BgIg.SetActive(true);
             KillScore.SetActive(true);
             Heart.SetActive(true);

@@ -81,6 +81,9 @@ namespace TreadShred.Economy
                 "SPEND " + CountText.Format(cost) + " GEMS", "CANCEL");
         }
 
+        // D-035-AC-06: after the first play's free Overdrive, the victory card offers to keep it.
+        public const string KeepOverdrive = "KEEP OVERDRIVE";
+
         // Overdrive waits for the next mission, so the panel must say it is on.
         public const string OverdriveActive = "OVERDRIVE ACTIVE";
 

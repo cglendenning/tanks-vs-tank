@@ -198,7 +198,7 @@ namespace TreadShred.Progression.Tests
             StringAssert.Contains("TreadShredStore.Instance.Release(showStatus);", offer);
 
             var results = Script("ManagerScore/ManagerScore.cs");
-            var actions = results.IndexOf("BuildVictoryRewardActions();\n        // D-037-AC-04", StringComparison.Ordinal);
+            var actions = results.IndexOf("HighlightNextMission();\n        }\n        // D-037-AC-04", StringComparison.Ordinal);
             Assert.Greater(actions, 0, "after the result screen's own offers are built");
             StringAssert.Contains("TreadShredStarterOffer.ShowIfOnSale(TreadShredUi.FindFont(VictoryofFail));", results);
             var start = Script("LoadLv.cs");

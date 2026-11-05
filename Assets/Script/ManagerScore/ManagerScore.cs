@@ -311,10 +311,14 @@ public class ManagerScore : MonoBehaviour
         CaculaterScore(true);
         TreadShredImpact.MissionOver();
         VictoryofFail.SetActive(true);
+        TreadShredWeaponToggle.Hide();
         if (FailureObj != null && FailureObj.activeSelf)
             BuildFailureRewardActions();
         else
+        {
             BuildVictoryRewardActions();
+            HighlightNextMission();
+        }
         // D-037-AC-04: while the Starter Pack is on sale its interstitial opens over every result screen.
         TreadShredStarterOffer.ShowIfOnSale(TreadShredUi.FindFont(VictoryofFail));
     }
@@ -361,13 +365,29 @@ public class ManagerScore : MonoBehaviour
         else
             BuildOfferPanel(
                 GemOffer.Overdrive,
-                "OVERDRIVE",
+                TreadShredFirstMinute.FirstPlay ? OfferLabels.KeepOverdrive : "OVERDRIVE",
                 OfferLabels.OverdriveEffect,
                 "ACTIVATE",
                 () => ConfirmThen(GemOffer.Overdrive, RedeemOverdrive));
         ArrangeRetry(true);
         // D-033-AC-03: only a victory screen may ask for a store rating, after real play.
         TreadShredReviewPrompt.VictoryScreenOpened();
+    }
+
+    // D-009-AC-04: after a victory the way forward is the most prominent control on the screen.
+    private void HighlightNextMission()
+    {
+        var plate = VictoryObj != null ? VictoryObj.transform.Find("ButtonNext/LabelPlate") : null;
+        var image = plate != null ? plate.GetComponent<Image>() : null;
+        if (image == null)
+        {
+            Debug.LogError("[Results] NEXT MISSION's label plate not found; it keeps its plain style.");
+            return;
+        }
+        image.color = TreadShredUi.PrimaryFill;
+        var outline = plate.GetComponent<Outline>();
+        if (outline != null)
+            outline.effectColor = TreadShredUi.TitleColor;
     }
 
     private void BuildOfferPanel(GemOffer offer, string title, string detail, string action,

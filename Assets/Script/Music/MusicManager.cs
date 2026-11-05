@@ -69,7 +69,8 @@ public class MusicManager : MonoBehaviour {
 
         transform.GetChild(2).gameObject.GetComponent<AudioSource>().Stop();
         var source = transform.GetChild(5).gameObject.GetComponent<AudioSource>();
-        source.loop = true;
+        // D-027-AC-04: the victory music plays once and never loops.
+        source.loop = false;
         if (!source.isPlaying)
             source.Play();
     }
