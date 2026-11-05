@@ -601,13 +601,38 @@ public class PlayerMoverment : MonoBehaviour {
         // D-035-AC-03: on a first play a hit never takes the last armor.
         countdie = TreadShred.Progression.FirstMinute.ArmorAfterHit(countdie, index, TreadShredFirstMinute.FirstPlay);
         TreadShredImpact.HitTaken();
-        StartCoroutine(DelayHeath());
+        if (shieldFade != null)
+            StopCoroutine(shieldFade);
+        shieldFade = StartCoroutine(DelayHeath());
 
         if (countdie < 1 && countdie > -1)
         {
+            // D-017-AC-09: destroyed means no shields left on the HUD, at once (the revive panel pauses the game).
+            StopCoroutine(shieldFade);
+            shieldFade = null;
+            SetShields(0.15f);
             // D-020: offer a revive before the tank is lost.
             if (!TreadShredRevivePanel.TryOffer(this))
                 Die();
+        }
+    }
+
+    // The shield fade under way, stopped by a revive so it can never dim a shield the revive restored.
+    private Coroutine shieldFade;
+
+    private void SetShields(float alpha)
+    {
+        foreach (var heart in Heart)
+        {
+            if (heart == null)
+                continue;
+            heart.transform.localScale = Vector3.one;
+            var image = heart.GetComponent<Image>();
+            if (image == null)
+                continue;
+            var color = image.color;
+            color.a = alpha;
+            image.color = color;
         }
     }
 
@@ -615,19 +640,10 @@ public class PlayerMoverment : MonoBehaviour {
     public void Revive()
     {
         countdie = missionArmorHits;
-        foreach (var heart in Heart)
-        {
-            if (heart == null)
-                continue;
-            heart.transform.localScale = Vector3.one;
-            var image = heart.GetComponent<Image>();
-            if (image != null)
-            {
-                var color = image.color;
-                color.a = 1f;
-                image.color = color;
-            }
-        }
+        if (shieldFade != null)
+            StopCoroutine(shieldFade);
+        shieldFade = null;
+        SetShields(1f);
     }
 
     public void Die()
@@ -654,6 +670,7 @@ public class PlayerMoverment : MonoBehaviour {
         }
     }
 
+   // D-017-AC-09: real-time waits, so the revive panel's pause cannot freeze a shield mid-fade.
    IEnumerator DelayHeath()
    {
       
@@ -666,12 +683,12 @@ public class PlayerMoverment : MonoBehaviour {
                {
                    if (i<5)
                    {
-                       yield return new WaitForSeconds(0.05f);
+                       yield return new WaitForSecondsRealtime(0.05f);
                        Heart[0].gameObject.transform.localScale += new Vector3(0.1f, 0.1f, 0);
                    }
                    else
                    {
-                       yield return new WaitForSeconds(0.05f);
+                       yield return new WaitForSecondsRealtime(0.05f);
                        Heart[0].gameObject.transform.localScale += new Vector3(-0.1f,-0.1f, 0);
                    }
                    
@@ -687,12 +704,12 @@ public class PlayerMoverment : MonoBehaviour {
                {
                    if (i < 5)
                    {
-                       yield return new WaitForSeconds(0.05f);
+                       yield return new WaitForSecondsRealtime(0.05f);
                        Heart[1].gameObject.transform.localScale += new Vector3(0.1f, 0.1f, 0);
                    }
                    else
                    {
-                       yield return new WaitForSeconds(0.05f);
+                       yield return new WaitForSecondsRealtime(0.05f);
                        Heart[1].gameObject.transform.localScale += new Vector3(-0.1f, -0.1f, 0);
                    }
 
@@ -710,12 +727,12 @@ public class PlayerMoverment : MonoBehaviour {
                    {
                        if (i < 5)
                        {
-                           yield return new WaitForSeconds(0.05f);
+                           yield return new WaitForSecondsRealtime(0.05f);
                            Heart[2].gameObject.transform.localScale += new Vector3(0.1f, 0.1f, 0);
                        }
                        else
                        {
-                           yield return new WaitForSeconds(0.05f);
+                           yield return new WaitForSecondsRealtime(0.05f);
                            Heart[2].gameObject.transform.localScale += new Vector3(-0.1f, -0.1f, 0);
                        }
 
@@ -733,12 +750,12 @@ public class PlayerMoverment : MonoBehaviour {
                    {
                        if (i < 5)
                        {
-                           yield return new WaitForSeconds(0.05f);
+                           yield return new WaitForSecondsRealtime(0.05f);
                            Heart[0].gameObject.transform.localScale += new Vector3(0.1f, 0.1f, 0);
                        }
                        else
                        {
-                           yield return new WaitForSeconds(0.05f);
+                           yield return new WaitForSecondsRealtime(0.05f);
                            Heart[0].gameObject.transform.localScale += new Vector3(-0.1f, -0.1f, 0);
                        }
 
@@ -752,12 +769,12 @@ public class PlayerMoverment : MonoBehaviour {
                    {
                        if (i < 5)
                        {
-                           yield return new WaitForSeconds(0.05f);
+                           yield return new WaitForSecondsRealtime(0.05f);
                            Heart[1].gameObject.transform.localScale += new Vector3(0.1f, 0.1f, 0);
                        }
                        else
                        {
-                           yield return new WaitForSeconds(0.05f);
+                           yield return new WaitForSecondsRealtime(0.05f);
                            Heart[1].gameObject.transform.localScale += new Vector3(-0.1f, -0.1f, 0);
                        }
 
@@ -770,12 +787,12 @@ public class PlayerMoverment : MonoBehaviour {
                    {
                        if (i < 5)
                        {
-                           yield return new WaitForSeconds(0.05f);
+                           yield return new WaitForSecondsRealtime(0.05f);
                            Heart[2].gameObject.transform.localScale += new Vector3(0.1f, 0.1f, 0);
                        }
                        else
                        {
-                           yield return new WaitForSeconds(0.05f);
+                           yield return new WaitForSecondsRealtime(0.05f);
                            Heart[2].gameObject.transform.localScale += new Vector3(-0.1f, -0.1f, 0);
                        }
 
