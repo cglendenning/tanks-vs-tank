@@ -6,9 +6,10 @@ namespace TreadShred.Progression
     /// <summary>R-REVIEW-PROMPT (D-033): when the native store review prompt may be requested.</summary>
     public static class ReviewRules
     {
-        public const int MinPlayDays = 2;
+        // Owner decision 2026-11-05: six wins alone; any day, any play time.
+        public const int MinPlayDays = 1;
         public const int MinMissionsWon = 6;
-        public const int MinActivePlayMinutes = 20;
+        public const int MinActivePlayMinutes = 0;
         public const float ResultScreenDelaySeconds = 1.5f;
         public const int MaxRequestsPerAppVersion = 1;
         public const int MinDaysBetweenRequests = 120;

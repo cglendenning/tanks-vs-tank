@@ -32,14 +32,14 @@ namespace TreadShred.Progression.Tests
             return prompt;
         }
 
-        [Test(Description = "D-033-AC-02: a request needs missions on two local days, six missions won and twenty minutes of active mission time")]
+        [Test(Description = "D-033-AC-02: a request needs six missions won, on any day and with any play time")]
         public void RequestNeedsRealPlay()
         {
             Assert.IsTrue(Played(new CopyingStore()).MayRequest(Utc, "1.9.1", false));
-            Assert.IsFalse(Played(new CopyingStore(), days: 1).MayRequest(Utc, "1.9.1", false), "first day only");
+            Assert.IsTrue(Played(new CopyingStore(), days: 1).MayRequest(Utc, "1.9.1", false), "a first-day player with six wins");
             Assert.IsFalse(Played(new CopyingStore(), wins: 5).MayRequest(Utc, "1.9.1", false), "five wins");
-            Assert.IsFalse(Played(new CopyingStore(), minutes: 19.9).MayRequest(Utc, "1.9.1", false), "under twenty minutes");
-            Assert.AreEqual((2, 6, 20), (ReviewRules.MinPlayDays, ReviewRules.MinMissionsWon, ReviewRules.MinActivePlayMinutes), "R-REVIEW-PROMPT");
+            Assert.IsTrue(Played(new CopyingStore(), minutes: 0).MayRequest(Utc, "1.9.1", false), "no minimum play time");
+            Assert.AreEqual((1, 6, 0), (ReviewRules.MinPlayDays, ReviewRules.MinMissionsWon, ReviewRules.MinActivePlayMinutes), "R-REVIEW-PROMPT");
         }
 
         [Test(Description = "D-033-AC-02: each local calendar day counts once, and losses are not wins")]
