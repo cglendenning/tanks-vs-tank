@@ -36,8 +36,8 @@ used for the admin app, which is installed over OTA and never sold.
 
 custom-pages: creates or updates the custom product pages listed in
 Store/custom-product-pages.json (D-042) with their promotional text, screenshots
-and preview, and prints each page's URL; --submit sends them to App Review on
-their own, apart from any app version.
+and preview, and prints each page's URL; --submit sends their drafts, as they
+stand, to App Review on their own, apart from any app version.
 
 creative-assets: uploads videos to the app's Asset Library as creative assets (the
 product page header and search results placements, iOS 27+) and submits them for
@@ -371,14 +371,12 @@ def localization_media(api, kind, loc_id, iphone_shots, ipad_shots, preview=None
     print("IPHONE_67 preview uploaded:", Path(preview).name)
 
 
-def custom_pages(api, submit=False):
+def custom_pages(api):
     """Creates or updates the custom product pages in Store/custom-product-pages.json (D-042): name, promotional
-    text, screenshots in the listed order and preview. With submit, sends their drafts to App Review in a submission
-    of their own, apart from any app version."""
+    text, screenshots in the listed order and preview."""
     manifest = json.loads((ROOT / "Store/custom-product-pages.json").read_text())
     app = api.call("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"][0]["id"]
     existing = {p["attributes"]["name"]: p for p in api.call("GET", f"/v1/apps/{app}/appCustomProductPages?limit=50")["data"]}
-    drafts = []
     for page in manifest["pages"]:
         found = existing.get(page["name"])
         if not found:
@@ -405,8 +403,26 @@ def custom_pages(api, submit=False):
                            [ROOT / f for f in page["ipad"]], ROOT / page["preview"])
         url = api.call("GET", f"/v1/appCustomProductPages/{found['id']}")["data"]["attributes"].get("url")
         print(f"{page['name']}: {url}")
-        drafts.append((page["name"], version["id"]))
-    if not submit or not drafts:
+
+
+def submit_custom_pages(api):
+    """Sends the drafts of the pages in Store/custom-product-pages.json to App Review in a submission of their own,
+    apart from any app version (D-042-AC-02)."""
+    manifest = json.loads((ROOT / "Store/custom-product-pages.json").read_text())
+    app = api.call("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"][0]["id"]
+    existing = {p["attributes"]["name"]: p for p in api.call("GET", f"/v1/apps/{app}/appCustomProductPages?limit=50")["data"]}
+    drafts = []
+    for page in manifest["pages"]:
+        found = existing.get(page["name"])
+        if not found:
+            raise SystemExit(f"{page['name']} does not exist yet; run custom-pages first")
+        versions = api.call("GET", f"/v1/appCustomProductPages/{found['id']}/appCustomProductPageVersions")["data"]
+        draft = next((v for v in versions if v["attributes"].get("state") in ("PREPARE_FOR_SUBMISSION", "REJECTED")), None)
+        if draft:
+            drafts.append((page["name"], draft["id"]))
+        else:
+            print(f"{page['name']}: nothing to submit ({', '.join(v['attributes'].get('state') for v in versions)})")
+    if not drafts:
         return
     submission = api.create("reviewSubmissions", {"platform": "IOS"}, {"app": {"data": {"type": "apps", "id": app}}})
     for name, version_id in drafts:
@@ -682,7 +698,7 @@ def main():
     elif command == ["custom-pages"] and len(sys.argv) == 2:
         custom_pages(api)
     elif command == ["custom-pages"] and len(sys.argv) == 3 and sys.argv[2] == "--submit":
-        custom_pages(api, submit=True)
+        submit_custom_pages(api)
     elif command == ["full-release"] and len(sys.argv) == 3:
         full_release(api, sys.argv[2])
     else:
