@@ -29,9 +29,9 @@ import store_copy
 PACKAGE = "com.tgts.tankkvstank"
 API = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/" + PACKAGE
 GAMES_API = "https://gamesconfiguration.googleapis.com/games/v1configuration/applications/"
-# D-032-AC-04: the Play Games HIGH SCORE board, with the same limits as Game Center's (TreadShredLeaderboard.PlayGamesId).
+# D-032-AC-04: the Play Games HIGH SCORE board the game submits to, with the same limits as Game Center's.
+PLAY_GAMES_BOARD = "CgkIg7WH2cUEEAIQAA"  # TreadShredLeaderboard.PlayGamesId
 LEADERBOARD = {
-    "token": "treadshred.best_run",
     "scoreOrder": "LARGER_IS_BETTER",
     "scoreMin": "0",
     "scoreMax": "253200",  # ScoreRules.MaxRunScore: (222 kills x 100 + 40 clears x 500) x (1 + 2 + 3)
@@ -226,16 +226,25 @@ def status(auth):
 
 
 def games_leaderboard(auth, application_id):
-    """Creates the HIGH SCORE leaderboard in Play Games Services (draft until the game's Play Games
-    configuration is published), or finds it, and prints its ID for TreadShredLeaderboard.PlayGamesId."""
+    """Checks the HIGH SCORE board the game submits to (PLAY_GAMES_BOARD) against LEADERBOARD's score limits,
+    creating it only when the game has none, and lists any other board. Google replaces the token a board is created
+    with, so it is found by the game's ID; matching by token created a duplicate. The API accepts but ignores new
+    limits for a published board (2026-11-04), so a difference is reported for a Play Console edit."""
     boards = call("GET", f"{application_id}/leaderboards", auth, base=GAMES_API).get("items", [])
-    board = next((b for b in boards if b.get("token") == LEADERBOARD["token"]), None)
+    board = next((b for b in boards if b["id"] == PLAY_GAMES_BOARD), None)
     if board is None:
         board = call("POST", f"{application_id}/leaderboards", auth, dict(LEADERBOARD, draft={
             "name": {"translations": [{"locale": "en-US", "value": "HIGH SCORE"}]},
             "scoreFormat": {"numberFormatType": "NUMERIC", "numDecimalPlaces": 0},
             "sortRank": 1}), base=GAMES_API)
+        print(f"created {board['id']}; set TreadShredLeaderboard.PlayGamesId and PLAY_GAMES_BOARD to it")
     print(f"Play Games leaderboard {board['id']}: scores {board.get('scoreMin')} to {board.get('scoreMax')}, {board.get('scoreOrder')}")
+    for key, value in LEADERBOARD.items():
+        if board.get(key) != value:
+            print(f"  {key} is {board.get(key)}, the game's rule is {value}: change it in Play Console > Play Games Services > Leaderboards")
+    for other in boards:
+        if other["id"] != board["id"]:
+            print(f"another board, not the game's: {other['id']} ({'published' if other.get('published') else 'draft only'})")
 
 
 if __name__ == "__main__":
