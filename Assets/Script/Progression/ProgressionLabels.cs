@@ -40,6 +40,24 @@ namespace TreadShred.Progression
             }
         }
 
+        /// <summary>D-017-AC-10: the mission HUD's upgraded tracks, one line each in track order ("ARMOR LEVEL 3"); none with none.</summary>
+        public static IReadOnlyList<string> ActiveUpgrades(Func<UpgradeTrack, int> level)
+        {
+            var lines = new List<string>();
+            foreach (UpgradeTrack track in Enum.GetValues(typeof(UpgradeTrack)))
+            {
+                if (level(track) > 0)
+                    lines.Add(Track(track) + " LEVEL " + level(track));
+            }
+            return lines;
+        }
+
+        /// <summary>D-017-AC-10: armor beyond the shields the HUD draws, as "+N"; empty when there is none.</summary>
+        public static string ExtraArmor(int hitsLeft, int shieldsDrawn)
+        {
+            return hitsLeft > shieldsDrawn ? "+" + (hitsLeft - shieldsDrawn) : string.Empty;
+        }
+
         // Current effect and what the next purchase leads to. Armor gains a hit
         // every second level, so name the level where the next hit arrives.
         public static string Preview(UpgradeTrack track, int level)

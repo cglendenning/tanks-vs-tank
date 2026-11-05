@@ -80,6 +80,11 @@ public class PlayerMoverment : MonoBehaviour {
         overdriveActive = loadout.RoundsPerTap > 1 || firstPlay;
         if (overdriveActive)
             TreadShredOverdriveBadge.Show(TreadShredUi.FindFont(GameObject.Find("Canvas")));
+        // D-017-AC-10: the upgraded tracks under the Overdrive tag, and armor beyond the three shields as +N beside them.
+        var hudFont = TreadShredUi.FindFont(GameObject.Find("Canvas"));
+        TreadShredOverdriveBadge.ShowUpgrades(hudFont, TreadShred.Progression.ProgressionLabels.ActiveUpgrades(progress.Progression.Level));
+        extraArmor = TreadShredExtraArmor.Attach(Heart, hudFont);
+        ShowExtraArmor();
         if (firstPlay)
         {
             var font = TreadShredUi.FindFont(GameObject.Find("Canvas"));
@@ -600,6 +605,7 @@ public class PlayerMoverment : MonoBehaviour {
 
         // D-035-AC-03: on a first play a hit never takes the last armor.
         countdie = TreadShred.Progression.FirstMinute.ArmorAfterHit(countdie, index, TreadShredFirstMinute.FirstPlay);
+        ShowExtraArmor();
         TreadShredImpact.HitTaken();
         if (shieldFade != null)
             StopCoroutine(shieldFade);
@@ -619,6 +625,15 @@ public class PlayerMoverment : MonoBehaviour {
 
     // The shield fade under way, stopped by a revive so it can never dim a shield the revive restored.
     private Coroutine shieldFade;
+
+    // D-017-AC-10: armor beyond the drawn shields, as +N beside them.
+    private Text extraArmor;
+
+    private void ShowExtraArmor()
+    {
+        if (extraArmor != null)
+            extraArmor.text = TreadShred.Progression.ProgressionLabels.ExtraArmor(countdie, Heart.Count);
+    }
 
     private void SetShields(float alpha)
     {
@@ -640,6 +655,7 @@ public class PlayerMoverment : MonoBehaviour {
     public void Revive()
     {
         countdie = missionArmorHits;
+        ShowExtraArmor();
         if (shieldFade != null)
             StopCoroutine(shieldFade);
         shieldFade = null;
