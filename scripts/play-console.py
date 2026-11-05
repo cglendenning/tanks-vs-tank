@@ -5,6 +5,7 @@
     python3 scripts/play-console.py check-upload-key <aab>    # upload into a throwaway edit: does Google accept its signing key?
     python3 scripts/play-console.py release <aab> <fraction>  # one edit: bundle, staged production rollout, listing text and images
     python3 scripts/play-console.py draft <aab>               # bundle as a production draft: not reviewed or shown until sent from Play Console
+    python3 scripts/play-console.py send-draft                # the production draft out to everyone with the listing: reviewed, live on approval
     python3 scripts/play-console.py rollout <fraction>        # change the live production rollout; 1 completes it for everyone
     python3 scripts/play-console.py listing                   # write the listing text, promo video and images alone (no bundle)
     python3 scripts/play-console.py status                    # Google's review state of each production release
@@ -197,6 +198,22 @@ def listing(auth):
     print(f"Listing written from {MEDIA.relative_to(ROOT)} with promo video {PROMO_VIDEO}")
 
 
+def send_draft(auth):
+    """Sends the production draft (`draft`) out in one edit: a full release to everyone with the approved listing.
+    Google reviews it with anything already in review and publishes it on approval."""
+    edit = call("POST", "/edits", auth, {})["id"]
+    drafts = [r for r in call("GET", f"/edits/{edit}/tracks/production", auth).get("releases", []) if r.get("status") == "draft"]
+    if not drafts:
+        call("DELETE", f"/edits/{edit}", auth)
+        sys.exit("No production draft to send")
+    release = dict(drafts[0], status="completed")
+    release.pop("userFraction", None)
+    call("PUT", f"/edits/{edit}/tracks/production", auth, {"track": "production", "releases": [release]})
+    write_listing(auth, edit)
+    call("POST", f"/edits/{edit}:commit", auth)
+    print(f"Version code {release['versionCodes'][0]} sent for review as a full production release with the approved listing.")
+
+
 def rollout(auth, fraction):
     """Moves the production release in progress to that fraction of users; 1 completes it for everyone."""
     edit = call("POST", "/edits", auth, {})["id"]
@@ -256,6 +273,8 @@ if __name__ == "__main__":
         release(token(), sys.argv[2], sys.argv[3])
     elif len(sys.argv) == 3 and sys.argv[1] == "draft":
         release(token(), sys.argv[2], 1, draft=True)
+    elif len(sys.argv) == 2 and sys.argv[1] == "send-draft":
+        send_draft(token())
     elif len(sys.argv) == 3 and sys.argv[1] == "games-leaderboard":
         games_leaderboard(token(), sys.argv[2])
     elif len(sys.argv) == 2 and sys.argv[1] == "listing":
