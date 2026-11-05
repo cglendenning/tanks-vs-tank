@@ -18,4 +18,4 @@ device, sign in with the same Apple account or Google account and your progress 
 
 ## Privacy
 
-Read the [Tread Shred Privacy Policy](privacy-policy.md).
+Read the [Tread Shred Privacy Policy](privacy-policy.md) and the [Terms of Service](terms-of-service.md).

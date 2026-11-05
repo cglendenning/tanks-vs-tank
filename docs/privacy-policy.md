@@ -1,7 +1,7 @@
 # Tread Shred Privacy Policy
 
-Effective November 3, 2026. This policy covers Tread Shred on iPhone, iPad and Android, published by TGTStudios
-(Craig Glendenning), "we" below.
+Effective November 4, 2026. This policy covers Tread Shred on iPhone, iPad and Android, published by Craig
+Glendenning, "we" below.
 
 ## The short version
 
