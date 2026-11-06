@@ -12,7 +12,9 @@ using UnityEngine.UI;
 public sealed class TreadShredRevivePanel : MonoBehaviour
 {
     private static int revivesThisMission;
-    private static string missionScene;
+    // D-020-AC-04: the limit is per play of a mission. Each load of a mission scene, RETRY and Armored Redeploy
+    // included, has its own handle; the scene's path stays the same and would carry the count into the replay.
+    private static int missionScene;
 
     private PlayerMoverment player;
     private Text countdownText;
@@ -30,7 +32,7 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
     /// <summary>Shows the offer and returns true, or returns false when no revive is allowed.</summary>
     public static bool TryOffer(PlayerMoverment player)
     {
-        var scene = SceneManager.GetActiveScene().path;
+        var scene = SceneManager.GetActiveScene().handle;
         if (scene != missionScene)
         {
             missionScene = scene;
