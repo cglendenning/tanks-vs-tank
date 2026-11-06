@@ -22,14 +22,6 @@ namespace TreadShred.Analytics
         // Firebase rejects user property values longer than 36 characters.
         public const int MaxPropertyLength = 36;
 
-        // Tenjin credits a fresh install on its server moments after the first launch reports it, so the answer to
-        // the launch's own question is usually empty. The game asks again this many seconds after launch, and on every
-        // return to the game, until the answer is settled.
-        public static readonly float[] AskAgainAfterSeconds = { 15f, 60f, 180f, 600f };
-
-        // Settled once Tenjin credits a network; organic may still turn into a network once Tenjin matches the click.
-        public static bool Settled(Acquisition? acquisition) => acquisition != null && acquisition.Value.Source != Organic;
-
         // Null until Tenjin has attributed the install: an empty answer is not evidence of an organic install.
         public static Acquisition? FromTenjin(string adNetwork, string campaignName, string campaignId)
         {

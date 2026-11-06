@@ -18,7 +18,6 @@ public sealed class TreadShredAttribution : MonoBehaviour
     private const string ReceiverName = "TreadShredAttribution";
 
     private bool paused;
-    private bool settled;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Create()
@@ -31,19 +30,6 @@ public sealed class TreadShredAttribution : MonoBehaviour
     private void Start()
     {
         Run("start", Platform.Start);
-        StartCoroutine(AskAgain());
-    }
-
-    // D-021-AC-05: the launch's own question is usually asked before Tenjin has credited the install.
-    private System.Collections.IEnumerator AskAgain()
-    {
-        foreach (var delay in Attribution.AskAgainAfterSeconds)
-        {
-            yield return new WaitForSecondsRealtime(delay);
-            if (settled)
-                yield break;
-            Run("attribution", Platform.RequestAttribution);
-        }
     }
 
     // Tenjin counts a session each time the player comes back to the game.
@@ -58,8 +44,6 @@ public sealed class TreadShredAttribution : MonoBehaviour
             return;
         paused = false;
         Run("resume", Platform.Resume);
-        if (!settled)
-            Run("attribution", Platform.RequestAttribution);
     }
 
     // Sent by TreadShredTenjin.java as "ad_network<TAB>campaign_name<TAB>campaign_id".
@@ -73,7 +57,6 @@ public sealed class TreadShredAttribution : MonoBehaviour
             return;
         }
         Debug.Log("[Attribution] " + acquisition.Value.Source + " / " + acquisition.Value.Campaign);
-        settled = Attribution.Settled(acquisition);
         TreadShredAnalytics.SetUserProperty(GameEvents.AcquisitionSource, acquisition.Value.Source);
         TreadShredAnalytics.SetUserProperty(GameEvents.AcquisitionCampaign, acquisition.Value.Campaign);
     }
@@ -110,12 +93,10 @@ public sealed class TreadShredAttribution : MonoBehaviour
         {
             using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
                 Plugin.CallStatic("start", player.GetStatic<AndroidJavaObject>("currentActivity"));
-            RequestAttribution();
+            Plugin.CallStatic("requestAttribution");
         }
 
         public static void Resume() => Plugin.CallStatic("connect");
-
-        public static void RequestAttribution() => Plugin.CallStatic("requestAttribution");
 
         public static void Purchase(string productId, double price, string currency, string receipt)
         {
@@ -151,10 +132,6 @@ public sealed class TreadShredAttribution : MonoBehaviour
         {
         }
 
-        public static void RequestAttribution()
-        {
-        }
-
         // Conversion values use each pack's reference US price, so every storefront's purchases decode alike.
         public static void Purchase(string productId, double price, string currency, string receipt)
         {
@@ -178,10 +155,6 @@ public sealed class TreadShredAttribution : MonoBehaviour
         }
 
         public static void Resume()
-        {
-        }
-
-        public static void RequestAttribution()
         {
         }
 
