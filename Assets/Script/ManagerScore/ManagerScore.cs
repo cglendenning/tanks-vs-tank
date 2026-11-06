@@ -93,11 +93,13 @@ public class ManagerScore : MonoBehaviour
         if (KillScore == null)
             return;
 
-        // SCORE: the run so far plus this mission's kills, or the run as the mission ended (D-032-AC-01).
-        KillScore.text = ScoreRules.ScoreLine(scoreCommitted
-            ? lastMission.RunScore
-            : TreadShredScores.Run.Live(CurDieEmnemy, TreadShredProgress.Ensure().SelectedTier));
+        KillScore.text = ScoreRules.ScoreLine(LiveRunScore);
     }
+
+    /// <summary>SCORE: the run so far plus this mission's kills, or the run as the mission ended (D-032-AC-01).</summary>
+    public int LiveRunScore => scoreCommitted
+        ? lastMission.RunScore
+        : TreadShredScores.Run.Live(CurDieEmnemy, TreadShredProgress.Ensure().SelectedTier);
 
     public float test;
     int indexmedel;
@@ -347,7 +349,9 @@ public class ManagerScore : MonoBehaviour
         BuildOfferPanel(
             GemOffer.ArmoredRedeploy,
             "ARMORED REDEPLOY",
-            CombatBoosts.RedeployExtraHits + " EXTRA HIT. " + SalesPitches.RunContinues,
+            TreadShredScores.Run.Resumable > 0
+                ? OfferLabels.RedeployKeeps(TreadShredScores.Run.Resumable)
+                : CombatBoosts.RedeployExtraHits + " EXTRA HIT. " + SalesPitches.RunContinues,
             "REDEPLOY",
             () => ConfirmThen(GemOffer.ArmoredRedeploy, RedeemArmoredRedeploy));
         ArrangeRetry(false);
@@ -628,8 +632,8 @@ public class ManagerScore : MonoBehaviour
             return;
         }
         // Above the RETRY icon, in the open space under the offer: legible, and read before tapping.
-        var caption = TreadShredUi.CreateText(OfferLabels.RetryCaption, retry, new Vector2(0f, 104f), new Vector2(340f, 36f), 26,
-            rewardFont);
+        var caption = TreadShredUi.CreateText(OfferLabels.RetryCaptionFor(TreadShredScores.Run.Resumable), retry,
+            new Vector2(0f, 104f), new Vector2(460f, 36f), 26, rewardFont);
         caption.color = TreadShredUi.TitleColor;
         caption.raycastTarget = false;
     }

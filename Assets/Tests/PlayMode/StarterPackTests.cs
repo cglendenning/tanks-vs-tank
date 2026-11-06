@@ -123,6 +123,9 @@ namespace TreadShred.Screens.Tests
                 Seed(0, 0.1);
                 yield return Load("Lv1");
                 Assert.IsTrue(Get<bool>(Store(), "StarterPackOnSale"), "the editor's test store offers the Starter Pack's product");
+                // A fresh run (SCORE 0), so the plain revive reads as at the start of a run whatever earlier tests banked (D-020-AC-05).
+                var run = GameType("TreadShredScores").GetProperty("Run").GetValue(null);
+                run.GetType().GetMethod("Start").Invoke(run, null);
 
                 OfferRevive();
                 yield return null;

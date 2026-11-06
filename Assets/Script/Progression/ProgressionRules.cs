@@ -50,7 +50,7 @@ namespace TreadShred.Progression
 
         public static readonly int[] ReviveCostsGems = { 30, 60 };
         public const int MaxRevivesPerMission = 2;
-        public const float ReviveOfferSeconds = 8f;
+        public const float ReviveOfferSeconds = 12f;
 
         public static TierModifiers Modifiers(DifficultyTier tier)
         {

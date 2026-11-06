@@ -114,9 +114,9 @@ namespace TreadShred.Progression.Tests
         public void OfferStaysUpForOfferSeconds()
         {
             var offer = new ReviveOffer(0);
-            Assert.AreEqual(8, offer.SecondsShown);
+            Assert.AreEqual(12, offer.SecondsShown);
 
-            Assert.IsFalse(offer.Tick(7.5f, purchaseOpen: false));
+            Assert.IsFalse(offer.Tick(11.5f, purchaseOpen: false));
             Assert.IsFalse(offer.Tick(30f, purchaseOpen: true), "the clock waits for the purchase sheet");
             Assert.AreEqual(ReviveOutcome.Pending, offer.Outcome);
             Assert.IsTrue(offer.Tick(0.6f, purchaseOpen: false));

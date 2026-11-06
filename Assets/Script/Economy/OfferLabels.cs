@@ -95,6 +95,24 @@ namespace TreadShred.Economy
         // Overdrive waits for the next mission, so the panel must say it is on.
         public const string OverdriveActive = "OVERDRIVE ACTIVE";
 
+        // D-020-AC-05, D-009-AC-05: declining ends the run, so while there is a SCORE to lose the offers name it, and the
+        // way out says what it costs. Nothing else is taken away.
+        public const string ReviveWithFullArmor = "REVIVE NOW WITH FULL ARMOR";
+        public const string NoThanks = "NO THANKS";
+        public const string EndRun = "END RUN: SCORE BACK TO 0";
+
+        public static string ReviveHeadline(int runScore) =>
+            runScore > 0 ? "YOUR " + CountText.Format(runScore) + " SCORE RUN ENDS HERE" : ReviveWithFullArmor;
+
+        public static string ReviveAction(int runScore) => runScore > 0 ? "REVIVE AND KEEP IT" : "REVIVE";
+
+        public static string ReviveDecline(int runScore) => runScore > 0 ? EndRun : NoThanks;
+
+        public static string RedeployKeeps(int scoreKept) =>
+            CombatBoosts.RedeployExtraHits + " EXTRA HIT. KEEP YOUR " + CountText.Format(scoreKept) + " SCORE";
+
+        public static string RetryCaptionFor(int scoreKept) => scoreKept > 0 ? EndRun : RetryCaption;
+
         // The free retry on the result screens. The mission scenes label it with the paid offer's name, which
         // made Armored Redeploy look like a worse deal than a free button; missions relabel it on load.
         public const string Retry = "RETRY";

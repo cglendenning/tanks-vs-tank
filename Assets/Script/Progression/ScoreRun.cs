@@ -120,6 +120,9 @@ namespace TreadShred.Progression
             return new MissionScore(true, kills, killPoints, clear, Banked);
         }
 
+        /// <summary>D-009-AC-05: the SCORE an Armored Redeploy would carry back into the lost mission.</summary>
+        public int Resumable => resumeFrom;
+
         /// <summary>Armored Redeploy replays the lost mission with the run as it stood before it.</summary>
         public void ResumeAfterRedeploy()
         {

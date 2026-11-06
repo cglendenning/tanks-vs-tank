@@ -23,6 +23,8 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
     private Button starterButton;
     private GameObject[] starterParts;
     private ReviveOffer offer;
+    // D-020-AC-05: the run's SCORE when the tank went down, which declining loses.
+    private int runScore;
     private System.Action<string> showStatus;
 
     /// <summary>Shows the offer and returns true, or returns false when no revive is allowed.</summary>
@@ -41,6 +43,7 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
         var panel = root.gameObject.AddComponent<TreadShredRevivePanel>();
         panel.player = player;
         panel.offer = new ReviveOffer(revivesThisMission);
+        panel.runScore = ManagerScore.instance != null ? ManagerScore.instance.LiveRunScore : 0;
         panel.Build(root, TreadShredUi.FindFont(GameObject.Find("Canvas")));
         Time.timeScale = 0f;
         return true;
@@ -73,13 +76,14 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
     {
         TreadShredUi.CreateText("TANK DESTROYED", panel, new Vector2(0f, 170f), new Vector2(860f, 70f), 56, font)
             .color = TreadShredUi.TitleColor;
-        TreadShredUi.CreateText("REVIVE NOW WITH FULL ARMOR", panel, new Vector2(0f, 105f), new Vector2(860f, 40f), 30, font)
+        TreadShredUi.CreateText(OfferLabels.ReviveHeadline(runScore), panel, new Vector2(0f, 105f), new Vector2(860f, 40f), 30, font)
             .color = Color.white;
         balanceText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(0f, 60f), new Vector2(860f, 34f), 24, font);
         balanceText.color = TreadShredUi.DetailColor;
         reviveButton = TreadShredUi.CreateButton(string.Empty, panel, new Vector2(0f, -30f), new Vector2(620f, 100f), 34,
             font, Accept);
-        TreadShredUi.CreateButton("NO THANKS", panel, new Vector2(0f, -150f), new Vector2(360f, 80f), 28, font, Decline);
+        TreadShredUi.CreateButton(OfferLabels.ReviveDecline(runScore), panel, new Vector2(0f, -150f), new Vector2(500f, 80f), 28, font,
+            Decline);
         countdownText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(330f, 170f), new Vector2(160f, 70f), 56, font);
         countdownText.color = TreadShredUi.AccentColor;
     }
@@ -105,11 +109,15 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
             BuyStarter);
         TreadShredUi.StylePrimary(starterButton);
         starterParts = new[] { title.gameObject, headline.gameObject, value.gameObject, starterCountdown.gameObject, starterButton.gameObject };
-        balanceText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(0f, -75f), new Vector2(940f, 34f), 24, font);
+        // D-020-AC-05: under the Starter Pack, the plain revive states what declining loses.
+        TreadShredUi.CreateText(OfferLabels.ReviveHeadline(runScore), panel, new Vector2(0f, -80f), new Vector2(940f, 40f), 30, font)
+            .color = Color.white;
+        balanceText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(0f, -122f), new Vector2(940f, 34f), 24, font);
         balanceText.color = TreadShredUi.DetailColor;
-        reviveButton = TreadShredUi.CreateButton(string.Empty, panel, new Vector2(0f, -150f), new Vector2(520f, 84f), 30, font,
+        reviveButton = TreadShredUi.CreateButton(string.Empty, panel, new Vector2(0f, -190f), new Vector2(640f, 84f), 30, font,
             Accept);
-        TreadShredUi.CreateButton("NO THANKS", panel, new Vector2(0f, -265f), new Vector2(360f, 70f), 26, font, Decline);
+        TreadShredUi.CreateButton(OfferLabels.ReviveDecline(runScore), panel, new Vector2(0f, -290f), new Vector2(500f, 70f), 26, font,
+            Decline);
     }
 
     private void Refresh(string status)
@@ -118,7 +126,7 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
         var plan = store.PlanFor(offer.Cost);
         var price = plan.CanSpendNow ? null : store.PriceFor(plan.PackToBuy);
         var starterShown = starterLayout && store.StarterPackOnSale;
-        TreadShredUi.SetLabel(reviveButton, OfferLabels.ActionButton("REVIVE", plan, price));
+        TreadShredUi.SetLabel(reviveButton, OfferLabels.ActionButton(OfferLabels.ReviveAction(runScore), plan, price));
         balanceText.text = status ?? (starterShown ? OfferLabels.Owned(store.Wallet.Balance)
             : OfferLabels.BalanceLine(store.Wallet.Balance, plan));
         reviveButton.interactable = !store.PurchaseInProgress;
