@@ -52,6 +52,36 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual("ALL 120 MISSIONS CLEARED", Campaign.Cleared);
         }
 
+        [Test(Description = "D-019-AC-06: a save from before the campaign carries over: Recruit, Veteran and Elite clears become missions 1-40, 41-80 and 81-120")]
+        public void SavesFromBeforeTheCampaignCarryOver()
+        {
+            var progression = new PlayerProgression(new MemoryStore(), new TreadShred.Economy.GemWallet(new MemoryWalletStore()));
+            // Every Recruit mission and Veteran 1-5 cleared, saved per tier as before the campaign.
+            progression.Replace(new ProgressionState { clearedMissions = new[] { (1L << 40) - 1, 31L, 0L }, highestUnlockedTier = 1 });
+            bool Cleared(int n) => progression.IsCleared(Campaign.TierOf(n), Campaign.MapOf(n));
+            bool Unlocked(int n) => Campaign.IsUnlocked(n, Cleared, progression.IsUnlocked);
+            Assert.IsTrue(Cleared(40));
+            Assert.IsTrue(Cleared(45), "Veteran 5 is mission 45");
+            Assert.IsFalse(Cleared(46));
+            Assert.IsTrue(Unlocked(46));
+            Assert.IsFalse(Unlocked(47));
+            Assert.IsFalse(Unlocked(81), "Elite was never opened");
+        }
+
+        private sealed class MemoryStore : IProgressionStore
+        {
+            private ProgressionState state = new ProgressionState();
+            public ProgressionState Load() => state;
+            public void Save(ProgressionState saved) => state = saved;
+        }
+
+        private sealed class MemoryWalletStore : TreadShred.Economy.IWalletStore
+        {
+            private TreadShred.Economy.WalletState state = new TreadShred.Economy.WalletState();
+            public TreadShred.Economy.WalletState Load() => state;
+            public void Save(TreadShred.Economy.WalletState saved) => state = saved;
+        }
+
         [Test(Description = "D-019-AC-03: the tier is named in the mission list headers and beside the mission number in the HUD")]
         public void TierLabels()
         {

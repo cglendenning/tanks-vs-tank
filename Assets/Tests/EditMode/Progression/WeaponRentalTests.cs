@@ -82,6 +82,37 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual(Weapon.TripleShot, progression.OfferedWeapon);
         }
 
+        [Test(Description = "D-043-AC-04: renting records the weapon for the full term at once, and the mission it is rented in counts as the first; the tank takes it in hand and the toggle switches as on its own missions")]
+        public void RentingTakesEffectAtOnce()
+        {
+            var progression = NewProgression();
+            progression.WeaponUsed(Weapon.Seeker);
+            progression.StartRental(Weapon.Seeker);
+            Assert.AreEqual((Weapon?)Weapon.Seeker, progression.RentedWeapon);
+            Assert.AreEqual(WeaponRental.MissionsWon, progression.RentalMissionsLeft);
+            progression.RentalMissionWon();
+            Assert.AreEqual(WeaponRental.MissionsWon - 1, progression.RentalMissionsLeft, "the mission it was rented in counts");
+            var player = Script("Player/PlayerMoverment.cs");
+            StringAssert.Contains("missionType = typeplayer = (PlayerType)(int)weapon;", player);
+            StringAssert.Contains("TreadShredWeaponToggle.Attach(this, MissionWeapon,", player.Substring(player.IndexOf("public void Rent(")));
+            StringAssert.Contains("player.Rent(weapon);", Script("Game/TreadShredRentalOffer.cs"));
+        }
+
+        [Test(Description = "D-043-AC-06: each rental offer is logged as shown and each rental as an accepted offer named weapon_rental with its gem cost (D-021); the screen audit of the locked toggle, the offer and a rented mission runs in the D-043-AC-02 screen test")]
+        public void RentalsAreLogged()
+        {
+            var offer = Script("Game/TreadShredRentalOffer.cs");
+            StringAssert.Contains("public const string OfferName = \"weapon_rental\";", offer);
+            StringAssert.Contains("GameEvents.OfferShown(OfferName, store.Wallet.Balance)", offer);
+            StringAssert.Contains("GameEvents.OfferAccepted(OfferName, WeaponRental.CostGems, packBought)", offer);
+            var screen = System.IO.File.ReadAllText(System.IO.Path.Combine(UnityEngine.Application.dataPath, "Tests/PlayMode/WeaponRentalScreenTests.cs"));
+            foreach (var audited in new[] { "MISSION WITH THE ARC SHOT LOCKED", "ARC SHOT RENTAL OFFER", "MISSION WITH THE ARC SHOT RENTED" })
+                StringAssert.Contains("Audit(\"" + audited + "\"", screen);
+        }
+
+        private static string Script(string relative) =>
+            System.IO.File.ReadAllText(System.IO.Path.Combine(UnityEngine.Application.dataPath, "Script", relative));
+
         [Test(Description = "D-043-AC-03: the offer costs R-WEAPON-RENTAL's 100 gems for 5 missions, titled <WEAPON> FOR 5 MISSIONS, with LOCKED and NOT NOW, on the weapon's own sales screen and clip")]
         public void OfferWordingAndPrice()
         {
