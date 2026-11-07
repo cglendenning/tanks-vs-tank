@@ -95,6 +95,29 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual(0f, WeaponRental.BarFill(0));
         }
 
+        [Test(Description = "D-043-AC-02: a used weapon that is neither rented nor the mission's own shows LOCKED with its price in the drawer, on every mission, including one with its own special weapon")]
+        public void UsedWeaponsShowLockedWithTheirPrice()
+        {
+            var progression = NewProgression();
+            progression.WeaponUsed(Weapon.ArcShot);
+            foreach (var native in new[] { Weapon.Cannon, Weapon.TripleShot, Weapon.Seeker })
+                Assert.AreEqual(DrawerState.Locked, progression.Drawer(native).Single(e => e.Weapon == Weapon.ArcShot).State, native.ToString());
+            var drawer = System.IO.File.ReadAllText(System.IO.Path.Combine(UnityEngine.Application.dataPath, "Script/Game/TreadShredWeaponToggle.cs"));
+            StringAssert.Contains("return WeaponRental.LockedLabel + \" · \" + price;", drawer, "LOCKED in text with the price, no icon");
+            StringAssert.DoesNotContain("Sprite", drawer, "no lock icon");
+        }
+
+        [Test(Description = "D-043-AC-07: the weapon button, the drawer with locked and rented weapons, and the offer are screen-audited on every shape, and every rental offer and rental is logged")]
+        public void DrawerAndOfferAreAuditedAndLogged()
+        {
+            var screen = System.IO.File.ReadAllText(System.IO.Path.Combine(UnityEngine.Application.dataPath, "Tests/PlayMode/WeaponDrawerScreenTests.cs"));
+            foreach (var audited in new[] { "WEAPON BUTTON", "WEAPON DRAWER", "ARC SHOT RENTAL OFFER FROM THE DRAWER", "ARC SHOT RENTED" })
+                StringAssert.Contains("Audit(\"" + audited + "\"", screen);
+            var offer = System.IO.File.ReadAllText(System.IO.Path.Combine(UnityEngine.Application.dataPath, "Script/Game/TreadShredRentalOffer.cs"));
+            StringAssert.Contains("GameEvents.OfferShown(OfferName, store.Wallet.Balance)", offer);
+            StringAssert.Contains("GameEvents.OfferAccepted(OfferName, WeaponRental.CostGems, packBought)", offer);
+        }
+
         [Test(Description = "D-043-AC-03: the offer costs R-WEAPON-RENTAL's 100 gems, titled <WEAPON> FOR 5 MISSIONS, with LOCKED and NOT NOW; short of gems the 100-gem pack covers it")]
         public void OfferWordingAndPrice()
         {
