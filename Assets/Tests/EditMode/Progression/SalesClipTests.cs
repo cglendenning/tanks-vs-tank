@@ -15,7 +15,7 @@ namespace TreadShred.Progression.Tests
         [Test(Description = "D-034-AC-01: every item sold has its own bundled clip, 5 seconds at 640x360, silent and within 600 KB")]
         public void EveryItemHasItsClip()
         {
-            CollectionAssert.AreEqual(new[] { "overdrive", "armored-redeploy", "armor", "firepower", "speed" },
+            CollectionAssert.AreEqual(new[] { "overdrive", "armored-redeploy", "armor", "firepower", "speed", "arc-shot", "triple-shot", "seeker" },
                 SalesPitches.All.Select(SalesPitches.ClipName), "the items in R-SALES-CLIPS");
             foreach (var item in SalesPitches.All)
             {

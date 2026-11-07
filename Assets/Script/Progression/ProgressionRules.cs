@@ -61,9 +61,9 @@ namespace TreadShred.Progression
             switch (tier)
             {
                 case DifficultyTier.Veteran:
-                    return new TierModifiers(2f, 1.3f, 2, 1.6f);
+                    return new TierModifiers(2f, 1.3f, 2, 1.75f);
                 case DifficultyTier.Elite:
-                    return new TierModifiers(3f, 1.5f, 3, 2.2f);
+                    return new TierModifiers(3f, 1.5f, 3, 2.6f);
                 default:
                     return new TierModifiers(1f, 1f, 1);
             }

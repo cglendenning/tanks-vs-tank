@@ -68,9 +68,9 @@ namespace TreadShred.Progression.Tests
             var recruit = ProgressionRules.Modifiers(DifficultyTier.Recruit);
             var veteran = ProgressionRules.Modifiers(DifficultyTier.Veteran);
             var elite = ProgressionRules.Modifiers(DifficultyTier.Elite);
-            Assert.AreEqual((1f, 1f, 1), (recruit.EnemyHealth, recruit.EnemySpeed, recruit.Coins));
-            Assert.AreEqual((1.5f, 1.2f, 2), (veteran.EnemyHealth, veteran.EnemySpeed, veteran.Coins));
-            Assert.AreEqual((2.25f, 1.4f, 3), (elite.EnemyHealth, elite.EnemySpeed, elite.Coins));
+            Assert.AreEqual((1f, 1f, 1f, 1), (recruit.EnemyHealth, recruit.EnemySpeed, recruit.EnemyFireRate, recruit.Coins));
+            Assert.AreEqual((2f, 1.3f, 1.75f, 2), (veteran.EnemyHealth, veteran.EnemySpeed, veteran.EnemyFireRate, veteran.Coins));
+            Assert.AreEqual((3f, 1.5f, 2.6f, 3), (elite.EnemyHealth, elite.EnemySpeed, elite.EnemyFireRate, elite.Coins));
 
             var progression = NewProgression();
             ClearTier(progression, DifficultyTier.Recruit);
@@ -78,6 +78,7 @@ namespace TreadShred.Progression.Tests
 
             StringAssert.Contains("TierModifiers.EnemyHealth", Script("Emnemy/EmnemyRed.cs"));
             StringAssert.Contains("TierModifiers.EnemySpeed", Script("Emnemy/MoveEmnemy.cs"));
+            StringAssert.Contains("TierModifiers.EnemyFireRate", Script("Emnemy/BulletEmnemy.cs"));
         }
 
         [Test(Description = "D-019-AC-03: mission progress is tracked separately per tier, and mission select sets the tier")]
@@ -93,7 +94,9 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual(1, progression.ClearedCount(DifficultyTier.Veteran));
             Assert.AreEqual(ProgressionRules.MissionCount, progression.ClearedCount(DifficultyTier.Recruit));
             Assert.AreEqual(0, progression.ClearedCount(DifficultyTier.Elite));
-            StringAssert.Contains("TreadShredProgress.Ensure().SelectTier(tier)", Script("Game/TreadShredTierSelector.cs"));
+            // D-019: the mission number sets the tier; there is no tier picker.
+            StringAssert.Contains("progress.SelectTier(tier)", Script("Game/TreadShredCampaign.cs"));
+            Assert.IsFalse(File.Exists(Path.Combine(Application.dataPath, "Script/Game/TreadShredTierSelector.cs")));
         }
 
         [Test(Description = "D-026-AC-02: the result screen says when a milestone reward was earned and how many gems it paid")]

@@ -45,7 +45,7 @@ namespace TreadShred.Screens.Tests
 
         private static string WeaponInHand() => Player().GetType().GetProperty("WeaponInHand").GetValue(Player()).ToString();
 
-        [UnityTest(Description = "D-038-AC-05: on the arc-shot mission the CANNON | ARC SHOT toggle starts on ARC SHOT, switches both ways on a tap, shows TAP TO SWITCH then drops it, hides while paused, passes the screen audit on every shape, and a cannon mission has no toggle")]
+        [UnityTest(Description = "D-038-AC-05: on the arc-shot mission the CANNON | ARC SHOT toggle starts on ARC SHOT, switches both ways on a tap, shows TAP TO SWITCH then drops it, hides while paused, passes the screen audit on every shape, and a cannon mission has no toggle until a special weapon has been played, then offers it LOCKED (D-043-AC-02)")]
         public IEnumerator WeaponToggleOnASpecialWeaponMission()
         {
             var findings = new List<Finding>();
@@ -80,6 +80,14 @@ namespace TreadShred.Screens.Tests
             Assert.IsNotNull(GameObject.Find("TreadShredWeaponToggle"), "back when play resumes");
             Time.timeScale = 1f;
 
+            // D-038-AC-01 as amended: the arc shot has now been played, so a cannon mission offers it LOCKED (D-043-AC-02)...
+            yield return Load("Lv2");
+            Assert.IsNotNull(GameObject.Find("TreadShredWeaponToggle"), "a cannon mission offers the arc shot just used");
+            Assert.IsTrue(UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Any(t => t.gameObject.activeInHierarchy && t.text == "LOCKED"));
+            // ...and before any special weapon has been played, a cannon mission shows no weapon control.
+            var progress = GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null);
+            var progression = progress.GetType().GetProperty("Progression").GetValue(progress);
+            progression.GetType().GetMethod("Replace").Invoke(progression, new[] { Activator.CreateInstance(GameType("TreadShred.Progression.ProgressionState")) });
             yield return Load("Lv2");
             Assert.IsNull(GameObject.Find("TreadShredWeaponToggle"), "a cannon mission shows no weapon control");
             Assert.IsNull(ButtonLabeled("CANNON"));

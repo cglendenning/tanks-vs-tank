@@ -39,8 +39,13 @@ public class BulletEmnemy : MonoBehaviour {
     }
 
    public GameObject Bullet;
+   // D-019-AC-02: the tank's field of view calls BulletPlayer every 0.2 s while it sees this enemy; the enemy remembers
+   // when, so it can fire again the moment it reloads instead of waiting for the next look.
+   float lastSeen = float.NegativeInfinity;
+   const float SeenFor = 0.25f;
    public void BulletPlayer()
     {
+        lastSeen = Time.time;
         // D-035-AC-03: enemies hold fire during a first-time player's first play of mission 1.
         if (TreadShredFirstMinute.EnemiesHoldFire)
             return;
@@ -77,6 +82,8 @@ public class BulletEmnemy : MonoBehaviour {
    {     
        yield return new WaitForSeconds(delay);
        canbullet = true;
+       if (Time.time - lastSeen <= SeenFor)
+           BulletPlayer();
    }
 
    IEnumerator BulletPlayerLan2(float delay)

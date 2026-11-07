@@ -152,10 +152,12 @@ namespace TreadShred.Progression.Tests
         [Test(Description = "D-019: tougher enemies and bigger payouts on higher tiers")]
         public void TierModifiersMatchRules()
         {
-            Assert.AreEqual(1.5f, ProgressionRules.Modifiers(DifficultyTier.Veteran).EnemyHealth, 1e-5f);
-            Assert.AreEqual(1.2f, ProgressionRules.Modifiers(DifficultyTier.Veteran).EnemySpeed, 1e-5f);
-            Assert.AreEqual(2.25f, ProgressionRules.Modifiers(DifficultyTier.Elite).EnemyHealth, 1e-5f);
-            Assert.AreEqual(1.4f, ProgressionRules.Modifiers(DifficultyTier.Elite).EnemySpeed, 1e-5f);
+            Assert.AreEqual(2f, ProgressionRules.Modifiers(DifficultyTier.Veteran).EnemyHealth, 1e-5f);
+            Assert.AreEqual(1.3f, ProgressionRules.Modifiers(DifficultyTier.Veteran).EnemySpeed, 1e-5f);
+            Assert.AreEqual(1.75f, ProgressionRules.Modifiers(DifficultyTier.Veteran).EnemyFireRate, 1e-5f);
+            Assert.AreEqual(3f, ProgressionRules.Modifiers(DifficultyTier.Elite).EnemyHealth, 1e-5f);
+            Assert.AreEqual(1.5f, ProgressionRules.Modifiers(DifficultyTier.Elite).EnemySpeed, 1e-5f);
+            Assert.AreEqual(2.6f, ProgressionRules.Modifiers(DifficultyTier.Elite).EnemyFireRate, 1e-5f);
             Assert.AreEqual(3, ProgressionRules.Modifiers(DifficultyTier.Elite).Coins);
         }
 

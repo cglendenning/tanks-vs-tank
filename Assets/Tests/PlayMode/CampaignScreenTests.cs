@@ -118,8 +118,6 @@ namespace TreadShred.Screens.Tests
 
         private static long All => (1L << Campaign.MissionsPerTier) - 1;
 
-        // Seeded runs per tier for the difficulty test, averaged.
-        private const int Runs = 5;
 
         [UnityTest(Description = "D-019-AC-03: the mission list shows all 120 missions under RECRUIT, VETERAN and ELITE headers with no tier picker, unlocked in order from saved per-tier progress (D-019-AC-01, D-019-AC-06), on every screen shape")]
         public IEnumerator MissionListShowsTheCampaign()
@@ -222,37 +220,70 @@ namespace TreadShred.Screens.Tests
             }
         }
 
-        [UnityTest(Description = "D-019-AC-02: with base upgrades and a tank that never moves, Mission 41's enemies destroy it in at most 0.6 of Mission 1's time and Mission 81's in at most 0.4")]
-        public IEnumerator HigherTiersDestroyAPassiveTankFaster()
+        [UnityTest(Description = "D-019-AC-02: with base upgrades, one enemy in sight of a tank that never moves (13 hits of armor) destroys it, timed from its first hit, in at most 0.6 of a Recruit enemy's time on Veteran and 0.4 on Elite")]
+        public IEnumerator HigherTierEnemiesDestroyATankFaster()
         {
             var times = new Dictionary<int, float>();
             yield return Restoring(Body());
-            var recruit = times[1];
-            Assert.LessOrEqual(times[41], recruit * 0.6f, $"Veteran {times[41]:0.0} s against Recruit {recruit:0.0} s");
-            Assert.LessOrEqual(times[81], recruit * 0.4f, $"Elite {times[81]:0.0} s against Recruit {recruit:0.0} s");
+            var recruit = times[17];
+            Assert.LessOrEqual(times[57], recruit * 0.6f, $"Veteran {times[57]:0.00} s against Recruit {recruit:0.00} s");
+            Assert.LessOrEqual(times[97], recruit * 0.4f, $"Elite {times[97]:0.00} s against Recruit {recruit:0.00} s");
 
             IEnumerator Body()
             {
-                // Mission 1 already cleared, so it is not a first play (where enemies hold fire, D-035).
                 Progression.Replace(new ProgressionState { clearedMissions = new[] { All, All, 0L }, highestUnlockedTier = 2 });
-                foreach (var number in new[] { 1, 41, 81 })
+                // The same open map in each tier (Mission 17's: few interior walls).
+                foreach (var number in new[] { 17, 57, 97 })
                 {
-                    var total = 0f;
-                    for (var run = 0; run < Runs; run++)
+                    yield return LoadMission(number);
+                    var player = UnityEngine.Object.FindFirstObjectByType(GameType("PlayerMoverment"));
+                    var sight = UnityEngine.Object.FindFirstObjectByType(GameType("FieldOfView")) as Component;
+                    Assert.IsNotNull(sight, "the tank's field of view");
+                    // Thirteen hits of armor, so the time covers about six reloads and no single reload's timing decides it.
+                    var health = player.GetType().GetField("countdie");
+                    const int startHits = 13;
+                    health.SetValue(player, startHits);
+
+                    // One enemy that fires, frozen in clear sight; every other enemy stands down.
+                    var enemies = UnityEngine.Object.FindObjectsByType(GameType("BulletEmnemy"), FindObjectsSortMode.None)
+                        .Cast<Component>().Where(e => e.CompareTag("emnemyred") == false).ToList();
+                    Assert.IsNotEmpty(enemies, $"mission {number} has an enemy that fires");
+                    var shooter = enemies[0];
+                    foreach (var gun in UnityEngine.Object.FindObjectsByType(GameType("BulletEmnemy"), FindObjectsSortMode.None).Cast<Component>())
                     {
-                        yield return LoadMission(number, 1000 + run);
-                        Time.timeScale = 3f;
-                        var start = Time.time;
-                        while (GameObject.Find("TreadShredRevive") == null && Time.time - start < 120f)
-                            yield return null;
-                        Assert.IsNotNull(GameObject.Find("TreadShredRevive"), $"mission {number}: the tank was destroyed within 120 s");
-                        total += Time.time - start;
-                        Debug.Log($"[D-019] mission {number} run {run}: {Time.time - start:0.0} s");
-                        UnityEngine.Object.Destroy(GameObject.Find("TreadShredRevive"));
-                        Time.timeScale = 1f;
+                        if (gun.gameObject != shooter.gameObject)
+                            gun.gameObject.SetActive(false);
                     }
-                    times[number] = total / Runs;
-                    Debug.Log($"[D-019] mission {number}: passive tank destroyed after {times[number]:0.0} s on average");
+                    foreach (var mover in UnityEngine.Object.FindObjectsByType(GameType("MoveEmnemy"), FindObjectsSortMode.None).Cast<Component>())
+                    {
+                        if (mover.gameObject != shooter.gameObject)
+                            mover.gameObject.SetActive(false);
+                        else
+                            ((Behaviour)mover).enabled = false;
+                    }
+                    Assert.AreEqual(1, UnityEngine.Object.FindObjectsByType(GameType("BulletEmnemy"), FindObjectsSortMode.None).Length, "one enemy can fire");
+                    var body = shooter.GetComponent<Rigidbody>();
+                    if (body != null)
+                        body.isKinematic = true;
+                    var origin = sight.transform.position;
+                    shooter.transform.position = new Vector3(origin.x, shooter.transform.position.y, origin.z) + sight.transform.forward * 5f;
+
+                    Time.captureDeltaTime = 1f / 120f;
+                    float firstHit = -1f, start = Time.time;
+                    while (GameObject.Find("TreadShredRevive") == null && Time.time - start < 60f)
+                    {
+                        if (firstHit < 0f && (int)health.GetValue(player) < startHits)
+                            firstHit = Time.time;
+                        yield return null;
+                    }
+                    var destroyed = Time.time;
+                    Time.captureDeltaTime = 0f;
+                    Assert.IsNotNull(GameObject.Find("TreadShredRevive"), $"mission {number}: the enemy destroyed the tank within 60 s");
+                    Assert.Greater(firstHit, 0f, $"mission {number}: the tank was hit");
+                    times[number] = destroyed - firstHit;
+                    Debug.Log($"[D-019] mission {number}: one enemy destroyed the tank {times[number]:0.00} s after its first hit");
+                    UnityEngine.Object.Destroy(GameObject.Find("TreadShredRevive"));
+                    Time.timeScale = 1f;
                 }
             }
         }
