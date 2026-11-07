@@ -76,37 +76,37 @@ namespace TreadShred.Progression.Tests
         public void UndoGivesBackExactlyWhatWasTaken()
         {
             Start(coins: 33, gems: 20);
-            shop.Buy(UpgradeTrack.Armor);
-            Assert.AreEqual((1, 13, 11), (progression.Level(UpgradeTrack.Armor), progression.Coins, wallet.Balance));
+            shop.Buy(UpgradeTrack.Firepower);
+            Assert.AreEqual((1, 13, 11), (progression.Level(UpgradeTrack.Firepower), progression.Coins, wallet.Balance));
 
             var receipt = shop.LastUpgrade.Value;
             Assert.IsTrue(shop.Undo());
 
-            Assert.AreEqual((0, 33, 20), (progression.Level(UpgradeTrack.Armor), progression.Coins, wallet.Balance));
+            Assert.AreEqual((0, 33, 20), (progression.Level(UpgradeTrack.Firepower), progression.Coins, wallet.Balance));
             Assert.IsFalse(shop.CanUndo);
-            Assert.AreEqual("ARMOR BACK TO LEVEL 0. 20 COINS AND 9 GEMS RETURNED", ProgressionLabels.Undone(receipt));
+            Assert.AreEqual("FIREPOWER BACK TO LEVEL 0. 20 COINS AND 9 GEMS RETURNED", ProgressionLabels.Undone(receipt));
         }
 
         [Test(Description = "D-017-AC-06: undo goes latest first, one upgrade per tap, and the screen's upgrades are final once it closes")]
         public void UndoIsLatestFirstUntilTheScreenCloses()
         {
             Start(coins: 1000, gems: 0);
-            shop.Buy(UpgradeTrack.Armor);
+            shop.Buy(UpgradeTrack.Speed);
             shop.Buy(UpgradeTrack.Firepower);
-            shop.Buy(UpgradeTrack.Armor);
+            shop.Buy(UpgradeTrack.Speed);
             Assert.AreEqual(200, progression.Coins);
-            CollectionAssert.AreEqual(new[] { (UpgradeTrack.Armor, 1), (UpgradeTrack.Firepower, 1), (UpgradeTrack.Armor, 2) },
+            CollectionAssert.AreEqual(new[] { (UpgradeTrack.Speed, 1), (UpgradeTrack.Firepower, 1), (UpgradeTrack.Speed, 2) },
                 new List<UpgradeReceipt>(shop.Kept).ConvertAll(r => (r.Track, r.Level)));
 
             Assert.IsTrue(shop.Undo());
-            Assert.AreEqual((1, 600), (progression.Level(UpgradeTrack.Armor), progression.Coins));
+            Assert.AreEqual((1, 600), (progression.Level(UpgradeTrack.Speed), progression.Coins));
             Assert.IsTrue(shop.Undo());
             Assert.AreEqual((0, 800), (progression.Level(UpgradeTrack.Firepower), progression.Coins));
 
             shop.Release();
             Assert.IsFalse(shop.CanUndo);
             Assert.IsFalse(shop.Undo(), "upgrades are final once the screen closes");
-            Assert.AreEqual((1, 800), (progression.Level(UpgradeTrack.Armor), progression.Coins));
+            Assert.AreEqual((1, 800), (progression.Level(UpgradeTrack.Speed), progression.Coins));
         }
 
         [Test(Description = "D-017-AC-06: gems bought from the store for an upgrade stay in the wallet when it is undone")]

@@ -38,7 +38,8 @@ namespace TreadShred.Screens.Tests
         private static IEnumerator OfferAfterVictory(int gems, int coins)
         {
             Wallet.Replace(new WalletState { balance = gems, starterGranted = true, starterPackBought = true });
-            Progression.Replace(new ProgressionState { coins = coins, clearedMissions = new[] { 1L, 0L, 0L } });
+            // Armor at level 1 (bought with gems, D-017-AC-03), so the cheapest upgrade is one coins can buy.
+            Progression.Replace(new ProgressionState { coins = coins, clearedMissions = new[] { 1L, 0L, 0L }, upgradeLevels = new[] { 1, 0, 0 } });
             Time.timeScale = 1f;
             SceneManager.LoadScene("Lv1");
             yield return null;

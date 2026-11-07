@@ -40,6 +40,9 @@ namespace TreadShred.Progression
         public const int LevelsPerTrack = 10;
         public const int CostStepCoins = 200;
 
+        /// <summary>D-017-AC-03 (R-UPGRADE-TRACKS gem_only_tracks): armor, the survival stat, is bought only with gems.</summary>
+        public static bool GemOnly(UpgradeTrack track) => track == UpgradeTrack.Armor;
+
         public const int BaseArmorHits = 3;
         public const int ExtraHitEveryLevels = 2;
         public const float DamageBonusPerLevel = 0.10f;

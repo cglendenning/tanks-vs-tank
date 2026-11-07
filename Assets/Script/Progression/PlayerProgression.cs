@@ -14,10 +14,10 @@ namespace TreadShred.Progression
         // One bit per mission (bit 0 = mission 1) for each tier.
         public long[] clearedMissions = new long[3];
         public List<string> claimedMilestones = new List<string>();
-        // D-043: special weapons the player has played with (WeaponRental.Bit), and the running rental.
+        // D-043: special weapons the player has played with (WeaponRental.Bit), and each weapon's rental: the missions
+        // won it has left, by Weapon.
         public int usedWeapons;
-        public int rentedWeapon;
-        public int rentalMissionsLeft;
+        public int[] rentals = new int[4];
     }
 
     public interface IProgressionStore
@@ -118,8 +118,7 @@ namespace TreadShred.Progression
             state.claimedMilestones = new List<string>(restored.claimedMilestones ?? new List<string>());
             // D-043: the weapons used and a running rental come back with a restored save.
             state.usedWeapons = restored.usedWeapons;
-            state.rentedWeapon = restored.rentedWeapon;
-            state.rentalMissionsLeft = restored.rentalMissionsLeft;
+            state.rentals = restored.rentals != null && restored.rentals.Length == 4 ? (int[])restored.rentals.Clone() : new int[4];
             Commit();
         }
 
@@ -155,6 +154,9 @@ namespace TreadShred.Progression
             if (IsMaxed(track))
                 return new UpgradeQuote(0, 0);
             var cost = (Level(track) + 1) * ProgressionRules.CostStepCoins;
+            // D-017-AC-03: coins never buy armor, so its whole price is paid in gems at the coin rate.
+            if (ProgressionRules.GemOnly(track))
+                return new UpgradeQuote(cost, cost);
             return new UpgradeQuote(cost, Math.Max(0, cost - state.coins));
         }
 
@@ -213,32 +215,42 @@ namespace TreadShred.Progression
             Commit();
         }
 
-        public Weapon? RentedWeapon => state.rentalMissionsLeft > 0 ? (Weapon)state.rentedWeapon : (Weapon?)null;
+        public bool HasUsed(Weapon weapon) => weapon != Weapon.Cannon && (state.usedWeapons & WeaponRental.Bit(weapon)) != 0;
 
-        public int RentalMissionsLeft => state.rentalMissionsLeft;
+        /// <summary>D-043-AC-06: the missions won a weapon's rental has left; 0 when it is not rented.</summary>
+        public int RentalLeft(Weapon weapon) => Rentals[(int)weapon];
 
-        /// <summary>D-043-AC-02: the weapon a cannon-only mission's toggle offers, or null before any is used.</summary>
-        public Weapon? OfferedWeapon => WeaponRental.Offered(state.usedWeapons, RentedWeapon);
+        private int[] Rentals => state.rentals != null && state.rentals.Length == 4 ? state.rentals : (state.rentals = new int[4]);
 
-        /// <summary>D-043-AC-04: records a paid rental; the mission it starts in is the first of the five.</summary>
+        /// <summary>D-038-AC-02, D-043-AC-02: the weapon drawer for a mission whose own tank carries <paramref name="native"/>.</summary>
+        public IReadOnlyList<DrawerEntry> Drawer(Weapon native) => WeaponRental.Drawer(native, state.usedWeapons, Rentals);
+
+        /// <summary>D-038-AC-02, D-043-AC-05: the weapon a mission starts on.</summary>
+        public Weapon StartingWeapon(Weapon native) => WeaponRental.Starting(native, Rentals);
+
+        /// <summary>D-043-AC-04: records a paid rental; a running one gets <see cref="WeaponRental.RepurchaseAdds"/> more missions.</summary>
         public void StartRental(Weapon weapon)
         {
-            if (weapon == Weapon.Cannon || (state.usedWeapons & WeaponRental.Bit(weapon)) == 0)
+            if (!HasUsed(weapon))
                 throw new InvalidOperationException(weapon + " has not been used, so it cannot be rented.");
-            state.rentedWeapon = (int)weapon;
-            state.rentalMissionsLeft = WeaponRental.MissionsWon;
+            Rentals[(int)weapon] += Rentals[(int)weapon] > 0 ? WeaponRental.RepurchaseAdds : WeaponRental.MissionsWon;
             Commit();
         }
 
-        /// <summary>D-043-AC-05: a cannon-only mission won with a rental running uses one of its missions.</summary>
-        public void RentalMissionWon()
+        /// <summary>D-043-AC-05: a mission won uses one mission of every running rental, except the rental of the weapon
+        /// the mission's own map carries.</summary>
+        public void RentalMissionWon(Weapon native)
         {
-            if (state.rentalMissionsLeft <= 0)
-                return;
-            state.rentalMissionsLeft--;
-            if (state.rentalMissionsLeft == 0)
-                state.rentedWeapon = 0;
-            Commit();
+            var changed = false;
+            for (var weapon = Weapon.ArcShot; weapon <= Weapon.Seeker; weapon++)
+            {
+                if (weapon == native || Rentals[(int)weapon] <= 0)
+                    continue;
+                Rentals[(int)weapon]--;
+                changed = true;
+            }
+            if (changed)
+                Commit();
         }
 
         public bool IsUnlocked(DifficultyTier tier)

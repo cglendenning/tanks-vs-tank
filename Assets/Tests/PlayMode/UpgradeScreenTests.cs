@@ -46,16 +46,16 @@ namespace TreadShred.Screens.Tests
 
             var panel = (Component)GameType("TreadShredUpgradePanel").GetMethod("Show").Invoke(null, new object[] { font });
             yield return null;
-            panel.GetType().GetMethod("Upgrade", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(panel, new object[] { UpgradeTrack.Armor });
+            panel.GetType().GetMethod("Upgrade", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(panel, new object[] { UpgradeTrack.Firepower });
             yield return null;
             var dialog = (Component)UnityEngine.Object.FindFirstObjectByType(GameType("TreadShredConfirmDialog"));
             Assert.IsNotNull(dialog, "D-017-AC-05: the upgrade asks first");
-            Assert.AreEqual((0, 33), (progression.Level(UpgradeTrack.Armor), progression.Coins), "D-017-AC-05: nothing spent before confirming");
+            Assert.AreEqual((0, 33), (progression.Level(UpgradeTrack.Firepower), progression.Coins), "D-017-AC-05: nothing spent before confirming");
             yield return Audit("upgrade confirmation", findings);
 
             dialog.GetType().GetMethod("Confirm").Invoke(dialog, null);
             yield return null;
-            Assert.AreEqual((1, 13, gems - 9), (progression.Level(UpgradeTrack.Armor), progression.Coins, wallet.Balance));
+            Assert.AreEqual((1, 13, gems - 9), (progression.Level(UpgradeTrack.Firepower), progression.Coins, wallet.Balance));
             var undo = UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
                 .First(b => b.GetComponentInChildren<Text>()?.text == ProgressionLabels.Undo);
             Assert.IsTrue(undo.gameObject.activeInHierarchy, "UNDO UPGRADE shows after an upgrade");
@@ -63,10 +63,10 @@ namespace TreadShred.Screens.Tests
 
             undo.onClick.Invoke();
             yield return null;
-            Assert.AreEqual((0, 33, gems), (progression.Level(UpgradeTrack.Armor), progression.Coins, wallet.Balance));
+            Assert.AreEqual((0, 33, gems), (progression.Level(UpgradeTrack.Firepower), progression.Coins, wallet.Balance));
             Assert.IsFalse(undo.gameObject.activeInHierarchy, "nothing left to undo");
             Assert.IsTrue(UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None)
-                .Any(t => t.text == "ARMOR BACK TO LEVEL 0. 20 COINS AND 9 GEMS RETURNED"), "the screen says what came back");
+                .Any(t => t.text == "FIREPOWER BACK TO LEVEL 0. 20 COINS AND 9 GEMS RETURNED"), "the screen says what came back");
             yield return Audit("upgrades after an undo", findings);
 
             UnityEngine.Object.Destroy(panel.gameObject);

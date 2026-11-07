@@ -49,17 +49,18 @@ public class PlayerMoverment : MonoBehaviour {
     public TreadShred.Progression.Weapon MissionWeapon => (TreadShred.Progression.Weapon)(int)missionType;
     public TreadShred.Progression.Weapon WeaponInHand => (TreadShred.Progression.Weapon)(int)typeplayer;
 
-    /// <summary>D-043-AC-04: a rented weapon goes in hand at once and the toggle switches as on its own missions.</summary>
+    /// <summary>D-043-AC-04: a rented weapon goes in hand at once.</summary>
     public void Rent(TreadShred.Progression.Weapon weapon)
     {
-        missionType = typeplayer = (PlayerType)(int)weapon;
-        TreadShredWeaponToggle.Attach(this, MissionWeapon, TreadShredUi.FindFont(GameObject.Find("Canvas")));
+        typeplayer = (PlayerType)(int)weapon;
+        TreadShredWeaponToggle.Refresh();
     }
 
-    /// <summary>D-038-AC-03: the toggle's tap; only the cannon or the mission's own weapon can be in hand.</summary>
+    /// <summary>D-038-AC-03: the drawer's tap; the cannon, the mission's own weapon or a rented one can be in hand.</summary>
     public void SelectWeapon(TreadShred.Progression.Weapon weapon)
     {
-        if (weapon == TreadShred.Progression.Weapon.Cannon || weapon == MissionWeapon)
+        if (weapon == TreadShred.Progression.Weapon.Cannon || weapon == MissionWeapon
+            || TreadShredProgress.Ensure().Progression.RentalLeft(weapon) > 0)
             typeplayer = (PlayerType)(int)weapon;
     }
 	// Use this for initialization
@@ -103,18 +104,13 @@ public class PlayerMoverment : MonoBehaviour {
         // named toggle instead.
         TreadShredGround.Apply(TreadShredProgress.CurrentMission());
         missionType = typeplayer;
-        // D-043: playing a special weapon's map makes it rentable; a cannon-only mission carries a running rental, or
-        // offers the latest weapon used, LOCKED until rented.
+        // D-043: playing a special weapon's map makes it rentable on every later mission; the mission starts on its own
+        // weapon, or on a cannon-only mission on a running rental's. D-038: the weapon button and drawer.
         var nativeWeapon = MissionWeapon;
         progress.NativeWeapon = nativeWeapon;
         progress.Progression.WeaponUsed(nativeWeapon);
-        if (nativeWeapon == TreadShred.Progression.Weapon.Cannon && progress.Progression.RentedWeapon is TreadShred.Progression.Weapon rented)
-            missionType = typeplayer = (PlayerType)(int)rented;
-        if (nativeWeapon == TreadShred.Progression.Weapon.Cannon && progress.Progression.RentedWeapon == null
-            && progress.Progression.OfferedWeapon is TreadShred.Progression.Weapon offered)
-            TreadShredWeaponToggle.AttachLocked(this, offered, TreadShredUi.FindFont(GameObject.Find("Canvas")));
-        else
-            TreadShredWeaponToggle.Attach(this, MissionWeapon, TreadShredUi.FindFont(GameObject.Find("Canvas")));
+        typeplayer = (PlayerType)(int)progress.Progression.StartingWeapon(nativeWeapon);
+        TreadShredWeaponToggle.Attach(this, MissionWeapon, TreadShredUi.FindFont(GameObject.Find("Canvas")));
         TreadShredMissionLabel.Show(TreadShredUi.FindFont(GameObject.Find("Canvas")));
 	}
   

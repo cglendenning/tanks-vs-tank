@@ -44,16 +44,16 @@ namespace TreadShred.Screens.Tests
 
             var panel = (Component)GameType("TreadShredUpgradePanel").GetMethod("Show").Invoke(null, new object[] { font });
             yield return null;
-            panel.GetType().GetMethod("Upgrade", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(panel, new object[] { UpgradeTrack.Armor });
+            panel.GetType().GetMethod("Upgrade", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(panel, new object[] { UpgradeTrack.Firepower });
             yield return null;
             Assert.IsNull(UnityEngine.Object.FindFirstObjectByType(GameType("TreadShredConfirmDialog")), "no dialog for an upgrade the coins cover");
-            Assert.AreEqual((1, 300), (progression.Level(UpgradeTrack.Armor), progression.Coins), "applied on the tap");
+            Assert.AreEqual((1, 300), (progression.Level(UpgradeTrack.Firepower), progression.Coins), "applied on the tap");
             var undo = UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
                 .First(b => b.GetComponentInChildren<Text>()?.text == ProgressionLabels.Undo);
             Assert.IsTrue(undo.gameObject.activeInHierarchy, "UNDO UPGRADE is the safety net");
             undo.onClick.Invoke();
             yield return null;
-            Assert.AreEqual((0, 500), (progression.Level(UpgradeTrack.Armor), progression.Coins), "undo gives the coins back");
+            Assert.AreEqual((0, 500), (progression.Level(UpgradeTrack.Firepower), progression.Coins), "undo gives the coins back");
 
             // No coins and no gems: every row shows what buys it, the store's price (the editor's test store reports
             // its own) or the pack's gems before the store answers, and those labels must fit.

@@ -108,8 +108,8 @@ public sealed class TreadShredProgress : MonoBehaviour
         }
 
         LastReward = Progression.CompleteMission(SelectedTier, mission, won);
-        if (won && NativeWeapon == Weapon.Cannon)
-            Progression.RentalMissionWon();
+        if (won)
+            Progression.RentalMissionWon(NativeWeapon);
         if (LastReward.Value.UnlockedTier is DifficultyTier promoted)
         {
             PlayerPrefs.SetInt(PromotionKey, (int)promoted);

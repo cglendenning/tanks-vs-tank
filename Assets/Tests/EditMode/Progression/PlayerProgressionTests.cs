@@ -48,8 +48,9 @@ namespace TreadShred.Progression.Tests
         [Test(Description = "D-017-AC-01: three tracks of ten levels that persist across sessions")]
         public void TracksHaveTenLevelsAndPersist()
         {
-            // All 30 upgrades cost 33,000 coins.
+            // All 30 upgrades: firepower and speed for 22,000 coins, armor for 550 gems (D-017-AC-03).
             EarnCoins(660);
+            wallet.CreditReward(550);
             foreach (UpgradeTrack track in System.Enum.GetValues(typeof(UpgradeTrack)))
             {
                 for (var level = 0; level < ProgressionRules.LevelsPerTrack; level++)
@@ -111,11 +112,11 @@ namespace TreadShred.Progression.Tests
             wallet.GrantStarterIfNeeded();
             EarnCoins(2);
             // Level 1 costs 200; 100 coins short means 5 gems.
-            Assert.AreEqual(5, progression.Quote(UpgradeTrack.Armor).GemsNeeded);
+            Assert.AreEqual(5, progression.Quote(UpgradeTrack.Firepower).GemsNeeded);
 
-            Assert.AreEqual(UpgradeResult.Upgraded, progression.TryUpgrade(UpgradeTrack.Armor));
+            Assert.AreEqual(UpgradeResult.Upgraded, progression.TryUpgrade(UpgradeTrack.Firepower));
 
-            Assert.AreEqual(1, progression.Level(UpgradeTrack.Armor));
+            Assert.AreEqual(1, progression.Level(UpgradeTrack.Firepower));
             Assert.AreEqual(GemCatalog.StarterGrant - 5, wallet.Balance);
             Assert.AreEqual(0, progression.Coins);
         }

@@ -62,11 +62,12 @@ namespace TreadShred.Screens.Tests
             var findings = new List<Finding>();
             try
             {
-                progression.Replace(new ProgressionState { coins = 5000 });
+                // Armor at level 1 (bought with gems, D-017-AC-03), so the cheapest upgrade is one coins can buy.
+                progression.Replace(new ProgressionState { coins = 5000, upgradeLevels = new[] { 1, 0, 0 } });
                 boosts.ArmOverdrive();
                 yield return Win();
                 var texts = Texts();
-                Assert.Contains("UPGRADE ARMOR", texts, "the cheapest upgrade replaces the Overdrive offer");
+                Assert.Contains("UPGRADE FIREPOWER", texts, "the cheapest upgrade replaces the Overdrive offer");
                 Assert.Contains(OfferLabels.OverdriveStatus(0), texts, "Overdrive's status stays on the card");
                 Assert.IsNull(CardButton(OfferLabels.OverdriveActive), "no button sells Overdrive while it runs");
                 yield return Audit("victory with Overdrive carried over", findings);
@@ -75,7 +76,7 @@ namespace TreadShred.Screens.Tests
                 Assert.IsNotNull(upgrade, "the card's one-price upgrade button");
                 upgrade.onClick.Invoke();
                 yield return null;
-                Assert.AreEqual(1, progression.Level(UpgradeTrack.Armor), "coins apply on the tap (D-036-AC-03)");
+                Assert.AreEqual(1, progression.Level(UpgradeTrack.Firepower), "coins apply on the tap (D-036-AC-03)");
                 Assert.IsNotNull(CardButton(ProgressionLabels.UndoShort), "UNDO is the safety net on the card");
                 yield return Audit("victory card after an upgrade", findings);
 

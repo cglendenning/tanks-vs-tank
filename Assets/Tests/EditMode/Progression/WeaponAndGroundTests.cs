@@ -18,10 +18,10 @@ namespace TreadShred.Progression.Tests
             var player = Script("Player/PlayerMoverment.cs");
             StringAssert.DoesNotContain("StyteBullet.transform.GetChild(1)", player, "the legacy icons are never switched on");
             StringAssert.Contains("TreadShredWeaponToggle.Attach(this, MissionWeapon,", player);
-            StringAssert.Contains("if (!WeaponRules.CanSwitch(missionWeapon))\n            return null;", Script("Game/TreadShredWeaponToggle.cs"));
+            StringAssert.Contains("if (TreadShredProgress.Ensure().Progression.Drawer(missionWeapon).Count < 2)\n            return null;", Script("Game/TreadShredWeaponToggle.cs"));
         }
 
-        [Test(Description = "D-038-AC-02: the toggle names the cannon and the mission's special weapon from R-WEAPONS, in the order of the tank's weapon types")]
+        [Test(Description = "D-038-AC-02: the drawer names the cannon and the special weapons from R-WEAPONS, in the order of the tank's weapon types, the one in hand in the accent style")]
         public void ToggleNamesBothWeapons()
         {
             Assert.AreEqual(new[] { "CANNON", "ARC SHOT", "TRIPLE SHOT", "SEEKER" },
@@ -34,17 +34,17 @@ namespace TreadShred.Progression.Tests
             Assert.Less(types.IndexOf("banvong", System.StringComparison.Ordinal), types.IndexOf("bandan3", System.StringComparison.Ordinal));
             Assert.Less(types.IndexOf("bandan3", System.StringComparison.Ordinal), types.IndexOf("bandanduoi", System.StringComparison.Ordinal),
                 "Weapon casts from PlayerType, so the orders must match");
-            StringAssert.Contains("TreadShredUi.StylePrimary(specialButton);", Script("Game/TreadShredWeaponToggle.cs"));
+            StringAssert.Contains("TreadShredUi.StylePrimary(row);", Script("Game/TreadShredWeaponToggle.cs"));
         }
 
-        [Test(Description = "D-038-AC-03: a tap on the other side switches between the cannon and the mission's weapon, and only those two can be in hand")]
+        [Test(Description = "D-038-AC-03: a tap in the drawer switches weapons, and only the cannon, the mission's weapon or a rented one can be in hand")]
         public void ATapSwitchesWeapons()
         {
             Assert.AreEqual(Weapon.Cannon, WeaponRules.Switch(Weapon.ArcShot, Weapon.ArcShot));
             Assert.AreEqual(Weapon.ArcShot, WeaponRules.Switch(Weapon.ArcShot, Weapon.Cannon));
             Assert.AreEqual(Weapon.Seeker, WeaponRules.Switch(Weapon.Seeker, Weapon.Cannon));
             var player = Script("Player/PlayerMoverment.cs");
-            StringAssert.Contains("if (weapon == TreadShred.Progression.Weapon.Cannon || weapon == MissionWeapon)\n            typeplayer = (PlayerType)(int)weapon;", player);
+            StringAssert.Contains("if (weapon == TreadShred.Progression.Weapon.Cannon || weapon == MissionWeapon\n            || TreadShredProgress.Ensure().Progression.RentalLeft(weapon) > 0)\n            typeplayer = (PlayerType)(int)weapon;", player);
             StringAssert.Contains("if (EventSystem.current.IsPointerOverGameObject(touch.fingerId) == false)", player, "a touch on the HUD never fires");
         }
 

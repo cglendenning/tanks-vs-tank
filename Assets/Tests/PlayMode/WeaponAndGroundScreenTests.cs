@@ -45,24 +45,28 @@ namespace TreadShred.Screens.Tests
 
         private static string WeaponInHand() => Player().GetType().GetProperty("WeaponInHand").GetValue(Player()).ToString();
 
-        [UnityTest(Description = "D-038-AC-05: on the arc-shot mission the CANNON | ARC SHOT toggle starts on ARC SHOT, switches both ways on a tap, shows TAP TO SWITCH then drops it, hides while paused, passes the screen audit on every shape, and a cannon mission has no toggle until a special weapon has been played, then offers it LOCKED (D-043-AC-02)")]
+        [UnityTest(Description = "D-038-AC-05: on the arc-shot mission the weapon button names ARC SHOT and starts on it, its drawer switches to the cannon and back, TAP TO SWITCH shows then drops, the button hides while paused, it passes the screen audit on every shape, and a cannon mission has no weapon control until a special weapon has been played, then offers it LOCKED (D-043-AC-02)")]
         public IEnumerator WeaponToggleOnASpecialWeaponMission()
         {
             var findings = new List<Finding>();
             yield return Load("Lv16");
-            var cannon = ButtonLabeled("CANNON");
-            var arc = ButtonLabeled("ARC SHOT");
-            Assert.IsNotNull(cannon, "the cannon side");
-            Assert.IsNotNull(arc, "the mission's weapon side");
-            Assert.AreEqual(("ArcShot", true, false), (WeaponInHand(), IsPrimary(arc), IsPrimary(cannon)), "starts on its special weapon, highlighted");
+            var button = ButtonLabeled("ARC SHOT");
+            Assert.IsNotNull(button, "the weapon button names the weapon in hand");
+            Assert.AreEqual(("ArcShot", true), (WeaponInHand(), IsPrimary(button)), "starts on its special weapon, highlighted");
             Assert.IsTrue(UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Any(t => t.gameObject.activeInHierarchy && t.text == "TAP TO SWITCH"));
-            yield return Audit("arc-shot mission with the weapon toggle", findings);
+            yield return Audit("arc-shot mission with the weapon button", findings);
 
-            cannon.onClick.Invoke();
-            yield return null;
-            Assert.AreEqual(("Cannon", true, false), (WeaponInHand(), IsPrimary(cannon), IsPrimary(arc)), "one tap switches to the cannon");
-            arc.onClick.Invoke();
-            yield return null;
+            button.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(0.4f);
+            Assert.AreEqual(0f, Time.timeScale, "the drawer pauses the game");
+            yield return Audit("arc-shot mission with the weapon drawer open", findings);
+            ButtonLabeled("CANNON").onClick.Invoke();
+            yield return new WaitForSecondsRealtime(0.4f);
+            Assert.AreEqual(("Cannon", 1f), (WeaponInHand(), Time.timeScale), "one tap in the drawer switches to the cannon and resumes");
+            ButtonLabeled("CANNON").onClick.Invoke();
+            yield return new WaitForSecondsRealtime(0.4f);
+            ButtonLabeled("ARC SHOT").onClick.Invoke();
+            yield return new WaitForSecondsRealtime(0.4f);
             Assert.AreEqual("ArcShot", WeaponInHand(), "and back");
 
             yield return new WaitForSecondsRealtime(6f);
@@ -83,7 +87,12 @@ namespace TreadShred.Screens.Tests
             // D-038-AC-01 as amended: the arc shot has now been played, so a cannon mission offers it LOCKED (D-043-AC-02)...
             yield return Load("Lv2");
             Assert.IsNotNull(GameObject.Find("TreadShredWeaponToggle"), "a cannon mission offers the arc shot just used");
-            Assert.IsTrue(UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Any(t => t.gameObject.activeInHierarchy && t.text == "LOCKED"));
+            ButtonLabeled("CANNON").onClick.Invoke();
+            yield return new WaitForSecondsRealtime(0.4f);
+            Assert.IsTrue(UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Any(t => t.gameObject.activeInHierarchy && t.text.StartsWith("LOCKED")));
+            ButtonLabeled("CANNON").onClick.Invoke();
+            yield return new WaitForSecondsRealtime(0.4f);
+            Time.timeScale = 1f;
             // ...and before any special weapon has been played, a cannon mission shows no weapon control.
             var progress = GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null);
             var progression = progress.GetType().GetProperty("Progression").GetValue(progress);

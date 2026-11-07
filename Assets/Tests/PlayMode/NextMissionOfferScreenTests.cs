@@ -67,7 +67,8 @@ namespace TreadShred.Screens.Tests
             try
             {
                 Boosts.TankLost();
-                progression.Replace(new ProgressionState { coins = 500 });
+                // Armor at level 1 (bought with gems, D-017-AC-03), so the cheapest upgrade is one coins can buy.
+                progression.Replace(new ProgressionState { coins = 500, upgradeLevels = new[] { 1, 0, 0 } });
                 yield return WinAndTapNext("Lv1");
                 Assert.IsNotNull(GameObject.Find("TreadShredNextMissionOffer"), "an offer before the next mission");
                 var texts = Texts();
@@ -83,7 +84,7 @@ namespace TreadShred.Screens.Tests
                 Boosts.ArmOverdrive();
                 yield return WinAndTapNext("Lv2");
                 Assert.IsNotNull(GameObject.Find("TreadShredNextMissionOffer"));
-                Assert.Contains("UPGRADE ARMOR", Texts(), "Overdrive running: the cheapest upgrade instead");
+                Assert.Contains("UPGRADE FIREPOWER", Texts(), "Overdrive running: the cheapest upgrade instead");
                 Assert.IsNotNull(ButtonStarting("UPGRADE FOR "), "priced in coins");
                 yield return Audit("NEXT MISSION offer: upgrade", findings);
                 UnityEngine.Object.Destroy(GameObject.Find("TreadShredNextMissionOffer"));

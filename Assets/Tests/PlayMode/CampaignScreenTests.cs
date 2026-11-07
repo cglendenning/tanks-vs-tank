@@ -267,6 +267,8 @@ namespace TreadShred.Screens.Tests
                         body.isKinematic = true;
                     var origin = sight.transform.position;
                     shooter.transform.position = new Vector3(origin.x, shooter.transform.position.y, origin.z) + sight.transform.forward * 5f;
+                    // Aimed before the clock starts, so the first shell always lands and every tier is timed from the same shell.
+                    shooter.GetType().GetMethod("LookPlayer", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(shooter, null);
 
                     Time.captureDeltaTime = 1f / 120f;
                     float firstHit = -1f, start = Time.time;
