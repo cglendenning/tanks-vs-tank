@@ -1,5 +1,6 @@
 using TreadShred.Analytics;
 using TreadShred.Economy;
+using TreadShred.Progression;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,7 +12,7 @@ using UnityEngine.UI;
 public sealed class TreadShredStarterOffer : MonoBehaviour
 {
     private Text countdownText;
-    private Text priceText;
+    private Text valueText;
     private Text statusText;
     private Button buyButton;
     private System.Action<string> showStatus;
@@ -38,15 +39,21 @@ public sealed class TreadShredStarterOffer : MonoBehaviour
             .color = TreadShredUi.TitleColor;
         countdownText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(0f, 190f), new Vector2(940f, 42f), 32, font);
         countdownText.color = TreadShredUi.AccentColor;
-        priceText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(0f, 120f), new Vector2(940f, 62f), 52, font);
-        priceText.color = Color.white;
-        TreadShredUi.CreateText(OfferLabels.StarterPackValue, panel, new Vector2(0f, 60f), new Vector2(940f, 36f), 28, font)
+        // D-037-AC-04: what the pack does in the game, not how many gems it is.
+        var progress = TreadShredProgress.Ensure();
+        TreadShredUi.CreateText(StarterPackPitch.Headline(progress.ArmorHits), panel, new Vector2(0f, 122f), new Vector2(940f, 64f), 60,
+            font).color = Color.white;
+        TreadShredUi.CreateText(StarterPackPitch.Alternatives, panel, new Vector2(0f, 62f), new Vector2(940f, 32f), 28, font)
             .color = TreadShredUi.DetailColor;
-        TreadShredUi.CreateText(OfferLabels.StarterPackBuys, panel, new Vector2(0f, 18f), new Vector2(940f, 34f), 26, font)
-            .color = TreadShredUi.DetailColor;
-        buyButton = TreadShredUi.CreateButton(string.Empty, panel, new Vector2(0f, -90f), new Vector2(680f, 120f), 40, font, Buy);
+        TreadShredUi.CreateText(StarterPackPitch.Firepower(progress.Progression.Level(UpgradeTrack.Firepower)), panel,
+            new Vector2(0f, 26f), new Vector2(940f, 32f), 28, font).color = TreadShredUi.DetailColor;
+        valueText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(0f, -14f), new Vector2(940f, 32f), 28, font);
+        valueText.color = TreadShredUi.TitleColor;
+        buyButton = TreadShredUi.CreateButton(string.Empty, panel, new Vector2(0f, -100f), new Vector2(680f, 110f), 40, font, Buy);
         TreadShredUi.StylePrimary(buyButton);
-        statusText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(0f, -180f), new Vector2(940f, 34f), 24, font);
+        TreadShredUi.CreateText(StarterPackPitch.GemsNote, panel, new Vector2(0f, -172f), new Vector2(940f, 26f), 20, font)
+            .color = TreadShredUi.DetailColor;
+        statusText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(0f, -207f), new Vector2(940f, 30f), 24, font);
         statusText.color = TreadShredUi.DetailColor;
         TreadShredUi.CreateButton("NOT NOW", panel, new Vector2(0f, -262f), new Vector2(360f, 76f), 28, font, Close);
 
@@ -60,8 +67,8 @@ public sealed class TreadShredStarterOffer : MonoBehaviour
         var store = TreadShredStore.Ensure();
         var price = store.PriceFor(GemCatalog.StarterPack);
         countdownText.text = OfferLabels.StarterPackLimit + "  |  " + OfferLabels.StarterPackCountdown(store.StarterPackTimeLeft);
-        priceText.text = OfferLabels.Pack(GemCatalog.StarterPack, price);
-        TreadShredUi.SetLabel(buyButton, OfferLabels.Pack(GemCatalog.StarterPack, price, "BUY "));
+        valueText.text = StarterPackPitch.ValueLine(store.PriceFor(GemCatalog.Packs[0]), price);
+        TreadShredUi.SetLabel(buyButton, StarterPackPitch.BuyButton(price));
         buyButton.interactable = !store.PurchaseInProgress;
     }
 

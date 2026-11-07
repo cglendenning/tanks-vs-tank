@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
+using TreadShred.Progression;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -111,7 +112,7 @@ namespace TreadShred.Screens.Tests
             }
         }
 
-        [UnityTest(Description = "D-037-AC-03: while on sale every revive panel leads with STARTER PACK, 300 GEMS + THIS REVIVE FREE, the countdown and REVIVE + 300 GEMS; short of gems the plain revive waits, with gems it sits below, and bought or ended the panel offers the plain revive")]
+        [UnityTest(Description = "D-037-AC-03: while on sale every revive panel leads with STARTER PACK, REVIVE FREE + the armor it adds, OR 10 MORE REVIVES, the countdown and REVIVE + STARTER PACK; short of gems the plain revive waits, with gems it sits below, and bought or ended the panel offers the plain revive")]
         public IEnumerator RevivePanelLeadsWithTheStarterPack()
         {
             var findings = new List<Finding>();
@@ -131,24 +132,24 @@ namespace TreadShred.Screens.Tests
                 yield return null;
                 var texts = Texts();
                 Assert.Contains(OfferLabels.StarterPackTitle, texts);
-                Assert.Contains(OfferLabels.StarterPackReviveHeadline, texts);
-                Assert.Contains(OfferLabels.StarterPackValue, texts);
+                Assert.IsTrue(texts.Any(t => t.StartsWith("REVIVE FREE + ", StringComparison.Ordinal)), "the revive it includes and the armor it adds");
+                Assert.Contains(StarterPackPitch.ReviveAlternative, texts);
                 Assert.IsTrue(texts.Any(t => t.StartsWith("ENDS IN 14:", StringComparison.Ordinal) || t == "ENDS IN 15:00"), "the live countdown");
-                Assert.IsNotNull(ButtonStarting("REVIVE + 300 GEMS"), "the main button buys it with the revive included");
+                Assert.IsNotNull(ButtonStarting("REVIVE + STARTER PACK"), "the main button buys it with the revive included");
                 Assert.IsNull(ButtonStarting("REVIVE: "), "short of gems the plain revive would only buy the same pack, so it waits");
                 yield return Audit("revive panel led by the Starter Pack", findings);
 
                 Deliver("playmode-starter-1");
                 yield return null;
                 Assert.AreEqual(300, Wallet.Balance, "the store delivered the Starter Pack");
-                Assert.IsFalse(Texts().Contains(OfferLabels.StarterPackReviveHeadline), "bought: the Starter Pack leaves the panel");
+                Assert.IsFalse(Texts().Any(t => t.StartsWith("REVIVE FREE + ", StringComparison.Ordinal)), "bought: the Starter Pack leaves the panel");
                 Assert.IsNotNull(ButtonStarting("REVIVE FOR 30 GEMS"), "and the revive offer remains, paid in gems");
                 yield return CloseRevive();
 
                 Seed(100, 1);
                 OfferRevive();
                 yield return null;
-                Assert.IsNotNull(ButtonStarting("REVIVE + 300 GEMS"));
+                Assert.IsNotNull(ButtonStarting("REVIVE + STARTER PACK"));
                 Assert.IsNotNull(ButtonStarting("REVIVE FOR 30 GEMS"), "gems cover the revive: the plain revive sits below");
                 yield return Audit("revive panel led by the Starter Pack, gems covering the revive", findings);
                 yield return CloseRevive();
@@ -176,10 +177,11 @@ namespace TreadShred.Screens.Tests
                 var texts = Texts();
                 Assert.Contains(OfferLabels.StarterPackTitle, texts);
                 Assert.IsTrue(texts.Any(t => t.StartsWith(OfferLabels.StarterPackLimit + "  |  ENDS IN ", StringComparison.Ordinal)), "ONE TIME ONLY and the countdown");
-                Assert.IsTrue(texts.Any(t => t.StartsWith("300 GEMS FOR ", StringComparison.Ordinal)), "its price");
-                Assert.Contains(OfferLabels.StarterPackValue, texts);
-                Assert.Contains(OfferLabels.StarterPackBuys, texts);
-                Assert.IsNotNull(ButtonStarting("BUY 300 GEMS"));
+                Assert.IsTrue(texts.Any(t => t.EndsWith("ARMOR", StringComparison.Ordinal) || t.EndsWith("ARMOR HITS", StringComparison.Ordinal)), "the armor it adds, not gems");
+                Assert.Contains(StarterPackPitch.Alternatives, texts);
+                Assert.IsTrue(texts.Any(t => t.EndsWith("YOU PICK WHAT.", StringComparison.Ordinal)), "what it is worth");
+                Assert.Contains(StarterPackPitch.GemsNote, texts);
+                Assert.IsNotNull(ButtonStarting("GET IT"));
                 ButtonStarting("NOT NOW").onClick.Invoke();
                 yield return null;
                 Assert.IsFalse(InterstitialOpen(), "NOT NOW closes it");
@@ -193,7 +195,7 @@ namespace TreadShred.Screens.Tests
             }
         }
 
-        [UnityTest(Description = "D-037-AC-06: with the Starter Pack on sale the interstitial over the victory and start screens and the gem store showing STARTER PACK: 300 GEMS pass the screen audit on every screen shape; the revive panel's audits run in its own test")]
+        [UnityTest(Description = "D-037-AC-06: with the Starter Pack on sale the interstitial over the victory and start screens and the gem store showing STARTER PACK: <armor> + MORE pass the screen audit on every screen shape; the revive panel's audits run in its own test")]
         public IEnumerator StarterPackScreensPassTheAudit()
         {
             var findings = new List<Finding>();
@@ -218,7 +220,7 @@ namespace TreadShred.Screens.Tests
                 var menu = UnityEngine.Object.FindFirstObjectByType(GameType("LoadLv"));
                 GameType("TreadShredSettingsPanel").GetMethod("Show").Invoke(null, new object[] { menu, font });
                 yield return null;
-                Assert.IsNotNull(ButtonStarting(OfferLabels.StarterPackTitle + ": 300 GEMS"), "in the smallest pack's slot");
+                Assert.IsNotNull(ButtonStarting(OfferLabels.StarterPackTitle + ": "), "in the smallest pack's slot, sold by what it does");
                 Assert.IsNull(ButtonStarting("BUY 100 GEMS"), "the smallest pack waits while the Starter Pack is on sale");
                 yield return Audit("gem store with the Starter Pack", findings);
 

@@ -135,7 +135,7 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
             var pack = SlotPack(slot);
             var price = store.PriceFor(pack);
             TreadShredUi.SetLabel(packButtons[slot], GemCatalog.IsStarterPack(pack)
-                ? OfferLabels.StarterPackStoreButton(price)
+                ? StarterPackPitch.StoreButton(TreadShredProgress.Ensure().ArmorHits, price)
                 : OfferLabels.Pack(pack, price, "BUY "));
         }
     }

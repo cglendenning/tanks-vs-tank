@@ -141,7 +141,7 @@ namespace TreadShred.Progression.Tests
             Assert.IsFalse(flow.StarterPackOnSale);
         }
 
-        [Test(Description = "D-037-AC-04: buttons that will buy the Starter Pack name its price, the line under result-screen offers names the pack, and the gem store's slot reads STARTER PACK: 300 GEMS FOR <price>")]
+        [Test(Description = "D-037-AC-04: buttons that will buy the Starter Pack name its price, the line under result-screen offers names the pack, and the gem store's slot reads STARTER PACK: <armor> + MORE: <price>")]
         public void LabelsNameTheStarterPack()
         {
             var plan = GemCatalog.PlanFor(30, 0, starterOnSale: true);
@@ -153,26 +153,26 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual("UPGRADE: treadshred.starter300",
                 ProgressionLabels.UpgradeButton(new UpgradeQuote(200, 100), false, 0, priceFor, starterOnSale: true));
             Assert.AreEqual("UPGRADE: treadshred.gems100", ProgressionLabels.UpgradeButton(new UpgradeQuote(200, 100), false, 0, priceFor));
-            Assert.AreEqual("STARTER PACK: 300 GEMS FOR $0.99", OfferLabels.StarterPackStoreButton("$0.99"));
-            Assert.AreEqual("STARTER PACK: 300 GEMS", OfferLabels.StarterPackStoreButton(null));
+            Assert.AreEqual("STARTER PACK: TRIPLE ARMOR + MORE: $0.99", StarterPackPitch.StoreButton(3, "$0.99"));
+            Assert.AreEqual("STARTER PACK: DOUBLE ARMOR + MORE", StarterPackPitch.StoreButton(5, null));
 
             var settings = Script("TreadShredSettingsPanel.cs");
             StringAssert.Contains("slot == 0 && TreadShredStore.Ensure().StarterPackOnSale ? GemCatalog.StarterPack : GemCatalog.Packs[slot]", settings);
-            StringAssert.Contains("OfferLabels.StarterPackStoreButton(price)", settings);
+            StringAssert.Contains("StarterPackPitch.StoreButton(TreadShredProgress.Ensure().ArmorHits, price)", settings);
             StringAssert.Contains("store.StarterPackOnSale);", Script("Game/TreadShredUpgradePanel.cs"));
         }
 
-        [Test(Description = "D-037-AC-03: while on sale the revive panel leads with STARTER PACK, 300 GEMS + THIS REVIVE FREE, 3X THE GEMS, the countdown and REVIVE + 300 GEMS: <price>, which revives without spending gems; the plain revive shows only when gems cover it")]
+        [Test(Description = "D-037-AC-03: while on sale the revive panel leads with STARTER PACK, REVIVE FREE + the armor it adds, OR 10 MORE REVIVES, the countdown and REVIVE + STARTER PACK: <price>, which revives without spending gems; the plain revive shows only when gems cover it")]
         public void RevivePanelLeadsWithTheStarterPack()
         {
-            Assert.AreEqual("300 GEMS + THIS REVIVE FREE", OfferLabels.StarterPackReviveHeadline);
-            Assert.AreEqual("3X THE GEMS OF THE 100-GEM PACK", OfferLabels.StarterPackValue);
-            Assert.AreEqual("REVIVE + 300 GEMS: $0.99", OfferLabels.StarterPackReviveButton("$0.99"));
-            Assert.AreEqual("REVIVE + 300 GEMS", OfferLabels.StarterPackReviveButton(null));
+            Assert.AreEqual("REVIVE FREE + TRIPLE YOUR ARMOR", StarterPackPitch.ReviveHeadline(3));
+            Assert.AreEqual("OR 10 MORE REVIVES", StarterPackPitch.ReviveAlternative);
+            Assert.AreEqual("REVIVE + STARTER PACK: $0.99", StarterPackPitch.ReviveButton("$0.99"));
+            Assert.AreEqual("REVIVE + STARTER PACK", StarterPackPitch.ReviveButton(null));
 
             var revive = Script("Game/TreadShredRevivePanel.cs");
             StringAssert.Contains("starterLayout = store.StarterPackOnSale;", revive);
-            StringAssert.Contains("OfferLabels.StarterPackReviveButton(store.PriceFor(GemCatalog.StarterPack))", revive);
+            StringAssert.Contains("StarterPackPitch.ReviveButton(store.PriceFor(GemCatalog.StarterPack))", revive);
             StringAssert.Contains("reviveButton.gameObject.SetActive(!starterShown || plan.CanSpendNow);", revive);
             // Bought here: the revive applies on delivery and spends nothing (no SpendOrBuy, no TrySpend).
             var buy = revive.Substring(revive.IndexOf("private void BuyStarter()", StringComparison.Ordinal));
@@ -183,16 +183,23 @@ namespace TreadShred.Progression.Tests
             StringAssert.DoesNotContain("TrySpend", buy);
         }
 
-        [Test(Description = "D-037-AC-04: the Starter Pack interstitial opens over every result screen and on the start screen while on sale, with ONE TIME ONLY, the countdown, 300 GEMS FOR <price>, what the gems buy, BUY and NOT NOW, and Back closes it")]
+        [Test(Description = "D-037-AC-04: the Starter Pack interstitial opens over every result screen and on the start screen while on sale, with ONE TIME ONLY, the countdown, the armor it adds (TRIPLE only when true), the revives, Overdrive and firepower it buys instead, its worth, GET IT and NOT NOW, and Back closes it")]
         public void InterstitialOpensAtEveryBreak()
         {
-            Assert.AreEqual("THAT'S 3 OVERDRIVES OR 7 ARMORED REDEPLOYS", OfferLabels.StarterPackBuys);
+            // Sold by what it does in the game (owner direction 2026-11-07), every number from the rules.
+            Assert.AreEqual(("TRIPLE YOUR ARMOR", "DOUBLE YOUR ARMOR", "+6 ARMOR HITS"),
+                (StarterPackPitch.Headline(3), StarterPackPitch.Headline(5), StarterPackPitch.Headline(8)), "only as true as the tank's own armor");
+            Assert.AreEqual("OR 10 REVIVES · OR 15 MISSIONS OF OVERDRIVE", StarterPackPitch.Alternatives);
+            Assert.AreEqual(("OR 7 FIREPOWER UPGRADES", "OR +60% FIREPOWER"), (StarterPackPitch.Firepower(0), StarterPackPitch.Firepower(10)));
+            Assert.AreEqual("$2.97 OF GEAR FOR $0.99. YOU PICK WHAT.", StarterPackPitch.ValueLine("$0.99", "$0.99"));
+            Assert.AreEqual("3X THE GEAR OF A REGULAR PACK. YOU PICK WHAT.", StarterPackPitch.ValueLine("0,99 €", "0,99 €"), "other currencies");
+            Assert.AreEqual(("GET IT FOR $0.99", "300 GEMS: SPEND THEM ON ANY OF THESE"), (StarterPackPitch.BuyButton("$0.99"), StarterPackPitch.GemsNote));
             Assert.AreEqual("300 GEMS FOR $0.99", OfferLabels.Pack(Starter, "$0.99"));
 
             var offer = Script("Game/TreadShredStarterOffer.cs");
             StringAssert.Contains("if (!TreadShredStore.Ensure().StarterPackOnSale || FindFirstObjectByType<TreadShredStarterOffer>() != null)", offer);
             StringAssert.Contains("OfferLabels.StarterPackLimit + \"  |  \" + OfferLabels.StarterPackCountdown(store.StarterPackTimeLeft)", offer);
-            StringAssert.Contains("OfferLabels.StarterPackBuys", offer);
+            StringAssert.Contains("StarterPackPitch.Headline(progress.ArmorHits)", offer);
             StringAssert.Contains("\"NOT NOW\"", offer);
             StringAssert.Contains("TreadShredBack.Opened(this, Close);", offer);
             StringAssert.Contains("TreadShredStore.Instance.Release(showStatus);", offer);

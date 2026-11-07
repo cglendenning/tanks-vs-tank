@@ -135,10 +135,10 @@ public sealed class TreadShredNextMissionOffer : MonoBehaviour
             pack = GemCatalog.PackAlongside(true, store.StarterPackOnSale);
             var starter = GemCatalog.IsStarterPack(pack);
             TreadShredUi.SetLabel(packButton, starter
-                ? OfferLabels.StarterPackStoreButton(store.PriceFor(pack))
+                ? StarterPackPitch.StoreButton(TreadShredProgress.Ensure().ArmorHits, store.PriceFor(pack))
                 : OfferLabels.Pack(pack, store.PriceFor(pack)));
             packLine.text = starter
-                ? OfferLabels.StarterPackValue + ". " + OfferLabels.StarterPackCountdown(store.StarterPackTimeLeft)
+                ? StarterPackPitch.Headline(TreadShredProgress.Ensure().ArmorHits) + " AND MORE. " + OfferLabels.StarterPackCountdown(store.StarterPackTimeLeft)
                 : OfferLabels.StockUp;
         }
         if (upgraded)

@@ -99,10 +99,11 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
         var title = TreadShredUi.CreateText(OfferLabels.StarterPackTitle, panel, new Vector2(0f, 245f), new Vector2(940f, 76f), 64,
             font);
         title.color = TreadShredUi.AccentColor;
-        var headline = TreadShredUi.CreateText(OfferLabels.StarterPackReviveHeadline, panel, new Vector2(0f, 185f),
+        // D-037-AC-03: the revive it includes and what it does in the game, not how many gems it is.
+        var headline = TreadShredUi.CreateText(StarterPackPitch.ReviveHeadline(TreadShredProgress.Ensure().ArmorHits), panel, new Vector2(0f, 185f),
             new Vector2(940f, 46f), 36, font);
         headline.color = Color.white;
-        var value = TreadShredUi.CreateText(OfferLabels.StarterPackValue, panel, new Vector2(0f, 140f), new Vector2(940f, 34f), 26,
+        var value = TreadShredUi.CreateText(StarterPackPitch.ReviveAlternative, panel, new Vector2(0f, 140f), new Vector2(940f, 34f), 26,
             font);
         value.color = TreadShredUi.DetailColor;
         starterCountdown = TreadShredUi.CreateText(string.Empty, panel, new Vector2(0f, 100f), new Vector2(940f, 40f), 30, font);
@@ -139,7 +140,7 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
             part.SetActive(starterShown);
         // Short of gems, the revive button would only buy the same pack without the free revive, so it waits.
         reviveButton.gameObject.SetActive(!starterShown || plan.CanSpendNow);
-        TreadShredUi.SetLabel(starterButton, OfferLabels.StarterPackReviveButton(store.PriceFor(GemCatalog.StarterPack)));
+        TreadShredUi.SetLabel(starterButton, StarterPackPitch.ReviveButton(store.PriceFor(GemCatalog.StarterPack)));
         starterButton.interactable = !store.PurchaseInProgress;
     }
 
