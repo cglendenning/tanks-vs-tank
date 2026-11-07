@@ -116,11 +116,11 @@ namespace TreadShred.Progression.Tests
             var pack = GemCatalog.Packs[0];
             shop.Buy(UpgradeTrack.Armor);
             flow.OrderDelivered(pack.ProductId, "txn-undo", out _);
-            Assert.AreEqual(1, progression.Level(UpgradeTrack.Armor));
+            Assert.AreEqual(1, progression.Supply(SupplyTrack.Armor), "a unit of armor supply (D-045)");
 
             Assert.IsTrue(shop.Undo());
 
-            Assert.AreEqual((0, 0, pack.Gems), (progression.Level(UpgradeTrack.Armor), progression.Coins, wallet.Balance));
+            Assert.AreEqual((0, 0, pack.Gems), (progression.Supply(SupplyTrack.Armor), progression.Coins, wallet.Balance));
         }
 
         [Test(Description = "D-017-AC-06: an upgrade changed elsewhere since (a cloud restore) is never given back")]

@@ -19,7 +19,7 @@ namespace TreadShred.Progression.Tests
             public void Save(WalletState saved) => state = saved;
         }
 
-        [Test(Description = "D-017-AC-03: armor level n costs 10 x n gems and coins never buy it; firepower and speed stay on coins; levels already owned stay")]
+        [Test(Description = "D-017-AC-03: armor is bought with gems only, a unit of supply at 100 gems (D-045) that coins never buy; firepower and speed stay on coins; levels already owned stay")]
         public void ArmorIsBoughtWithGemsOnly()
         {
             var wallet = new GemWallet(new MemoryWalletStore());
@@ -27,14 +27,15 @@ namespace TreadShred.Progression.Tests
             progression.Replace(new ProgressionState { coins = 100000, upgradeLevels = new[] { 2, 0, 0 } });
             Assert.AreEqual(2, progression.Level(UpgradeTrack.Armor), "levels already owned stay");
             var armor = progression.Quote(UpgradeTrack.Armor);
-            Assert.AreEqual((600, 30), (armor.CostCoins, armor.GemsNeeded), "level 3: the value of 600 coins, paid as 30 gems");
+            Assert.AreEqual((2000, 100), (armor.CostCoins, armor.GemsNeeded), "a unit of armor supply: 100 gems, kept in the quote at the coin rate");
             Assert.IsFalse(armor.AffordableWithCoins, "100,000 coins still do not buy armor");
             Assert.AreEqual(UpgradeResult.NotEnoughGems, progression.TryUpgrade(UpgradeTrack.Armor));
-            wallet.CreditReward(30);
+            wallet.CreditReward(100);
             Assert.AreEqual(UpgradeResult.Upgraded, progression.TryUpgrade(UpgradeTrack.Armor, out var receipt));
-            Assert.AreEqual((0, 30, 100000, 0), (receipt.CoinsPaid, receipt.GemsSpent, progression.Coins, wallet.Balance));
+            Assert.AreEqual((0, 100, 100000, 0), (receipt.CoinsPaid, receipt.GemsSpent, progression.Coins, wallet.Balance));
+            Assert.AreEqual((2, 1), (progression.Level(UpgradeTrack.Armor), progression.Supply(SupplyTrack.Armor)), "a unit, not a level");
             Assert.IsTrue(progression.Refund(receipt), "UNDO gives the gems back");
-            Assert.AreEqual(30, wallet.Balance);
+            Assert.AreEqual(100, wallet.Balance);
             Assert.IsTrue(progression.Quote(UpgradeTrack.Firepower).AffordableWithCoins, "firepower stays on coins");
             Assert.IsTrue(ProgressionRules.GemOnly(UpgradeTrack.Armor));
             Assert.IsFalse(ProgressionRules.GemOnly(UpgradeTrack.Speed));
@@ -46,7 +47,7 @@ namespace TreadShred.Progression.Tests
             var progression = new PlayerProgression(new MemoryStore(), new GemWallet(new MemoryWalletStore()));
             progression.Replace(new ProgressionState { coins = 100000 });
             var quote = progression.Quote(UpgradeTrack.Armor);
-            Assert.AreEqual(10, quote.GemsNeeded, "level 1 is 10 gems");
+            Assert.AreEqual(SupplyRules.UnitGems, quote.GemsNeeded, "every armor purchase is a 100-gem unit (D-045)");
             Assert.AreEqual(quote.CostCoins, quote.CoinShortfall, "the whole price falls to gems, so the button never quotes coins");
         }
 

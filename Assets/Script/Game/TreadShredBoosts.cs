@@ -21,5 +21,7 @@ public static class TreadShredBoosts
         }
     }
 
-    public static CombatBoosts Current { get; } = new CombatBoosts(new PlayerPrefsBoostFlags());
+    // D-045: Overdrive is on while the player holds Overdrive supply.
+    public static CombatBoosts Current { get; } = new CombatBoosts(new PlayerPrefsBoostFlags(),
+        () => TreadShredProgress.Ensure().Progression.Supply(TreadShred.Progression.SupplyTrack.Overdrive) > 0);
 }

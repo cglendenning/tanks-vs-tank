@@ -45,24 +45,26 @@ namespace TreadShred.Progression.Tests
                 progression.CompleteMission(tier, mission, true);
         }
 
-        [Test(Description = "D-017-AC-01: three tracks of ten levels that persist across sessions")]
+        [Test(Description = "D-017-AC-01: firepower and speed have ten coin levels that persist across sessions; past level 10, and for armor, each purchase is a unit of supply that persists too (D-045)")]
         public void TracksHaveTenLevelsAndPersist()
         {
-            // All 30 upgrades: firepower and speed for 22,000 coins, armor for 550 gems (D-017-AC-03).
+            // Firepower and speed to level 10 for 22,000 coins, then a unit of each and of armor for 300 gems.
             EarnCoins(660);
-            wallet.CreditReward(550);
-            foreach (UpgradeTrack track in System.Enum.GetValues(typeof(UpgradeTrack)))
+            wallet.CreditReward(300);
+            foreach (var track in new[] { UpgradeTrack.Firepower, UpgradeTrack.Speed })
             {
                 for (var level = 0; level < ProgressionRules.LevelsPerTrack; level++)
                     Assert.AreEqual(UpgradeResult.Upgraded, progression.TryUpgrade(track));
-                Assert.AreEqual(UpgradeResult.AlreadyMaxed, progression.TryUpgrade(track));
+                Assert.IsTrue(progression.IsMaxed(track) && progression.BuysSupply(track));
+                Assert.AreEqual(UpgradeResult.Upgraded, progression.TryUpgrade(track), "past level 10 a unit of supply, never MAXED");
             }
+            Assert.AreEqual(UpgradeResult.Upgraded, progression.TryUpgrade(UpgradeTrack.Armor));
 
             var reloaded = new PlayerProgression(store, wallet);
 
             Assert.AreEqual(3, System.Enum.GetValues(typeof(UpgradeTrack)).Length);
-            Assert.AreEqual(10, reloaded.Level(UpgradeTrack.Armor));
-            Assert.AreEqual(10, reloaded.Level(UpgradeTrack.Speed));
+            Assert.AreEqual((10, 10), (reloaded.Level(UpgradeTrack.Firepower), reloaded.Level(UpgradeTrack.Speed)));
+            Assert.AreEqual((1, 1, 1), (reloaded.Supply(SupplyTrack.Armor), reloaded.Supply(SupplyTrack.Firepower), reloaded.Supply(SupplyTrack.Speed)));
         }
 
         [Test(Description = "D-017-AC-03: level n costs n times 200 coins")]

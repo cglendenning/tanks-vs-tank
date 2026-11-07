@@ -112,9 +112,9 @@ namespace TreadShred.Progression.Tests
             flow.OrderDelivered(SmallPack.ProductId, "txn-upgrade", out _);
 
             Assert.AreEqual(new[] { UpgradeTrack.Armor }, upgraded);
-            Assert.AreEqual(1, progression.Level(UpgradeTrack.Armor));
+            Assert.AreEqual(1, progression.Supply(SupplyTrack.Armor), "a unit of armor supply (D-045)");
             Assert.AreEqual(0, progression.Coins);
-            Assert.AreEqual(SmallPack.Gems - ProgressionRules.CostStepCoins / ProgressionRules.CoinsPerGem, wallet.Balance);
+            Assert.AreEqual(SmallPack.Gems - SupplyRules.UnitGems, wallet.Balance);
             Assert.AreEqual(1, gateway.Started.Count, "one tap, one store sheet");
         }
 

@@ -35,11 +35,16 @@ namespace TreadShred.Screens.Tests
             UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
                 .FirstOrDefault(b => b.gameObject.activeInHierarchy && (b.GetComponentInChildren<Text>()?.text ?? string.Empty).StartsWith(label, StringComparison.Ordinal));
 
-        private static IEnumerator OfferAfterVictory(int gems, int coins)
+        // D-045: Overdrive is supply, so an offer with it running comes after a save holding Overdrive units.
+        private static IEnumerator OfferAfterVictory(int gems, int coins, int overdrive = 0)
         {
             Wallet.Replace(new WalletState { balance = gems, starterGranted = true, starterPackBought = true });
             // Armor at level 1 (bought with gems, D-017-AC-03), so the cheapest upgrade is one coins can buy.
-            Progression.Replace(new ProgressionState { coins = coins, clearedMissions = new[] { 1L, 0L, 0L }, upgradeLevels = new[] { 1, 0, 0 } });
+            Progression.Replace(new ProgressionState
+            {
+                coins = coins, clearedMissions = new[] { 1L, 0L, 0L }, upgradeLevels = new[] { 1, 0, 0 },
+                supply = new[] { 0, 0, 0, overdrive, 0, 0, 0 }
+            });
             Time.timeScale = 1f;
             SceneManager.LoadScene("Lv1");
             yield return null;
@@ -75,29 +80,25 @@ namespace TreadShred.Screens.Tests
             var pack = OfferLabels.Pack(GemCatalog.Packs[0], string.Empty);
             try
             {
-                Boosts.TankLost();
                 yield return OfferAfterVictory(100, 0);
-                Assert.IsNotNull(ButtonStarting("ACTIVATE FOR 60 GEMS"), "Overdrive covered by held gems");
+                Assert.IsNotNull(ButtonStarting("ACTIVATE FOR 100 GEMS"), "Overdrive covered by held gems");
                 Assert.IsNotNull(ButtonStarting(pack), "so the smallest pack is added");
                 Assert.Contains(OfferLabels.StockUp, Texts());
                 yield return Audit("NEXT MISSION offer: Overdrive with a pack", findings);
 
-                Boosts.TankLost();
                 yield return OfferAfterVictory(0, 0);
                 Assert.IsNotNull(ButtonStarting("ACTIVATE: "), "no gems: the offer's own button buys a pack");
                 Assert.IsNull(ButtonStarting(pack), "so none is added");
                 CollectionAssert.DoesNotContain(Texts(), OfferLabels.StockUp);
                 yield return Audit("NEXT MISSION offer: Overdrive that buys a pack", findings);
 
-                Boosts.ArmOverdrive();
-                yield return OfferAfterVictory(0, 1000);
+                yield return OfferAfterVictory(0, 1000, overdrive: 1);
                 Assert.IsNotNull(ButtonStarting("UPGRADE FOR "), "an upgrade covered by held coins");
                 Assert.IsNotNull(ButtonStarting(pack), "so the smallest pack is added");
                 yield return Audit("NEXT MISSION offer: upgrade with a pack", findings);
             }
             finally
             {
-                Boosts.TankLost();
                 Wallet.Replace(JsonUtility.FromJson<WalletState>(saved));
                 Progression.Replace(new ProgressionState());
                 Time.timeScale = 1f;

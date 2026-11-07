@@ -31,16 +31,16 @@ namespace TreadShred.Progression.Tests
         private static string Script(string relative) =>
             File.ReadAllText(Path.Combine(Application.dataPath, "Script", relative));
 
-        [Test(Description = "D-009-AC-03: with Overdrive carried over, the victory card offers the next level that costs fewest coins, armor first on a tie, and nothing once every track is maxed")]
+        [Test(Description = "D-009-AC-03: with Overdrive carried over, the victory card offers the next level that costs fewest coins, the first track on a tie; a unit of supply costs its 100 gems' worth of coins, so with every track at level 10 it offers armor supply (D-045)")]
         public void CardOffersTheCheapestNextUpgrade()
         {
             var max = ProgressionRules.LevelsPerTrack;
 
-            Assert.AreEqual(UpgradeTrack.Armor, WithLevels(0, 0, 0).CheapestNextUpgrade(), "a tie goes to armor");
+            Assert.AreEqual(UpgradeTrack.Firepower, WithLevels(0, 0, 0).CheapestNextUpgrade(), "armor is supply; firepower before speed on a tie");
             Assert.AreEqual(UpgradeTrack.Firepower, WithLevels(2, 0, 1).CheapestNextUpgrade());
-            Assert.AreEqual(UpgradeTrack.Armor, WithLevels(1, 2, 1).CheapestNextUpgrade(), "armor before speed at the same price");
-            Assert.AreEqual(UpgradeTrack.Speed, WithLevels(max, max, 3).CheapestNextUpgrade(), "maxed tracks are skipped");
-            Assert.IsNull(WithLevels(max, max, max).CheapestNextUpgrade());
+            Assert.AreEqual(UpgradeTrack.Speed, WithLevels(1, 2, 1).CheapestNextUpgrade(), "speed's 400 coins before firepower's 600");
+            Assert.AreEqual(UpgradeTrack.Speed, WithLevels(max, max, 3).CheapestNextUpgrade(), "a coin level before supply");
+            Assert.AreEqual(UpgradeTrack.Armor, WithLevels(max, max, max).CheapestNextUpgrade(), "all supply: the first track");
         }
 
         [Test(Description = "D-009-AC-03: the Overdrive status says it is on and why, without repeating the effect the card already states")]

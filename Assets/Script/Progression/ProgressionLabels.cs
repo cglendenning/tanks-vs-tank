@@ -40,6 +40,43 @@ namespace TreadShred.Progression
             }
         }
 
+        /// <summary>D-045: what one unit of a track's supply adds.</summary>
+        public static string SupplyUnit(UpgradeTrack track)
+        {
+            switch (track)
+            {
+                case UpgradeTrack.Armor:
+                    return "+" + SupplyRules.ArmorHitsPerUnit + " HITS";
+                case UpgradeTrack.Firepower:
+                    return "+" + Math.Round(SupplyRules.DamagePerUnit * 100f) + "% DAMAGE";
+                default:
+                    return "+" + Math.Round(SupplyRules.SpeedPerUnit * 100f) + "% SPEED";
+            }
+        }
+
+        /// <summary>D-045: the effect of the levels owned and the supply held, and what the next unit adds.</summary>
+        public static string SupplyPreview(UpgradeTrack track, int level, int units)
+        {
+            string now;
+            switch (track)
+            {
+                case UpgradeTrack.Armor:
+                    now = UpgradeEffects.ArmorHits(level) + SupplyRules.ArmorHitsPerUnit * units + " HITS";
+                    break;
+                case UpgradeTrack.Firepower:
+                    now = "X" + (UpgradeEffects.DamageMultiplier(level) + SupplyRules.DamagePerUnit * units).ToString("0.0") + " DAMAGE";
+                    break;
+                default:
+                    now = "X" + (UpgradeEffects.SpeedMultiplier(level) + SupplyRules.SpeedPerUnit * units).ToString("0.00") + " SPEED";
+                    break;
+            }
+            return now + "  >  " + SupplyUnit(track);
+        }
+
+        /// <summary>D-045: the supply a track holds and the missions won it lasts.</summary>
+        public static string SupplyLine(int units, int missionsLeft) =>
+            units > 0 ? "SUPPLY " + units + ": " + missionsLeft + " MISSIONS LEFT" : "NO SUPPLY";
+
         /// <summary>D-017-AC-10: the mission HUD's upgraded tracks, one line each in track order ("ARMOR LEVEL 3"); none with none.</summary>
         public static IReadOnlyList<string> ActiveUpgrades(Func<UpgradeTrack, int> level)
         {
@@ -101,7 +138,9 @@ namespace TreadShred.Progression
             var cost = quote.AffordableWithCoins
                 ? CountText.Format(quote.CostCoins) + " COINS"
                 : (coins > 0 ? CountText.Format(coins) + " COINS + " : string.Empty) + CountText.Format(quote.GemsNeeded) + " GEMS";
-            return new GemConfirmation("UPGRADE " + Track(track) + "?", "LEVEL " + nextLevel + " FOR " + cost, "UPGRADE", "CANCEL");
+            // D-045: nextLevel 0 is a supply unit.
+            var what = nextLevel > 0 ? "LEVEL " + nextLevel : SupplyUnit(track) + " SUPPLY";
+            return new GemConfirmation("UPGRADE " + Track(track) + "?", what + " FOR " + cost, "UPGRADE", "CANCEL");
         }
 
         /// <summary>D-017-AC-06: what an undone upgrade gave back.</summary>
@@ -112,7 +151,8 @@ namespace TreadShred.Progression
                 returned.Add(CountText.Format(receipt.CoinsPaid) + " COINS");
             if (receipt.GemsSpent > 0)
                 returned.Add(CountText.Format(receipt.GemsSpent) + " GEMS");
-            var back = Track(receipt.Track) + " BACK TO LEVEL " + (receipt.Level - 1);
+            // D-045: an undone supply unit goes back; a level drops to the one before it.
+            var back = receipt.Supply ? Track(receipt.Track) + " SUPPLY UNDONE" : Track(receipt.Track) + " BACK TO LEVEL " + (receipt.Level - 1);
             return returned.Count == 0 ? back : back + ". " + string.Join(" AND ", returned) + " RETURNED";
         }
 

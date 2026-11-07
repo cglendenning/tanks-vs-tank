@@ -9,7 +9,7 @@ namespace TreadShred.Economy.Tests
         {
             var plan = GemCatalog.Plan(GemOffer.Overdrive, 100);
 
-            Assert.AreEqual("ACTIVATE FOR 60 GEMS", OfferLabels.ActionButton("ACTIVATE", plan, "$0.99"));
+            Assert.AreEqual("ACTIVATE FOR 100 GEMS", OfferLabels.ActionButton("ACTIVATE", plan, "$0.99"));
         }
 
         [Test(Description = "D-009-AC-01: the button offers the pack with its price when short")]
@@ -41,7 +41,7 @@ namespace TreadShred.Economy.Tests
         {
             var plan = GemCatalog.Plan(GemOffer.Overdrive, 40);
 
-            Assert.AreEqual("YOU HAVE 40 GEMS. NEED 60", OfferLabels.BalanceLine(40, plan));
+            Assert.AreEqual("YOU HAVE 40 GEMS. NEED 100", OfferLabels.BalanceLine(40, plan));
         }
 
         [Test(Description = "D-012-AC-01: a pack label shows its gems and price")]

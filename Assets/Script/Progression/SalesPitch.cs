@@ -106,8 +106,9 @@ namespace TreadShred.Progression
                     return new SalesPitch("ARMORED REDEPLOY", "GET BACK IN AND FINISH THE JOB",
                         new[] { "REPLAY THIS MISSION", "WITH " + CombatBoosts.RedeployExtraHits + " EXTRA HIT OF ARMOR", RunContinues });
                 case SaleItem.Armor:
+                    // D-045: armor is bought as supply, with no cap.
                     return new SalesPitch("ARMOR", "SHRUG OFF THE HITS",
-                        new[] { "UP TO " + UpgradeEffects.ArmorHits(top) + " HITS" + atTop, Permanent });
+                        new[] { ProgressionLabels.SupplyUnit(UpgradeTrack.Armor) + " FOR EVERY " + SupplyRules.UnitGems + " GEMS", OfferLabels.SupplyLasts });
                 case SaleItem.Firepower:
                     return new SalesPitch("FIREPOWER", "HIT HARDER. KILL FASTER.",
                         new[] { "UP TO X" + Multiplier(UpgradeEffects.DamageMultiplier(top), "0.0") + " DAMAGE" + atTop, Permanent });

@@ -18,8 +18,8 @@ namespace TreadShred.Economy.Tests
         {
             var overdrive = OfferLabels.Confirmation(GemOffer.Overdrive, 120);
             Assert.AreEqual("ACTIVATE OVERDRIVE?", overdrive.Title);
-            Assert.AreEqual("SPEND 60 OF YOUR 120 GEMS", overdrive.Detail);
-            Assert.AreEqual("SPEND 60 GEMS", overdrive.ConfirmButton);
+            Assert.AreEqual("SPEND 100 OF YOUR 120 GEMS", overdrive.Detail);
+            Assert.AreEqual("SPEND 100 GEMS", overdrive.ConfirmButton);
             Assert.AreEqual("CANCEL", overdrive.CancelButton);
 
             var redeploy = OfferLabels.Confirmation(GemOffer.ArmoredRedeploy, 45);

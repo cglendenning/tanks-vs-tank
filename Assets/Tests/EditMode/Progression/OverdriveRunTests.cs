@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace TreadShred.Progression.Tests
 {
-    // Overdrive lasts from the next mission until the player's tank is lost (owner decision 2026-10-31).
+    // D-045: Overdrive is supply; it stays on while held, whatever happens to the tank (owner decision 2026-11-07).
     public sealed class OverdriveRunTests
     {
         private sealed class MemoryFlags : IBoostFlags
@@ -21,64 +21,40 @@ namespace TreadShred.Progression.Tests
         private static string Script(string relative) =>
             File.ReadAllText(Path.Combine(Application.dataPath, "Script", relative));
 
-        [Test(Description = "D-009-AC-03: Overdrive gives two rounds per tap in every mission until the player's tank is lost")]
-        public void OverdriveLastsUntilTheTankIsLost()
+        [Test(Description = "D-045-AC-04: losing the tank and an Armored Redeploy leave Overdrive on while its supply is held")]
+        public void TankLossNoLongerEndsOverdrive()
         {
-            var boosts = new CombatBoosts(new MemoryFlags());
-            boosts.ArmOverdrive();
-            for (var mission = 0; mission < 3; mission++)
-                Assert.AreEqual(2, boosts.ConsumeForMission(3).RoundsPerTap, "mission " + (mission + 1));
-
-            boosts.TankLost();
-
-            Assert.IsFalse(boosts.OverdriveActive);
-            Assert.AreEqual(1, boosts.ConsumeForMission(3).RoundsPerTap);
-        }
-
-        [Test(Description = "D-009-AC-03: an Armored Redeploy bought after the tank is lost keeps Overdrive running")]
-        public void RedeployKeepsOverdrive()
-        {
-            var boosts = new CombatBoosts(new MemoryFlags());
-            boosts.ArmOverdrive();
-            boosts.ConsumeForMission(3);
-            boosts.TankLost();
-
+            var boosts = new CombatBoosts(new MemoryFlags(), () => true);
             boosts.ArmRedeploy();
-
+            var reloaded = boosts.ConsumeForMission(3);
+            Assert.AreEqual((4, 2), (reloaded.ArmorHits, reloaded.RoundsPerTap), "the redeploy's hit and Overdrive together");
             Assert.IsTrue(boosts.OverdriveActive);
-            var replay = boosts.ConsumeForMission(3);
-            Assert.AreEqual((4, 2), (replay.ArmorHits, replay.RoundsPerTap));
+            var results = Script("ManagerScore/ManagerScore.cs");
+            StringAssert.DoesNotContain("TreadShredBoosts.Current.TankLost();", results, "a lost tank leaves Overdrive alone");
+            StringAssert.Contains("Progression.Supply(TreadShred.Progression.SupplyTrack.Overdrive) > 0", Script("Game/TreadShredBoosts.cs"));
         }
 
-        [Test(Description = "D-009-AC-03: once a mission starts without a redeploy after the loss, that Overdrive is gone for good")]
-        public void OverdriveEndsWithoutARedeploy()
+        [Test(Description = "D-045-AC-05: a 1.9.5 save's Overdrive, on or lost to a redeploy, is taken once and becomes one unit of supply")]
+        public void LegacyOverdriveIsTakenOnce()
         {
-            var boosts = new CombatBoosts(new MemoryFlags());
-            boosts.ArmOverdrive();
-            boosts.TankLost();
-            Assert.AreEqual(1, boosts.ConsumeForMission(3).RoundsPerTap, "the free retry starts without Overdrive");
-
-            boosts.ArmRedeploy();
-
-            Assert.IsFalse(boosts.OverdriveActive, "a later redeploy does not bring it back");
+            var flags = new MemoryFlags();
+            flags.Set(CombatBoosts.OverdriveKey);
+            var boosts = new CombatBoosts(flags, () => false);
+            Assert.IsTrue(boosts.TakeLegacyOverdrive());
+            Assert.IsFalse(boosts.TakeLegacyOverdrive(), "only once");
+            flags.Set(CombatBoosts.OverdriveLostKey);
+            Assert.IsTrue(boosts.TakeLegacyOverdrive(), "a lost Overdrive a redeploy could still bring back counts too");
+            StringAssert.Contains("if (TreadShredBoosts.Current.TakeLegacyOverdrive())\n            Progression.AddSupply(SupplyTrack.Overdrive);",
+                Script("Game/TreadShredProgress.cs"));
         }
 
-        [Test(Description = "D-009-AC-03: the offer, the active state and the sales screen all say Overdrive lasts until the tank goes down")]
+        [Test(Description = "D-045-AC-01: Overdrive is a unit of supply at 100 gems, and the offer, its sales screen and the victory card say it lasts at least 5 missions")]
         public void CopySaysHowLongOverdriveLasts()
         {
-            Assert.AreEqual("2 SHOTS PER TAP UNTIL YOUR TANK GOES DOWN", OfferLabels.OverdriveEffect);
-            Assert.AreEqual("60 GEMS SPENT", OfferLabels.OverdriveActiveDetail(60));
-            Assert.AreEqual("ON FROM AN EARLIER MISSION", OfferLabels.OverdriveActiveDetail(0), "carried from an earlier mission");
-            CollectionAssert.Contains(SalesPitches.For(SaleItem.Overdrive).Points, "UNTIL YOUR TANK GOES DOWN");
+            Assert.AreEqual(SupplyRules.UnitGems, GemCatalog.Cost(GemOffer.Overdrive));
+            Assert.AreEqual("2 SHOTS PER TAP FOR AT LEAST 5 MISSIONS", OfferLabels.OverdriveEffect);
+            CollectionAssert.Contains(SalesPitches.For(SaleItem.Overdrive).Points, "FOR AT LEAST 5 MISSIONS");
             StringAssert.Contains("OfferLabels.OverdriveEffect,", Script("ManagerScore/ManagerScore.cs"));
-        }
-
-        [Test(Description = "D-009-AC-03: losing the tank ends Overdrive, the victory screen shows it active, and the mission HUD shows it")]
-        public void ScreensFollowTheOverdriveRun()
-        {
-            var results = Script("ManagerScore/ManagerScore.cs");
-            StringAssert.Contains("TreadShredBoosts.Current.TankLost();", results);
-            StringAssert.Contains("if (offer == GemOffer.Overdrive && TreadShredBoosts.Current.OverdriveActive)", results);
             StringAssert.Contains("TreadShredOverdriveBadge.Show(", Script("Player/PlayerMoverment.cs"));
             StringAssert.Contains("TreadShredOverdriveBadge.SetVisible(false);", Script("ManagerScore/ManagerButton.cs"));
         }

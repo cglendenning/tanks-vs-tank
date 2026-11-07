@@ -14,10 +14,15 @@ namespace TreadShred.Progression
         // One bit per mission (bit 0 = mission 1) for each tier.
         public long[] clearedMissions = new long[3];
         public List<string> claimedMilestones = new List<string>();
-        // D-043: special weapons the player has played with (WeaponRental.Bit), and each weapon's rental: the missions
-        // won it has left, by Weapon.
+        // D-043: special weapons the player has played with (WeaponRental.Bit). rentals is the 1.9.5 save's missions left
+        // per weapon, turned into supply when loaded.
         public int usedWeapons;
         public int[] rentals = new int[4];
+
+        // D-045: supply units held per SupplyTrack, the missions won toward the next use, and where the rotation looks next.
+        public int[] supply = new int[SupplyRules.TrackCount];
+        public int supplyWins;
+        public int supplyNext;
     }
 
     public interface IProgressionStore
@@ -36,14 +41,18 @@ namespace TreadShred.Progression
     /// <summary>What one upgrade took: the level it bought, the coins it removed and the gems it spent.</summary>
     public readonly struct UpgradeReceipt
     {
-        public UpgradeReceipt(UpgradeTrack track, int level, int coinsPaid, int gemsSpent, UpgradeQuote quote)
+        public UpgradeReceipt(UpgradeTrack track, int level, int coinsPaid, int gemsSpent, UpgradeQuote quote, bool supply = false)
         {
             Track = track;
             Level = level;
             CoinsPaid = coinsPaid;
             GemsSpent = gemsSpent;
             Quote = quote;
+            Supply = supply;
         }
+
+        /// <summary>D-045: the purchase was a supply unit, not a level.</summary>
+        public bool Supply { get; }
 
         public UpgradeTrack Track { get; }
         public int Level { get; }
@@ -100,6 +109,23 @@ namespace TreadShred.Progression
                 state.clearedMissions = new long[3];
             if (state.claimedMilestones == null)
                 state.claimedMilestones = new List<string>();
+            AdoptRentals(state);
+        }
+
+        // D-045: a 1.9.5 save's running rentals (missions left) become weapon supply, one unit per 5 missions begun.
+        private static void AdoptRentals(ProgressionState held)
+        {
+            if (held.supply == null || held.supply.Length != SupplyRules.TrackCount)
+                held.supply = new int[SupplyRules.TrackCount];
+            if (held.rentals == null)
+                return;
+            for (var weapon = Weapon.ArcShot; weapon <= Weapon.Seeker && (int)weapon < held.rentals.Length; weapon++)
+            {
+                var left = held.rentals[(int)weapon];
+                if (left > 0)
+                    held.supply[(int)SupplyRules.ForWeapon(weapon)] += (left + SupplyRules.MissionsPerUse - 1) / SupplyRules.MissionsPerUse;
+            }
+            held.rentals = new int[4];
         }
 
         public event Action Changed;
@@ -119,6 +145,12 @@ namespace TreadShred.Progression
             // D-043: the weapons used and a running rental come back with a restored save.
             state.usedWeapons = restored.usedWeapons;
             state.rentals = restored.rentals != null && restored.rentals.Length == 4 ? (int[])restored.rentals.Clone() : new int[4];
+            // D-045: and the supply with its clock.
+            state.supply = restored.supply != null && restored.supply.Length == SupplyRules.TrackCount
+                ? (int[])restored.supply.Clone() : new int[SupplyRules.TrackCount];
+            state.supplyWins = restored.supplyWins;
+            state.supplyNext = restored.supplyNext;
+            AdoptRentals(state);
             Commit();
         }
 
@@ -136,23 +168,34 @@ namespace TreadShred.Progression
 
         /// <summary>
         /// D-009-AC-03: the next level that costs fewest coins, the one most likely to be a single tap; ties go to the
-        /// first track (armor, firepower, speed). Null when every track is maxed.
+        /// first track (armor, firepower, speed). D-045: every track can be bought (a coin level, or a unit of supply
+        /// at its coins' worth), so there is always one.
         /// </summary>
         public UpgradeTrack? CheapestNextUpgrade()
         {
             UpgradeTrack? cheapest = null;
             foreach (UpgradeTrack track in Enum.GetValues(typeof(UpgradeTrack)))
             {
-                if (!IsMaxed(track) && (cheapest == null || Quote(track).CostCoins < Quote(cheapest.Value).CostCoins))
+                if (cheapest == null || Quote(track).CostCoins < Quote(cheapest.Value).CostCoins)
                     cheapest = track;
             }
             return cheapest;
         }
 
+        /// <summary>D-045: armor, and a track at the top of its coin ladder, sells supply units instead of levels.</summary>
+        public bool BuysSupply(UpgradeTrack track) => ProgressionRules.GemOnly(track) || IsMaxed(track);
+
+        /// <summary>The level the next purchase reaches; 0 when it buys a unit of supply (D-045).</summary>
+        public int NextLevel(UpgradeTrack track) => BuysSupply(track) ? 0 : Level(track) + 1;
+
         public UpgradeQuote Quote(UpgradeTrack track)
         {
-            if (IsMaxed(track))
-                return new UpgradeQuote(0, 0);
+            if (BuysSupply(track))
+            {
+                // D-045: a unit is paid in gems only, at the coin rate the quote is kept in.
+                var unit = SupplyRules.UnitGems * ProgressionRules.CoinsPerGem;
+                return new UpgradeQuote(unit, unit);
+            }
             var cost = (Level(track) + 1) * ProgressionRules.CostStepCoins;
             // D-017-AC-03: coins never buy armor, so its whole price is paid in gems at the coin rate.
             if (ProgressionRules.GemOnly(track))
@@ -169,10 +212,17 @@ namespace TreadShred.Progression
         public UpgradeResult TryUpgrade(UpgradeTrack track, out UpgradeReceipt receipt)
         {
             receipt = default;
-            if (IsMaxed(track))
-                return UpgradeResult.AlreadyMaxed;
-
             var quote = Quote(track);
+            if (BuysSupply(track))
+            {
+                if (!wallet.TrySpend(quote.GemsNeeded))
+                    return UpgradeResult.NotEnoughGems;
+                SupplyUnits[(int)SupplyOf(track)]++;
+                receipt = new UpgradeReceipt(track, Level(track), 0, quote.GemsNeeded, quote, supply: true);
+                Commit();
+                return UpgradeResult.Upgraded;
+            }
+
             var coinsBefore = state.coins;
             var gemsSpent = 0;
             if (!quote.AffordableWithCoins)
@@ -196,6 +246,16 @@ namespace TreadShred.Progression
         /// </summary>
         public bool Refund(UpgradeReceipt receipt)
         {
+            if (receipt.Supply)
+            {
+                var units = SupplyUnits;
+                if (units[(int)SupplyOf(receipt.Track)] <= 0)
+                    return false;
+                units[(int)SupplyOf(receipt.Track)]--;
+                wallet.Refund(receipt.GemsSpent);
+                Commit();
+                return true;
+            }
             if (receipt.Level < 1 || Level(receipt.Track) != receipt.Level)
                 return false;
             state.upgradeLevels[(int)receipt.Track]--;
@@ -217,10 +277,57 @@ namespace TreadShred.Progression
 
         public bool HasUsed(Weapon weapon) => weapon != Weapon.Cannon && (state.usedWeapons & WeaponRental.Bit(weapon)) != 0;
 
-        /// <summary>D-043-AC-06: the missions won a weapon's rental has left; 0 when it is not rented.</summary>
-        public int RentalLeft(Weapon weapon) => Rentals[(int)weapon];
+        /// <summary>D-043-AC-06, D-045: the missions won a weapon's supply lasts; 0 when it holds none.</summary>
+        public int RentalLeft(Weapon weapon) => weapon == Weapon.Cannon ? 0 : SupplyMissionsLeft(SupplyRules.ForWeapon(weapon));
 
-        private int[] Rentals => state.rentals != null && state.rentals.Length == 4 ? state.rentals : (state.rentals = new int[4]);
+        // D-045: each weapon's missions left, by Weapon, for the drawer and the starting weapon.
+        private int[] Rentals
+        {
+            get
+            {
+                var left = new int[4];
+                for (var weapon = Weapon.ArcShot; weapon <= Weapon.Seeker; weapon++)
+                    left[(int)weapon] = RentalLeft(weapon);
+                return left;
+            }
+        }
+
+        private int[] SupplyUnits => state.supply != null && state.supply.Length == SupplyRules.TrackCount
+            ? state.supply : (state.supply = new int[SupplyRules.TrackCount]);
+
+        private static SupplyTrack SupplyOf(UpgradeTrack track) => (SupplyTrack)(int)track;
+
+        /// <summary>D-045: the units a track holds.</summary>
+        public int Supply(SupplyTrack track) => SupplyUnits[(int)track];
+
+        /// <summary>D-045: the missions won until a track's last unit is used up, if nothing more is bought.</summary>
+        public int SupplyMissionsLeft(SupplyTrack track) =>
+            SupplyRules.MissionsLeft(SupplyUnits, state.supplyWins, state.supplyNext, track);
+
+        /// <summary>D-045: the track the next use takes from (null when none is held) and the missions won until then.</summary>
+        public SupplyTrack? NextSupplyUse => SupplyRules.NextTrack(SupplyUnits, state.supplyNext);
+
+        public int MissionsToNextSupplyUse => SupplyRules.MissionsToNextUse(SupplyUnits, state.supplyWins, state.supplyNext);
+
+        /// <summary>D-045: one unit paid for (the caller has taken the gems).</summary>
+        public void AddSupply(SupplyTrack track)
+        {
+            SupplyUnits[(int)track]++;
+            Commit();
+        }
+
+        /// <summary>D-045: a mission won counts toward the next use; every fifth uses one unit up, in rotation.</summary>
+        public void SupplyMissionWon()
+        {
+            var wins = state.supplyWins;
+            var next = state.supplyNext;
+            SupplyRules.MissionWon(SupplyUnits, ref wins, ref next);
+            if (wins == state.supplyWins && next == state.supplyNext)
+                return;
+            state.supplyWins = wins;
+            state.supplyNext = next;
+            Commit();
+        }
 
         /// <summary>D-038-AC-02, D-043-AC-02: the weapon drawer for a mission whose own tank carries <paramref name="native"/>.</summary>
         public IReadOnlyList<DrawerEntry> Drawer(Weapon native) => WeaponRental.Drawer(native, state.usedWeapons, Rentals);
@@ -228,29 +335,12 @@ namespace TreadShred.Progression
         /// <summary>D-038-AC-02, D-043-AC-05: the weapon a mission starts on.</summary>
         public Weapon StartingWeapon(Weapon native) => WeaponRental.Starting(native, Rentals);
 
-        /// <summary>D-043-AC-04: records a paid rental; a running one gets <see cref="WeaponRental.RepurchaseAdds"/> more missions.</summary>
+        /// <summary>D-043-AC-04, D-045: a paid rental is one unit of the weapon's supply.</summary>
         public void StartRental(Weapon weapon)
         {
             if (!HasUsed(weapon))
                 throw new InvalidOperationException(weapon + " has not been used, so it cannot be rented.");
-            Rentals[(int)weapon] += Rentals[(int)weapon] > 0 ? WeaponRental.RepurchaseAdds : WeaponRental.MissionsWon;
-            Commit();
-        }
-
-        /// <summary>D-043-AC-05: a mission won uses one mission of every running rental, except the rental of the weapon
-        /// the mission's own map carries.</summary>
-        public void RentalMissionWon(Weapon native)
-        {
-            var changed = false;
-            for (var weapon = Weapon.ArcShot; weapon <= Weapon.Seeker; weapon++)
-            {
-                if (weapon == native || Rentals[(int)weapon] <= 0)
-                    continue;
-                Rentals[(int)weapon]--;
-                changed = true;
-            }
-            if (changed)
-                Commit();
+            AddSupply(SupplyRules.ForWeapon(weapon));
         }
 
         public bool IsUnlocked(DifficultyTier tier)

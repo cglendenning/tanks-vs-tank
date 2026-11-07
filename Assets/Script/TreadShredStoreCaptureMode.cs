@@ -134,7 +134,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
         if (mode != Trailer)
             SetClipLoadout();
         if (mode == Trailer || mode == ClipOverdrive)
-            TreadShredBoosts.Current.ArmOverdrive();
+            TreadShredProgress.Ensure().Progression.AddSupply(TreadShred.Progression.SupplyTrack.Overdrive);
         // Lv17: ten enemies and few interior obstacles, so shots connect and kills keep coming. A weapon clip plays the
         // weapon's first mission, where the tank carries it.
         var scene = mode == ClipArcShot ? "Lv16" : mode == ClipTripleShot ? "Lv26" : mode == ClipSeeker ? "Lv32" : "Lv17";
@@ -396,7 +396,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
             // one-screen overdrive state awarded by the rewarded-ad callback.
             // The simulator will supply real taps through the normal input
             // path; this driver does not synthesize projectiles or impacts.
-            TreadShredBoosts.Current.ArmOverdrive();
+            TreadShredProgress.Ensure().Progression.AddSupply(TreadShred.Progression.SupplyTrack.Overdrive);
             TreadShredBoosts.Current.ArmRedeploy();
             SceneManager.LoadScene("Lv26", LoadSceneMode.Single);
             return;

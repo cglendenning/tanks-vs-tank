@@ -494,8 +494,6 @@ public class ManagerScore : MonoBehaviour
     {
         var track = upgradeCardTrack.Value;
         var progression = TreadShredProgress.Ensure().Progression;
-        if (progression.IsMaxed(track))
-            return;
         var quote = progression.Quote(track);
         var balance = TreadShredStore.Ensure().Wallet.Balance;
         if (UpgradePurchase.Checkout(quote, balance) != UpgradeCheckout.ConfirmGems)
@@ -503,7 +501,7 @@ public class ManagerScore : MonoBehaviour
             cardShop.Buy(track);
             return;
         }
-        TreadShredConfirmDialog.Show(ProgressionLabels.UpgradeConfirmation(track, progression.Level(track) + 1, quote, balance),
+        TreadShredConfirmDialog.Show(ProgressionLabels.UpgradeConfirmation(track, progression.NextLevel(track), quote, balance),
             rewardFont, () => cardShop.Buy(track));
     }
 
@@ -523,9 +521,9 @@ public class ManagerScore : MonoBehaviour
         var track = upgradeCardTrack.Value;
         var progression = TreadShredProgress.Ensure().Progression;
         var store = TreadShredStore.Ensure();
-        var maxed = progression.IsMaxed(track);
-        TreadShredUi.SetLabel(rewardButton, TreadShredUpgradePanel.PricedLabel(track, maxed));
-        rewardButton.interactable = !maxed && !store.PurchaseInProgress;
+        // D-045: nothing is ever maxed; armor and a track at level 10 sell supply.
+        TreadShredUi.SetLabel(rewardButton, TreadShredUpgradePanel.PricedLabel(track, false));
+        rewardButton.interactable = !store.PurchaseInProgress;
         cardPreviewText.text = ProgressionLabels.Preview(track, progression.Level(track));
         rewardBalanceText.text = status ?? OfferLabels.OverdriveStatus(0);
         rewardBalanceText.color = status == null ? TreadShredUi.TitleColor : TreadShredUi.DetailColor;
@@ -605,11 +603,9 @@ public class ManagerScore : MonoBehaviour
         }
     }
 
-    // The tank is lost: Overdrive ends here unless Armored Redeploy resumes the run (D-009-AC-03), and the
-    // mission counts toward real play as a loss (D-033).
+    // The tank is lost: the mission counts toward real play as a loss (D-033). Overdrive supply stays (D-045).
     private static void TankLost()
     {
-        TreadShredBoosts.Current.TankLost();
         TreadShredReviewPrompt.MissionEnded(false);
         TreadShredOverdriveBadge.Hide();
     }
@@ -732,7 +728,7 @@ public class ManagerScore : MonoBehaviour
         {
             rewardUsedThisScreen = true;
             TreadShredAnalytics.Log(GameEvents.OfferAccepted(OfferName(GemOffer.Overdrive), GemCatalog.Cost(GemOffer.Overdrive), packBought));
-            TreadShredBoosts.Current.ArmOverdrive();
+            TreadShredProgress.Ensure().Progression.AddSupply(TreadShred.Progression.SupplyTrack.Overdrive);
             ShowOverdriveActive(GemCatalog.Cost(GemOffer.Overdrive));
         }, RefreshOfferControls);
     }

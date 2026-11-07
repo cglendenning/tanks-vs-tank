@@ -24,54 +24,42 @@ namespace TreadShred.Economy
     }
 
     /// <summary>
-    /// D-009-AC-03: result-screen boosts. Armored Redeploy gives the reloaded
-    /// mission one extra hit, used up by the first mission that starts after it
-    /// is bought. Overdrive gives two rounds per tap from the next mission until
-    /// the player's tank is lost; an Armored Redeploy bought then keeps it.
+    /// D-009-AC-03: Armored Redeploy gives the reloaded mission one extra hit, used up by the first mission that starts
+    /// after it is bought. D-045: Overdrive gives two rounds per tap in every mission while the player holds Overdrive
+    /// supply; losing the tank no longer ends it.
     /// </summary>
     public sealed class CombatBoosts
     {
         public const string RedeployKey = "TreadShredArmorCache";
+        // A 1.9.5 save's Overdrive switch and its lost-tank marker, turned into one unit of supply when found.
         public const string OverdriveKey = "TreadShredOverdrive";
-        // Set while the lost tank's Overdrive can still come back with an Armored Redeploy.
         public const string OverdriveLostKey = "TreadShredOverdriveLost";
         public const int RedeployExtraHits = 1;
         public const int OverdriveRoundsPerTap = 2;
 
         private readonly IBoostFlags flags;
+        private readonly Func<bool> overdriveSupplied;
 
-        public CombatBoosts(IBoostFlags flags)
+        public CombatBoosts(IBoostFlags flags, Func<bool> overdriveSupplied)
         {
             this.flags = flags ?? throw new ArgumentNullException(nameof(flags));
+            this.overdriveSupplied = overdriveSupplied ?? throw new ArgumentNullException(nameof(overdriveSupplied));
         }
 
-        public bool OverdriveActive => flags.IsSet(OverdriveKey);
+        public bool OverdriveActive => overdriveSupplied();
 
-        public void ArmRedeploy()
+        public void ArmRedeploy() => flags.Set(RedeployKey);
+
+        /// <summary>D-045: true once when a 1.9.5 save had Overdrive on (or lost to a redeploy); the flags are cleared.</summary>
+        public bool TakeLegacyOverdrive()
         {
-            flags.Set(RedeployKey);
-            // The redeploy continues the run the lost tank ended, Overdrive included.
-            if (!flags.IsSet(OverdriveLostKey))
-                return;
-            flags.Clear(OverdriveLostKey);
-            flags.Set(OverdriveKey);
-        }
-
-        public void ArmOverdrive() => flags.Set(OverdriveKey);
-
-        /// <summary>The player's tank was lost: Overdrive ends unless an Armored Redeploy is bought next.</summary>
-        public void TankLost()
-        {
-            if (!flags.IsSet(OverdriveKey))
-                return;
+            var had = flags.IsSet(OverdriveKey) || flags.IsSet(OverdriveLostKey);
             flags.Clear(OverdriveKey);
-            flags.Set(OverdriveLostKey);
+            flags.Clear(OverdriveLostKey);
+            return had;
         }
 
-        /// <summary>
-        /// Applies the armed boosts for the mission that is starting: Armored Redeploy is used up, Overdrive
-        /// stays until the tank is lost, and a lost Overdrive not resumed by a redeploy is gone for good.
-        /// </summary>
+        /// <summary>Applies the boosts for the mission that is starting: Armored Redeploy is used up; Overdrive follows supply.</summary>
         public MissionLoadout ConsumeForMission(int baseArmorHits)
         {
             var hits = baseArmorHits;
@@ -80,9 +68,7 @@ namespace TreadShred.Economy
                 hits += RedeployExtraHits;
                 flags.Clear(RedeployKey);
             }
-
-            flags.Clear(OverdriveLostKey);
-            return new MissionLoadout(hits, flags.IsSet(OverdriveKey) ? OverdriveRoundsPerTap : 1);
+            return new MissionLoadout(hits, OverdriveActive ? OverdriveRoundsPerTap : 1);
         }
     }
 }

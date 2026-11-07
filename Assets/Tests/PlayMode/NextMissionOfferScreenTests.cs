@@ -26,6 +26,14 @@ namespace TreadShred.Screens.Tests
 
         private static CombatBoosts Boosts => (CombatBoosts)GameType("TreadShredBoosts").GetProperty("Current").GetValue(null);
 
+        // D-045: Overdrive is supply; this uses up the Overdrive the save holds (the tests hold no other supply).
+        private static void ClearOverdrive()
+        {
+            var progression = (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
+            while (progression.Supply(SupplyTrack.Overdrive) > 0)
+                progression.SupplyMissionWon();
+        }
+
         private static IEnumerator Audit(string screen, List<Finding> findings)
         {
             foreach (var shape in ScreenAudit.Shapes)
@@ -66,7 +74,6 @@ namespace TreadShred.Screens.Tests
             var progression = (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
             try
             {
-                Boosts.TankLost();
                 // Armor at level 1 (bought with gems, D-017-AC-03), so the cheapest upgrade is one coins can buy.
                 progression.Replace(new ProgressionState { coins = 500, upgradeLevels = new[] { 1, 0, 0 } });
                 yield return WinAndTapNext("Lv1");
@@ -81,7 +88,7 @@ namespace TreadShred.Screens.Tests
                 yield return new WaitForSecondsRealtime(1.5f);
                 Assert.AreEqual("Lv2", SceneManager.GetActiveScene().name, "NO THANKS, PLAY loads the next mission");
 
-                Boosts.ArmOverdrive();
+                progression.AddSupply(SupplyTrack.Overdrive);
                 yield return WinAndTapNext("Lv2");
                 Assert.IsNotNull(GameObject.Find("TreadShredNextMissionOffer"));
                 Assert.Contains("UPGRADE FIREPOWER", Texts(), "Overdrive running: the cheapest upgrade instead");
@@ -92,13 +99,13 @@ namespace TreadShred.Screens.Tests
             }
             finally
             {
-                Boosts.TankLost();
+                ClearOverdrive();
                 Time.timeScale = 1f;
             }
             Assert.IsEmpty(findings, ScreenAudit.Report(findings));
         }
 
-        [UnityTest(Description = "D-017-AC-08: the upgrade screen lists OVERDRIVE with FOR YOUR NEXT MISSION and an ACTIVATE button; held gems are confirmed once, then it reads ACTIVE, and the screen passes the audit on every shape")]
+        [UnityTest(Description = "D-017-AC-08: the upgrade screen lists OVERDRIVE with FOR YOUR NEXT MISSION and an ACTIVATE button; held gems are confirmed once, then it shows its supply and offers ADD (D-045), and the screen passes the audit on every shape")]
         public IEnumerator UpgradeScreenSellsOverdrive()
         {
             var findings = new List<Finding>();
@@ -106,7 +113,7 @@ namespace TreadShred.Screens.Tests
             Component panel = null;
             try
             {
-                Boosts.TankLost();
+                ClearOverdrive();
                 Wallet.Replace(new WalletState { balance = 100, starterGranted = true, starterPackBought = true });
                 Time.timeScale = 1f;
                 SceneManager.LoadScene("Start");
@@ -119,22 +126,24 @@ namespace TreadShred.Screens.Tests
                 Assert.Contains("OVERDRIVE", texts);
                 Assert.Contains(OfferLabels.ForNextMission, texts);
                 Assert.Contains(OfferLabels.OverdriveShots, texts);
-                Assert.IsNotNull(ButtonStarting("ACTIVATE FOR 60 GEMS"), "held gems cover it");
+                Assert.IsNotNull(ButtonStarting("ACTIVATE FOR 100 GEMS"), "held gems cover it");
                 yield return Audit("upgrade screen with Overdrive", findings);
 
-                ButtonStarting("ACTIVATE FOR 60 GEMS").onClick.Invoke();
+                ButtonStarting("ACTIVATE FOR 100 GEMS").onClick.Invoke();
                 yield return null;
-                ButtonStarting("SPEND 60 GEMS").onClick.Invoke();
+                ButtonStarting("SPEND 100 GEMS").onClick.Invoke();
                 yield return null;
                 Assert.IsTrue(Boosts.OverdriveActive, "armed for the next mission");
-                Assert.AreEqual(40, Wallet.Balance);
-                Assert.IsNotNull(ButtonStarting(OfferLabels.Active), "the row reads ACTIVE while it runs");
+                Assert.AreEqual(0, Wallet.Balance);
+                // D-045: the row shows the supply it holds, and more can be added.
+                Assert.Contains("SUPPLY 1: 5 MISSIONS LEFT", Texts());
+                Assert.IsNotNull(ButtonStarting("ADD"), "more Overdrive can be added");
             }
             finally
             {
                 if (panel != null)
                     UnityEngine.Object.Destroy(panel.gameObject);
-                Boosts.TankLost();
+                ClearOverdrive();
                 Wallet.Replace(JsonUtility.FromJson<WalletState>(saved));
             }
             Assert.IsEmpty(findings, ScreenAudit.Report(findings));

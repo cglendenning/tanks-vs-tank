@@ -107,7 +107,6 @@ public class PlayerMoverment : MonoBehaviour {
         // D-043: playing a special weapon's map makes it rentable on every later mission; the mission starts on its own
         // weapon, or on a cannon-only mission on a running rental's. D-038: the weapon button and drawer.
         var nativeWeapon = MissionWeapon;
-        progress.NativeWeapon = nativeWeapon;
         progress.Progression.WeaponUsed(nativeWeapon);
         typeplayer = (PlayerType)(int)progress.Progression.StartingWeapon(nativeWeapon);
         TreadShredWeaponToggle.Attach(this, MissionWeapon, TreadShredUi.FindFont(GameObject.Find("Canvas")));

@@ -58,13 +58,12 @@ namespace TreadShred.Screens.Tests
         public IEnumerator CarriedOverdriveOffersAnUpgrade()
         {
             var progression = (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
-            var boosts = (CombatBoosts)GameType("TreadShredBoosts").GetProperty("Current").GetValue(null);
             var findings = new List<Finding>();
             try
             {
                 // Armor at level 1 (bought with gems, D-017-AC-03), so the cheapest upgrade is one coins can buy.
                 progression.Replace(new ProgressionState { coins = 5000, upgradeLevels = new[] { 1, 0, 0 } });
-                boosts.ArmOverdrive();
+                progression.AddSupply(SupplyTrack.Overdrive);
                 yield return Win();
                 var texts = Texts();
                 Assert.Contains("UPGRADE FIREPOWER", texts, "the cheapest upgrade replaces the Overdrive offer");
@@ -89,7 +88,7 @@ namespace TreadShred.Screens.Tests
             }
             finally
             {
-                boosts.TankLost();
+                progression.Replace(new ProgressionState());
             }
             Assert.IsEmpty(findings, ScreenAudit.Report(findings));
         }

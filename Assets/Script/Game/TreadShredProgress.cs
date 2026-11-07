@@ -20,13 +20,15 @@ public sealed class TreadShredProgress : MonoBehaviour
     // The reward from the mission that just ended, shown on its result screen.
     public MissionReward? LastReward { get; private set; }
 
-    /// <summary>D-043-AC-05: the weapon the mission's own tank carries; only cannon-only missions use up a rental.</summary>
-    public Weapon NativeWeapon { get; set; }
 
     public TierModifiers TierModifiers => ProgressionRules.Modifiers(SelectedTier);
-    public float DamageMultiplier => UpgradeEffects.DamageMultiplier(Progression.Level(UpgradeTrack.Firepower));
-    public float SpeedMultiplier => UpgradeEffects.SpeedMultiplier(Progression.Level(UpgradeTrack.Speed));
-    public int ArmorHits => UpgradeEffects.ArmorHits(Progression.Level(UpgradeTrack.Armor));
+    // D-017, D-045: the levels owned plus the supply held.
+    public float DamageMultiplier => UpgradeEffects.DamageMultiplier(Progression.Level(UpgradeTrack.Firepower))
+        + SupplyRules.DamagePerUnit * Progression.Supply(SupplyTrack.Firepower);
+    public float SpeedMultiplier => UpgradeEffects.SpeedMultiplier(Progression.Level(UpgradeTrack.Speed))
+        + SupplyRules.SpeedPerUnit * Progression.Supply(SupplyTrack.Speed);
+    public int ArmorHits => UpgradeEffects.ArmorHits(Progression.Level(UpgradeTrack.Armor))
+        + SupplyRules.ArmorHitsPerUnit * Progression.Supply(SupplyTrack.Armor);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
@@ -54,6 +56,9 @@ public sealed class TreadShredProgress : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
         Progression = new PlayerProgression(new PlayerPrefsProgressionStore(), TreadShredStore.Ensure().Wallet);
+        // D-045: a 1.9.5 save's Overdrive becomes one unit of Overdrive supply.
+        if (TreadShredBoosts.Current.TakeLegacyOverdrive())
+            Progression.AddSupply(SupplyTrack.Overdrive);
         var saved = (DifficultyTier)Mathf.Clamp(PlayerPrefs.GetInt(TierKey, 0), 0, (int)DifficultyTier.Elite);
         SelectedTier = Progression.IsUnlocked(saved) ? saved : DifficultyTier.Recruit;
     }
@@ -108,8 +113,9 @@ public sealed class TreadShredProgress : MonoBehaviour
         }
 
         LastReward = Progression.CompleteMission(SelectedTier, mission, won);
+        // D-045: every fifth mission won uses one unit of supply, in rotation.
         if (won)
-            Progression.RentalMissionWon(NativeWeapon);
+            Progression.SupplyMissionWon();
         if (LastReward.Value.UnlockedTier is DifficultyTier promoted)
         {
             PlayerPrefs.SetInt(PromotionKey, (int)promoted);

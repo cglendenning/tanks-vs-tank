@@ -125,8 +125,10 @@ namespace TreadShred.Economy
         // A retry ends the SCORE run; the failure screen says so under RETRY (D-032-AC-06).
         public const string RetryCaption = "SCORE STARTS OVER";
 
-        /// <summary>How long Overdrive lasts (D-009-AC-03).</summary>
-        public const string OverdriveLasts = "UNTIL YOUR TANK GOES DOWN";
+        /// <summary>D-045: how long a unit of supply lasts, Overdrive included: 5 missions won, longer while other supply
+        /// takes its turn in the rotation.</summary>
+        public const string SupplyLasts = "FOR AT LEAST 5 MISSIONS";
+        public const string OverdriveLasts = SupplyLasts;
         public const string OverdriveEffect = "2 SHOTS PER TAP " + OverdriveLasts;
 
         /// <summary>

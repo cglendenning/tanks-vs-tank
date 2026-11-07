@@ -137,7 +137,7 @@ namespace TreadShred.Progression.Tests
             flow.SpendOrBuy(GemCatalog.Cost(GemOffer.Overdrive), () => applied++, _ => { });
             Assert.AreEqual(new[] { Starter.ProductId }, gateway.Started, "Overdrive opens the Starter Pack's sheet");
             flow.OrderDelivered(Starter.ProductId, "order-1", out _);
-            Assert.AreEqual((1, 240), (applied, wallet.Balance), "applied on delivery, the rest stays in the wallet");
+            Assert.AreEqual((1, 200), (applied, wallet.Balance), "applied on delivery (Overdrive is 100 gems, D-045), the rest stays in the wallet");
             Assert.IsFalse(flow.StarterPackOnSale);
         }
 
@@ -186,7 +186,7 @@ namespace TreadShred.Progression.Tests
         [Test(Description = "D-037-AC-04: the Starter Pack interstitial opens over every result screen and on the start screen while on sale, with ONE TIME ONLY, the countdown, 300 GEMS FOR <price>, what the gems buy, BUY and NOT NOW, and Back closes it")]
         public void InterstitialOpensAtEveryBreak()
         {
-            Assert.AreEqual("THAT'S 5 OVERDRIVES OR 7 ARMORED REDEPLOYS", OfferLabels.StarterPackBuys);
+            Assert.AreEqual("THAT'S 3 OVERDRIVES OR 7 ARMORED REDEPLOYS", OfferLabels.StarterPackBuys);
             Assert.AreEqual("300 GEMS FOR $0.99", OfferLabels.Pack(Starter, "$0.99"));
 
             var offer = Script("Game/TreadShredStarterOffer.cs");

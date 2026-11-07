@@ -119,8 +119,6 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     /// <summary>An upgrade tap's checkout (D-036), shared with the next-mission interstitial (D-040).</summary>
     internal static void Checkout(UpgradePurchase shop, UpgradeTrack track, Font font, System.Action beforeBuy)
     {
-        if (Progression.IsMaxed(track))
-            return;
         var quote = Progression.Quote(track);
         var balance = TreadShredStore.Ensure().Wallet.Balance;
         if (UpgradePurchase.Checkout(quote, balance) != UpgradeCheckout.ConfirmGems)
@@ -129,7 +127,7 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
             shop.Buy(track);
             return;
         }
-        var confirmation = ProgressionLabels.UpgradeConfirmation(track, Progression.Level(track) + 1, quote, balance);
+        var confirmation = ProgressionLabels.UpgradeConfirmation(track, Progression.NextLevel(track), quote, balance);
         TreadShredConfirmDialog.Show(confirmation, font, () =>
         {
             beforeBuy();
@@ -147,11 +145,16 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     {
         TreadShredSalesScreen.Show(SalesPitches.ForOffer(GemOffer.Overdrive), font, TreadShredOverdrive.ButtonLabel(),
             OfferLabels.Owned(TreadShredStore.Ensure().Wallet.Balance),
-            !TreadShredOverdrive.Active && !TreadShredStore.Ensure().PurchaseInProgress, ActivateOverdrive);
+            !TreadShredStore.Ensure().PurchaseInProgress, ActivateOverdrive);
     }
 
     // D-036-AC-01: one price on the row and on its sales screen alike.
     private string ButtonLabel(UpgradeTrack track, bool maxed) => PricedLabel(track, maxed);
+
+    // D-045: the coin ladder's next level, or the supply held and what one more unit adds.
+    internal static string PreviewLine(UpgradeTrack track) => Progression.BuysSupply(track)
+        ? ProgressionLabels.SupplyPreview(track, Progression.Level(track), Progression.Supply((SupplyTrack)(int)track))
+        : ProgressionLabels.Preview(track, Progression.Level(track));
 
     /// <summary>
     /// D-036-AC-01, D-037-AC-04: an upgrade's one price, naming the Starter Pack's price while it is on sale.
@@ -175,16 +178,17 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     // D-034: the sales screen's button is the row's own upgrade, with the same label and purchase.
     private void OpenSalesScreen(UpgradeTrack track)
     {
-        var maxed = Progression.IsMaxed(track);
+        // D-045: nothing is ever maxed; armor and a track at level 10 sell supply.
         TreadShredSalesScreen.Show(SalesPitches.ForTrack(track), font,
-            ButtonLabel(track, maxed),
-            ProgressionLabels.Preview(track, Progression.Level(track)),
-            !maxed && !TreadShredStore.Ensure().PurchaseInProgress, () => Upgrade(track));
+            ButtonLabel(track, false), PreviewLine(track),
+            !TreadShredStore.Ensure().PurchaseInProgress, () => Upgrade(track));
     }
 
     private void OnUpgraded(UpgradeTrack track, UpgradeQuote quote)
     {
-        statusText.text = ProgressionLabels.Track(track) + " UPGRADED TO LEVEL " + Progression.Level(track);
+        statusText.text = Progression.BuysSupply(track)
+            ? ProgressionLabels.Track(track) + " " + ProgressionLabels.SupplyUnit(track) + " ADDED"
+            : ProgressionLabels.Track(track) + " UPGRADED TO LEVEL " + Progression.Level(track);
         // Progress redraws the screen before the upgrade is recorded for undo; redraw once it is.
         Refresh();
     }
@@ -209,18 +213,24 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
         gemsText.text = OfferLabels.Owned(TreadShredStore.Ensure().Wallet.Balance);
         foreach (var track in Tracks)
         {
-            var level = Progression.Level(track);
-            var maxed = Progression.IsMaxed(track);
-            levelTexts[track].text = "LEVEL " + level + " / " + ProgressionRules.LevelsPerTrack;
-            effectTexts[track].text = ProgressionLabels.Preview(track, level);
-            TreadShredUi.SetLabel(buttons[track], ButtonLabel(track, maxed));
+            // D-045: armor and a track at level 10 show the supply held; the others their coin level.
+            var supply = Progression.Supply((SupplyTrack)(int)track);
+            levelTexts[track].text = Progression.BuysSupply(track)
+                ? ProgressionLabels.SupplyLine(supply, Progression.SupplyMissionsLeft((SupplyTrack)(int)track))
+                : "LEVEL " + Progression.Level(track) + " / " + ProgressionRules.LevelsPerTrack;
+            effectTexts[track].text = PreviewLine(track);
+            TreadShredUi.SetLabel(buttons[track], ButtonLabel(track, false));
             // Locked while the store sheet is open, so a slow sheet never invites a second purchase.
-            buttons[track].interactable = !maxed && !TreadShredStore.Ensure().PurchaseInProgress;
+            buttons[track].interactable = !TreadShredStore.Ensure().PurchaseInProgress;
         }
         undoButton.gameObject.SetActive(shop != null && shop.CanUndo);
-        overdriveState.text = TreadShredOverdrive.Active ? OfferLabels.Active : OfferLabels.ForNextMission;
-        TreadShredUi.SetLabel(overdriveButton, TreadShredOverdrive.Active ? OfferLabels.Active : TreadShredOverdrive.ButtonLabel());
-        overdriveButton.interactable = !TreadShredOverdrive.Active && !TreadShredStore.Ensure().PurchaseInProgress;
+        // D-045: Overdrive is supply too, so more can always be added.
+        var overdrive = Progression.Supply(SupplyTrack.Overdrive);
+        overdriveState.text = overdrive > 0
+            ? ProgressionLabels.SupplyLine(overdrive, Progression.SupplyMissionsLeft(SupplyTrack.Overdrive))
+            : OfferLabels.ForNextMission;
+        TreadShredUi.SetLabel(overdriveButton, TreadShredOverdrive.ButtonLabel());
+        overdriveButton.interactable = !TreadShredStore.Ensure().PurchaseInProgress;
     }
 
     private void OnBalanceChanged(int balance)

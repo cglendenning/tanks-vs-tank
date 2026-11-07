@@ -18,7 +18,7 @@ namespace TreadShred.Progression.Tests
             var offer = Script("Game/TreadShredNextMissionOffer.cs");
             StringAssert.Contains("if (TreadShredOverdrive.Active)\n        {\n            track = TreadShredProgress.Ensure().Progression.CheapestNextUpgrade();\n            if (track == null)\n                return false;", offer);
             StringAssert.Contains("overdrive ? OfferLabels.ArmOverdrive : \"UPGRADE \" + ProgressionLabels.Track(track.Value)", offer);
-            Assert.AreEqual(("ARM OVERDRIVE", "FOR YOUR NEXT MISSION", "2 SHOTS PER TAP", "UNTIL YOUR TANK GOES DOWN"),
+            Assert.AreEqual(("ARM OVERDRIVE", "FOR YOUR NEXT MISSION", "2 SHOTS PER TAP", "FOR AT LEAST 5 MISSIONS"),
                 (OfferLabels.ArmOverdrive, OfferLabels.ForNextMission, OfferLabels.OverdriveShots, OfferLabels.OverdriveLasts));
             StringAssert.Contains("TreadShredUi.StylePrimary(buyButton);", offer);
         }
@@ -50,9 +50,10 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual("ACTIVE", OfferLabels.Active);
             var panel = Script("Game/TreadShredUpgradePanel.cs");
             StringAssert.Contains("SalesPitches.ForOffer(GemOffer.Overdrive), font, OpenOverdriveSalesScreen);", panel);
-            StringAssert.Contains("overdriveState.text = TreadShredOverdrive.Active ? OfferLabels.Active : OfferLabels.ForNextMission;", panel);
-            StringAssert.Contains("TreadShredOverdrive.Active ? OfferLabels.Active : TreadShredOverdrive.ButtonLabel()", panel);
-            StringAssert.Contains("return OfferLabels.ActionButton(\"ACTIVATE\", plan,", Script("Game/TreadShredOverdrive.cs"));
+            // D-045: Overdrive is supply; the row shows what is held and can always add more.
+            StringAssert.Contains("ProgressionLabels.SupplyLine(overdrive, Progression.SupplyMissionsLeft(SupplyTrack.Overdrive))", panel);
+            StringAssert.Contains("TreadShredUi.SetLabel(overdriveButton, TreadShredOverdrive.ButtonLabel());", panel);
+            StringAssert.Contains("return OfferLabels.ActionButton(Active ? \"ADD\" : \"ACTIVATE\", plan,", Script("Game/TreadShredOverdrive.cs"), "ADD while some is held (D-045)");
             StringAssert.Contains("if (OfferLabels.NeedsConfirmation(store.PlanFor(GemOffer.Overdrive)))", Script("Game/TreadShredOverdrive.cs"),
                 "gems the player holds are confirmed once (D-036-AC-03)");
         }

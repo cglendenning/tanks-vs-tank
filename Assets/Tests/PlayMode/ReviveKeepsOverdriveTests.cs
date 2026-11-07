@@ -38,7 +38,7 @@ namespace TreadShred.Screens.Tests
             {
                 Wallet.Replace(new WalletState { balance = 100, starterGranted = true });
                 progression.Replace(new ProgressionState { clearedMissions = new[] { 1L, 0L, 0L } });
-                Boosts.ArmOverdrive();
+                progression.AddSupply(SupplyTrack.Overdrive);
                 Time.timeScale = 1f;
                 SceneManager.LoadScene("Lv2");
                 yield return null;
@@ -74,8 +74,8 @@ namespace TreadShred.Screens.Tests
                 var open = GameObject.Find("TreadShredRevive");
                 if (open != null)
                     UnityEngine.Object.Destroy(open);
-                // Leave no Overdrive armed for the tests after this one.
-                Boosts.TankLost();
+                // Leave no Overdrive supply or armed redeploy for the tests after this one.
+                progression.Replace(new ProgressionState());
                 Boosts.ConsumeForMission(0);
                 Wallet.Replace(JsonUtility.FromJson<WalletState>(saved));
             }

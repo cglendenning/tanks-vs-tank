@@ -36,7 +36,7 @@ namespace TreadShred.Progression.Tests
         {
             var capture = Script("TreadShredStoreCaptureMode.cs");
             StringAssert.Contains("mode == ClipArmor ? top : 0, mode == ClipFirepower ? top : 0, mode == ClipSpeed ? top : 0", capture);
-            StringAssert.Contains("if (mode == Trailer || mode == ClipOverdrive)\n            TreadShredBoosts.Current.ArmOverdrive();", capture);
+            StringAssert.Contains("if (mode == Trailer || mode == ClipOverdrive)\n            TreadShredProgress.Ensure().Progression.AddSupply(TreadShred.Progression.SupplyTrack.Overdrive);", capture);
             StringAssert.Contains("if (mode == ClipRedeploy)\n            TreadShredBoosts.Current.ArmRedeploy();", capture);
         }
 
@@ -83,11 +83,11 @@ namespace TreadShred.Progression.Tests
         {
             Assert.AreEqual(2, CombatBoosts.OverdriveRoundsPerTap, "Overdrive's copy says two shots");
             Assert.AreEqual("TWO SHOTS EVERY TAP", SalesPitches.For(SaleItem.Overdrive).Outcome);
-            CollectionAssert.Contains(SalesPitches.For(SaleItem.Overdrive).Points, "UNTIL YOUR TANK GOES DOWN");
+            CollectionAssert.Contains(SalesPitches.For(SaleItem.Overdrive).Points, "FOR AT LEAST 5 MISSIONS");
             CollectionAssert.Contains(SalesPitches.For(SaleItem.ArmoredRedeploy).Points, "REPLAY THIS MISSION");
             CollectionAssert.Contains(SalesPitches.For(SaleItem.ArmoredRedeploy).Points, "WITH 1 EXTRA HIT OF ARMOR");
             CollectionAssert.Contains(SalesPitches.For(SaleItem.ArmoredRedeploy).Points, "YOUR SCORE RUN CONTINUES");
-            CollectionAssert.Contains(SalesPitches.For(SaleItem.Armor).Points, "UP TO 8 HITS AT LEVEL 10");
+            CollectionAssert.AreEqual(new[] { "+2 HITS FOR EVERY 100 GEMS", "FOR AT LEAST 5 MISSIONS" }, SalesPitches.For(SaleItem.Armor).Points, "armor is supply (D-045)");
             CollectionAssert.Contains(SalesPitches.For(SaleItem.Firepower).Points, "UP TO X2.0 DAMAGE AT LEVEL 10");
             CollectionAssert.Contains(SalesPitches.For(SaleItem.Speed).Points, "UP TO X1.50 MOVE AND TURRET SPEED AT LEVEL 10");
             foreach (var item in SalesPitches.All)
@@ -118,8 +118,8 @@ namespace TreadShred.Progression.Tests
             StringAssert.Contains("rewardButton.GetComponentInChildren<Text>().text, rewardBalanceText.text,", results);
             StringAssert.Contains("rewardButton.interactable && !rewardUsedThisScreen, onTap);", results);
             var upgrades = Script("Game/TreadShredUpgradePanel.cs");
-            StringAssert.Contains("ButtonLabel(track, maxed),", upgrades);
-            StringAssert.Contains("!maxed && !TreadShredStore.Ensure().PurchaseInProgress, () => Upgrade(track));", upgrades);
+            StringAssert.Contains("ButtonLabel(track, false), PreviewLine(track),", upgrades);
+            StringAssert.Contains("!TreadShredStore.Ensure().PurchaseInProgress, () => Upgrade(track));", upgrades, "never MAXED (D-045)");
         }
     }
 }

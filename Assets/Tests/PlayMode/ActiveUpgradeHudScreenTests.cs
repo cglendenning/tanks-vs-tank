@@ -34,9 +34,14 @@ namespace TreadShred.Screens.Tests
         private static string ExtraArmor() => GameObject.Find("ExtraArmor").GetComponent<Text>().text;
 
         // Loads mission 2 with the given upgrade levels, then freezes time once the countdown ends so no enemy shot lands.
-        private static IEnumerator StartMission(int armor, int firepower, int speed)
+        // D-045: Overdrive is supply, so a mission with it running starts from a save holding Overdrive units.
+        private static IEnumerator StartMission(int armor, int firepower, int speed, int overdrive = 0)
         {
-            Progression.Replace(new ProgressionState { upgradeLevels = new[] { armor, firepower, speed }, clearedMissions = new[] { 1L, 0L, 0L } });
+            Progression.Replace(new ProgressionState
+            {
+                upgradeLevels = new[] { armor, firepower, speed }, clearedMissions = new[] { 1L, 0L, 0L },
+                supply = new[] { 0, 0, 0, overdrive, 0, 0, 0 }
+            });
             Time.timeScale = 1f;
             SceneManager.LoadScene("Lv2");
             yield return null;
@@ -52,8 +57,7 @@ namespace TreadShred.Screens.Tests
             var findings = new List<Finding>();
             try
             {
-                Boosts.ArmOverdrive();
-                yield return StartMission(4, 2, 1);
+                yield return StartMission(4, 2, 1, overdrive: 1);
                 var texts = Texts();
                 Assert.Contains(OfferLabels.OverdriveActive, texts);
                 Assert.Contains("ARMOR LEVEL 4", texts);
@@ -73,7 +77,6 @@ namespace TreadShred.Screens.Tests
                 hit.Invoke(player, new object[] { 1 });
                 Assert.AreEqual(string.Empty, ExtraArmor(), "then only the three shields are left");
 
-                Boosts.TankLost();
                 yield return StartMission(0, 0, 3);
                 texts = Texts();
                 CollectionAssert.DoesNotContain(texts, OfferLabels.OverdriveActive);
@@ -88,7 +91,6 @@ namespace TreadShred.Screens.Tests
             }
             finally
             {
-                Boosts.TankLost();
                 Progression.Replace(new ProgressionState());
                 Time.timeScale = 1f;
             }

@@ -17,7 +17,7 @@ namespace TreadShred.Economy.Tests
         [Test(Description = "D-009-AC-03: Armored Redeploy gives the reloaded mission exactly one extra hit, once")]
         public void RedeployAddsOneHitToTheNextMissionOnly()
         {
-            var boosts = new CombatBoosts(new MemoryFlags());
+            var boosts = new CombatBoosts(new MemoryFlags(), () => false);
             boosts.ArmRedeploy();
 
             var reloaded = boosts.ConsumeForMission(3);
@@ -28,24 +28,22 @@ namespace TreadShred.Economy.Tests
             Assert.AreEqual(3, after.ArmorHits, "the extra hit is used up by the reloaded mission");
         }
 
-        [Test(Description = "D-009-AC-03: Overdrive gives the next mission two rounds per tap and stays on for the missions after it")]
-        public void OverdriveDoublesRoundsFromTheNextMission()
+        [Test(Description = "D-045-AC-04: Overdrive gives two rounds per tap in every mission while Overdrive supply is held, and none once it is used up")]
+        public void OverdriveFollowsSupply()
         {
-            var boosts = new CombatBoosts(new MemoryFlags());
-            boosts.ArmOverdrive();
+            var held = true;
+            var boosts = new CombatBoosts(new MemoryFlags(), () => held);
 
-            var next = boosts.ConsumeForMission(3);
-            var later = boosts.ConsumeForMission(3);
-
-            Assert.AreEqual(2, next.RoundsPerTap);
-            Assert.AreEqual(3, next.ArmorHits);
-            Assert.AreEqual(2, later.RoundsPerTap, "Overdrive lasts until the tank is lost (owner decision 2026-10-31)");
+            Assert.AreEqual(2, boosts.ConsumeForMission(3).RoundsPerTap);
+            Assert.AreEqual(2, boosts.ConsumeForMission(3).RoundsPerTap, "every mission while it is held");
+            held = false;
+            Assert.AreEqual(1, boosts.ConsumeForMission(3).RoundsPerTap, "used up");
         }
 
         [Test(Description = "D-009-AC-03: with no boost bought a mission starts with base armor and one round per tap")]
         public void NoBoostMeansBaseLoadout()
         {
-            var loadout = new CombatBoosts(new MemoryFlags()).ConsumeForMission(5);
+            var loadout = new CombatBoosts(new MemoryFlags(), () => false).ConsumeForMission(5);
 
             Assert.AreEqual(5, loadout.ArmorHits);
             Assert.AreEqual(1, loadout.RoundsPerTap);

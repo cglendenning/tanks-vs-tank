@@ -49,7 +49,7 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual(Weapon.TripleShot, progression.StartingWeapon(Weapon.TripleShot), "a special weapon's mission starts on it");
         }
 
-        [Test(Description = "D-043-AC-04: each weapon has its own rental, it starts with 5 missions won, and renting one that is still running adds 5")]
+        [Test(Description = "D-043-AC-04: each weapon has its own rental, a unit of supply (D-045) that lasts 5 missions won on its own; renting again adds a unit, and units take turns in rotation")]
         public void RentalsArePerWeaponAndStack()
         {
             var progression = NewProgression();
@@ -59,12 +59,13 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual(5, progression.RentalLeft(Weapon.ArcShot));
             Assert.AreEqual(0, progression.RentalLeft(Weapon.TripleShot));
             progression.StartRental(Weapon.ArcShot);
-            Assert.AreEqual(10, progression.RentalLeft(Weapon.ArcShot), "re-renting adds 5");
+            Assert.AreEqual(10, progression.RentalLeft(Weapon.ArcShot), "re-renting adds a unit: 5 more");
             progression.StartRental(Weapon.TripleShot);
-            Assert.AreEqual("Cannon:Available, ArcShot:Rented(10), TripleShot:Rented(5)", Describe(progression, Weapon.Cannon));
+            Assert.AreEqual("Cannon:Available, ArcShot:Rented(15), TripleShot:Rented(10)", Describe(progression, Weapon.Cannon),
+                "arc shot, triple shot, arc shot: one unit every 5 missions won");
         }
 
-        [Test(Description = "D-043-AC-05: a mission won uses one mission of every running rental except the weapon its own map carries; a rental relocks at zero; a cannon-only mission starts on a running rental; rentals come back with a restored save")]
+        [Test(Description = "D-043-AC-05: weapon rentals are supply (D-045): every 5 missions won one unit goes, the arc shot's before the seeker's; a rental relocks at zero; a cannon-only mission starts on a running rental; a 1.9.5 save's rental comes back as a unit")]
         public void RentalsCountMissionsWon()
         {
             var progression = NewProgression();
@@ -73,16 +74,17 @@ namespace TreadShred.Progression.Tests
             progression.StartRental(Weapon.ArcShot);
             progression.StartRental(Weapon.Seeker);
             Assert.AreEqual(Weapon.Seeker, progression.StartingWeapon(Weapon.Cannon), "the latest-introduced running rental");
-            progression.RentalMissionWon(Weapon.ArcShot);
-            Assert.AreEqual((5, 4), (progression.RentalLeft(Weapon.ArcShot), progression.RentalLeft(Weapon.Seeker)), "the arc shot's own map is free");
+            Assert.AreEqual((5, 10), (progression.RentalLeft(Weapon.ArcShot), progression.RentalLeft(Weapon.Seeker)), "one unit each, in rotation");
+            progression.SupplyMissionWon();
+            Assert.AreEqual((4, 9), (progression.RentalLeft(Weapon.ArcShot), progression.RentalLeft(Weapon.Seeker)), "every mission won counts, on any map");
             for (var won = 0; won < 4; won++)
-                progression.RentalMissionWon(Weapon.Cannon);
-            Assert.AreEqual((1, 0), (progression.RentalLeft(Weapon.ArcShot), progression.RentalLeft(Weapon.Seeker)));
-            Assert.AreEqual("Cannon:Available, ArcShot:Rented(1), Seeker:Locked", Describe(progression, Weapon.Cannon), "the seeker relocked");
+                progression.SupplyMissionWon();
+            Assert.AreEqual((0, 5), (progression.RentalLeft(Weapon.ArcShot), progression.RentalLeft(Weapon.Seeker)));
+            Assert.AreEqual("Cannon:Available, ArcShot:Locked, Seeker:Rented(5)", Describe(progression, Weapon.Cannon), "the arc shot relocked");
 
             var restored = NewProgression();
             restored.Replace(new ProgressionState { usedWeapons = WeaponRental.Bit(Weapon.ArcShot), rentals = new[] { 0, 3, 0, 0 } });
-            Assert.AreEqual(3, restored.RentalLeft(Weapon.ArcShot));
+            Assert.AreEqual(5, restored.RentalLeft(Weapon.ArcShot), "three missions left in 1.9.5 become one unit");
             Assert.AreEqual(Weapon.ArcShot, restored.StartingWeapon(Weapon.Cannon));
         }
 

@@ -72,16 +72,19 @@ public sealed class TreadShredNextMissionOffer : MonoBehaviour
         titleText = TreadShredUi.CreateText(overdrive ? OfferLabels.ArmOverdrive : "UPGRADE " + ProgressionLabels.Track(track.Value),
             panel, new Vector2(0f, 245f + lift), new Vector2(940f, 80f), 64, font);
         titleText.color = TreadShredUi.TitleColor;
-        TreadShredUi.CreateText(overdrive ? OfferLabels.ForNextMission : ProgressionLabels.Preview(track.Value, level), panel,
+        TreadShredUi.CreateText(overdrive ? OfferLabels.ForNextMission : TreadShredUpgradePanel.PreviewLine(track.Value), panel,
             new Vector2(0f, 180f + lift), new Vector2(940f, 40f), 30, font).color = Color.white;
         var item = overdrive ? SalesPitches.ForOffer(GemOffer.Overdrive) : SalesPitches.ForTrack(track.Value);
         // D-034: the item working; tapping it opens its sales screen, whose button is this offer's own.
         TreadShredSalesClip.Create(panel, new Vector2(-240f, 45f + lift), new Vector2(380f, 214f), item, font,
             () => TreadShredSalesScreen.Show(item, font, buyButton.GetComponentInChildren<Text>().text, balanceText.text,
                 !TreadShredStore.Ensure().PurchaseInProgress, Buy));
-        TreadShredUi.CreateText(overdrive ? OfferLabels.OverdriveShots : "LEVEL " + (level + 1) + " OF " + ProgressionRules.LevelsPerTrack,
+        // D-045: armor and a track at level 10 sell a unit of supply, which lasts at least 5 missions.
+        var supply = !overdrive && Progression.BuysSupply(track.Value);
+        TreadShredUi.CreateText(overdrive ? OfferLabels.OverdriveShots
+            : supply ? ProgressionLabels.SupplyUnit(track.Value) + " SUPPLY" : "LEVEL " + (level + 1) + " OF " + ProgressionRules.LevelsPerTrack,
             panel, new Vector2(230f, 95f + lift), new Vector2(440f, 36f), 26, font).color = Color.white;
-        TreadShredUi.CreateText(overdrive ? OfferLabels.OverdriveLasts : "YOURS FOR GOOD", panel, new Vector2(230f, 55f + lift),
+        TreadShredUi.CreateText(overdrive || supply ? OfferLabels.SupplyLasts : "YOURS FOR GOOD", panel, new Vector2(230f, 55f + lift),
             new Vector2(440f, 36f), 24, font).color = TreadShredUi.DetailColor;
         balanceText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(230f, 5f + lift), new Vector2(440f, 34f), 22, font);
         balanceText.color = TreadShredUi.DetailColor;

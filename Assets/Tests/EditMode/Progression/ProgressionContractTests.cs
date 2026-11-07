@@ -50,7 +50,8 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual("X1.0 DAMAGE  >  X1.1 DAMAGE", ProgressionLabels.Preview(UpgradeTrack.Firepower, 0));
             Assert.AreEqual("X1.00 SPEED  >  X1.05 SPEED", ProgressionLabels.Preview(UpgradeTrack.Speed, 0));
             Assert.AreEqual("3 HITS  >  4 HITS AT LEVEL 2", ProgressionLabels.Preview(UpgradeTrack.Armor, 0));
-            StringAssert.Contains("ProgressionLabels.Preview(track, level)", Script("Game/TreadShredUpgradePanel.cs"));
+            StringAssert.Contains(": ProgressionLabels.Preview(track, Progression.Level(track));", Script("Game/TreadShredUpgradePanel.cs"),
+                "the coin ladder's preview; armor and a track at level 10 preview supply (D-045)");
         }
 
         [Test(Description = "D-017-AC-02: every mission reads the upgrade effects when it starts")]

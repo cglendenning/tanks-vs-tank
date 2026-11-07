@@ -73,8 +73,9 @@ namespace TreadShred.Economy
             {
                 case GemOffer.ArmoredRedeploy:
                     return 40;
+                // D-045: one unit of Overdrive supply, the price of every unit.
                 case GemOffer.Overdrive:
-                    return 60;
+                    return 100;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(offer), offer, "Unknown gem offer.");
             }
