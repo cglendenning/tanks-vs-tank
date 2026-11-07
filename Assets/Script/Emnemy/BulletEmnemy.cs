@@ -63,8 +63,10 @@ public class BulletEmnemy : MonoBehaviour {
                     obj.GetComponent<Rigidbody>().linearVelocity = -dir.normalized * 5f;
                 }  
 
-                StartCoroutine(BulletPlayerLan2(1f));
-                StartCoroutine(DelayBulletPlayer(3f));
+                // D-019-AC-02: tougher tiers fire more often: the follow-up shell and the reload both come sooner.
+                var fireRate = TreadShredProgress.Ensure().TierModifiers.EnemyFireRate;
+                StartCoroutine(BulletPlayerLan2(1f / fireRate));
+                StartCoroutine(DelayBulletPlayer(3f / fireRate));
             }           
            
         }

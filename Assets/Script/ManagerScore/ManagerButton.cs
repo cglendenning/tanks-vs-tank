@@ -25,12 +25,8 @@ public class ManagerButton : MonoBehaviour {
         LoadNextMission();
     }
 
-    private void LoadNextMission()
-    {
-        string level = Application.loadedLevelName;
-        level = level.Remove(2) + (int.Parse(level.Substring(2)) + 1).ToString();
-        Application.LoadLevel(level);
-    }
+    // D-019-AC-04: the next mission number, 40 to 41 and 80 to 81; after 120 the mission list.
+    private void LoadNextMission() => TreadShredCampaign.Next();
 
     public void Retry()
     {
@@ -59,6 +55,7 @@ public class ManagerButton : MonoBehaviour {
             PauseGameObj.SetActive(true);
             TreadShredOverdriveBadge.SetVisible(false);
             TreadShredWeaponToggle.SetVisible(false);
+            TreadShredMissionLabel.SetVisible(false);
             Time.timeScale = 0;
         }
         else
@@ -69,6 +66,7 @@ public class ManagerButton : MonoBehaviour {
             PauseGameObj.SetActive(false);
             TreadShredOverdriveBadge.SetVisible(true);
             TreadShredWeaponToggle.SetVisible(true);
+            TreadShredMissionLabel.SetVisible(true);
             BgIg.SetActive(true);
             KillScore.SetActive(true);
             Heart.SetActive(true);

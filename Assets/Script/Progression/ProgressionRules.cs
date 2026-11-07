@@ -16,16 +16,20 @@ namespace TreadShred.Progression
 
     public readonly struct TierModifiers
     {
-        public TierModifiers(float enemyHealth, float enemySpeed, int coins)
+        public TierModifiers(float enemyHealth, float enemySpeed, int coins, float enemyFireRate = 1f)
         {
             EnemyHealth = enemyHealth;
             EnemySpeed = enemySpeed;
             Coins = coins;
+            EnemyFireRate = enemyFireRate;
         }
 
         public float EnemyHealth { get; }
         public float EnemySpeed { get; }
         public int Coins { get; }
+
+        /// <summary>D-019-AC-02: how much more often enemies fire than on Recruit.</summary>
+        public float EnemyFireRate { get; }
     }
 
     // Values mirror contracts/rules.json in the specification repository
@@ -57,9 +61,9 @@ namespace TreadShred.Progression
             switch (tier)
             {
                 case DifficultyTier.Veteran:
-                    return new TierModifiers(1.5f, 1.2f, 2);
+                    return new TierModifiers(2f, 1.3f, 2, 1.6f);
                 case DifficultyTier.Elite:
-                    return new TierModifiers(2.25f, 1.4f, 3);
+                    return new TierModifiers(3f, 1.5f, 3, 2.2f);
                 default:
                     return new TierModifiers(1f, 1f, 1);
             }

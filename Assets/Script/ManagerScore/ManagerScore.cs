@@ -135,8 +135,8 @@ public class ManagerScore : MonoBehaviour
     public void CaculaterScore(bool won)
     {
 
-        string level = Application.loadedLevelName;
-        int currentLevel = int.Parse(level.Substring(2));
+        // D-019: medals are kept per campaign mission (1-120); Recruit keeps the original keys.
+        int currentLevel = TreadShredProgress.Ensure().CurrentNumber();
 
         int T1 = ((int)(CurDieEmnemy * 100)) + ((int)((float)CurDieEmnemy / (float)CurCountbullet) * 300) + (((int)((3 - (float)Mathf.Min(CurHeath, 3)) / 3)) * 1000) + (CurDieEmnemy * 100);
         int T2 = (SumEmnemy * 100) + 1300 + (SumEmnemy * 100);
@@ -314,6 +314,7 @@ public class ManagerScore : MonoBehaviour
         TreadShredImpact.MissionOver();
         VictoryofFail.SetActive(true);
         TreadShredWeaponToggle.Hide();
+        TreadShredMissionLabel.Hide();
         if (FailureObj != null && FailureObj.activeSelf)
             BuildFailureRewardActions();
         else

@@ -9,7 +9,8 @@ using UnityEngine;
 /// </summary>
 public static class TreadShredOverdriveBadge
 {
-    private const float TopY = 490f;
+    // Just under the HUD bar, whose centre holds the mission and tier (D-019-AC-03).
+    private const float TopY = 430f;
     // The corner stack starts below the HUD bar on every screen shape (this overlay scales to the screen's height).
     private const float CornerInset = 30f;
     private const float StackTop = 130f;

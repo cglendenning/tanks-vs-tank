@@ -38,6 +38,10 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private const int ClipSpeed = 20;
     private const int ClipArmor = 21;
     private const int ClipRedeploy = 22;
+    // D-043: the rented weapons' sales clips, each on the first mission that carries the weapon (R-WEAPONS).
+    private const int ClipArcShot = 23;
+    private const int ClipTripleShot = 24;
+    private const int ClipSeeker = 25;
     private const float TrailerZoom = 0.6f;
     private const float TrailerShotSeconds = 0.5f;
 
@@ -52,7 +56,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
         get { return mode == ActionCapture || mode == RealActionCapture; }
     }
 
-    private bool UsesTrailerDriver => mode == Trailer || (mode >= ClipOverdrive && mode <= ClipRedeploy);
+    private bool UsesTrailerDriver => mode == Trailer || (mode >= ClipOverdrive && mode <= ClipSeeker);
 
     // The Armor clip shows real hits landing on a fully armored tank: its armor is not padded.
     private bool EnemiesFire => mode == ClipArmor;
@@ -64,7 +68,7 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
     private static void InstallIfEnabled()
     {
         var mode = PlayerPrefs.GetInt(CaptureModeKey, 0);
-        if (mode < CombatSingle || mode > ClipRedeploy)
+        if (mode < CombatSingle || mode > ClipSeeker)
             return;
         IsInstalled = true;
 
@@ -131,8 +135,10 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
             SetClipLoadout();
         if (mode == Trailer || mode == ClipOverdrive)
             TreadShredBoosts.Current.ArmOverdrive();
-        // Lv17: ten enemies and few interior obstacles, so shots connect and kills keep coming.
-        SceneManager.LoadScene("Lv17", LoadSceneMode.Single);
+        // Lv17: ten enemies and few interior obstacles, so shots connect and kills keep coming. A weapon clip plays the
+        // weapon's first mission, where the tank carries it.
+        var scene = mode == ClipArcShot ? "Lv16" : mode == ClipTripleShot ? "Lv26" : mode == ClipSeeker ? "Lv32" : "Lv17";
+        SceneManager.LoadScene(scene, LoadSceneMode.Single);
     }
 
     private Transform trailerTarget;
@@ -156,6 +162,8 @@ public sealed class TreadShredStoreCaptureMode : MonoBehaviour
             upgradeLevels = new[] { mode == ClipArmor ? top : 0, mode == ClipFirepower ? top : 0, mode == ClipSpeed ? top : 0 }
         };
         TreadShredProgress.Ensure().Progression.Replace(state);
+        // Clips show the item at Recruit, whatever tier the capture device last played.
+        TreadShredProgress.Ensure().SelectTier(TreadShred.Progression.DifficultyTier.Recruit);
         // Overdrive lasts until the tank is lost, so an earlier clip's Overdrive must not carry into this one.
         PlayerPrefs.DeleteKey(TreadShred.Economy.CombatBoosts.OverdriveKey);
         PlayerPrefs.DeleteKey(TreadShred.Economy.CombatBoosts.OverdriveLostKey);

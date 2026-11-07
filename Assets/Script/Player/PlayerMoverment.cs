@@ -49,6 +49,13 @@ public class PlayerMoverment : MonoBehaviour {
     public TreadShred.Progression.Weapon MissionWeapon => (TreadShred.Progression.Weapon)(int)missionType;
     public TreadShred.Progression.Weapon WeaponInHand => (TreadShred.Progression.Weapon)(int)typeplayer;
 
+    /// <summary>D-043-AC-04: a rented weapon goes in hand at once and the toggle switches as on its own missions.</summary>
+    public void Rent(TreadShred.Progression.Weapon weapon)
+    {
+        missionType = typeplayer = (PlayerType)(int)weapon;
+        TreadShredWeaponToggle.Attach(this, MissionWeapon, TreadShredUi.FindFont(GameObject.Find("Canvas")));
+    }
+
     /// <summary>D-038-AC-03: the toggle's tap; only the cannon or the mission's own weapon can be in hand.</summary>
     public void SelectWeapon(TreadShred.Progression.Weapon weapon)
     {
@@ -96,7 +103,19 @@ public class PlayerMoverment : MonoBehaviour {
         // named toggle instead.
         TreadShredGround.Apply(TreadShredProgress.CurrentMission());
         missionType = typeplayer;
-        TreadShredWeaponToggle.Attach(this, MissionWeapon, TreadShredUi.FindFont(GameObject.Find("Canvas")));
+        // D-043: playing a special weapon's map makes it rentable; a cannon-only mission carries a running rental, or
+        // offers the latest weapon used, LOCKED until rented.
+        var nativeWeapon = MissionWeapon;
+        progress.NativeWeapon = nativeWeapon;
+        progress.Progression.WeaponUsed(nativeWeapon);
+        if (nativeWeapon == TreadShred.Progression.Weapon.Cannon && progress.Progression.RentedWeapon is TreadShred.Progression.Weapon rented)
+            missionType = typeplayer = (PlayerType)(int)rented;
+        if (nativeWeapon == TreadShred.Progression.Weapon.Cannon && progress.Progression.RentedWeapon == null
+            && progress.Progression.OfferedWeapon is TreadShred.Progression.Weapon offered)
+            TreadShredWeaponToggle.AttachLocked(this, offered, TreadShredUi.FindFont(GameObject.Find("Canvas")));
+        else
+            TreadShredWeaponToggle.Attach(this, MissionWeapon, TreadShredUi.FindFont(GameObject.Find("Canvas")));
+        TreadShredMissionLabel.Show(TreadShredUi.FindFont(GameObject.Find("Canvas")));
 	}
   
     Vector2 destiny;

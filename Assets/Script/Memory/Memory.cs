@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using TreadShred.Progression;
 
 public class Memory : MonoBehaviour {
 
@@ -94,12 +95,7 @@ public class Memory : MonoBehaviour {
 	void Start () {
      
         instance = this;
-        foreach (Transform item in GetButtonLev.transform)
-        {
-            ListButton.Add(item.gameObject);
-            MakeRoomForPlay(item);
-            KeepLabelClearOfMedal(item);
-        }
+        BuildCampaignRows();
 
         HightScoreTextButton.text = TreadShred.Progression.ScoreRules.HighScoreLine(TreadShredScores.HighScore, false);
         LevelTextButton.text = "MISSION: " + 1.ToString();
@@ -148,52 +144,13 @@ public class Memory : MonoBehaviour {
             }     
 
 
-            // Gán Medel khi load Menu
-
-            if (PlayerPrefs.GetFloat("Lv" + (i + 1).ToString()) == 3)
-            {
-                ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(3).gameObject.SetActive(true);
-                ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(2).gameObject.SetActive(false);
-                ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(1).gameObject.SetActive(false);
-                ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(0).gameObject.SetActive(false);
-            }
-            else if (PlayerPrefs.GetFloat("Lv" + (i + 1).ToString()) == 2)
-            {
-                ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(3).gameObject.SetActive(false);
-                ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(2).gameObject.SetActive(true);
-                ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(1).gameObject.SetActive(false);
-                ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(0).gameObject.SetActive(false);
-            }
-            else if (PlayerPrefs.GetFloat("Lv" + (i + 1).ToString()) == 1)
-            {
-                ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(3).gameObject.SetActive(false);
-                ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(2).gameObject.SetActive(false);
-                ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(1).gameObject.SetActive(true);
-                ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(0).gameObject.SetActive(false);
-            }
-            else
-            {
-                if (i != 0)
-                {
-                    if ((int)(PlayerPrefs.GetFloat("Lv" + (i).ToString())) != 0)
-                    {
-                        ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(3).gameObject.SetActive(false);
-                        ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(2).gameObject.SetActive(false);
-                        ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(1).gameObject.SetActive(false);
-                        ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(0).gameObject.SetActive(false);
-                    }
-                    else
-                    {
-                        ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(3).gameObject.SetActive(false);
-                        ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(2).gameObject.SetActive(false);
-                        ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(1).gameObject.SetActive(false);
-                        ListButton[i].gameObject.transform.GetChild(3).gameObject.transform.GetChild(0).gameObject.SetActive(true);
-                    }
-                   
-                }
-               
-            }
-
+            // D-019: medals per campaign mission; the lock follows the in-order campaign rule.
+            var medal = (int)PlayerPrefs.GetFloat("Lv" + (i + 1));
+            var icons = ListButton[i].transform.GetChild(3);
+            icons.GetChild(3).gameObject.SetActive(medal == 3);
+            icons.GetChild(2).gameObject.SetActive(medal == 2);
+            icons.GetChild(1).gameObject.SetActive(medal == 1);
+            icons.GetChild(0).gameObject.SetActive(!MissionUnlocked(i + 1));
         }
 
         // D-041: the play arrow lives in the selected row; the big one at the bottom and its MISSION: n label go.
@@ -245,13 +202,70 @@ public class Memory : MonoBehaviour {
         rowPlay.SetAsLastSibling();
     }
 
-    // D-041: the list opens on the mission to play next at the selected tier.
+    // D-041: the list opens on the mission to play next, of all 120 (D-019).
     private int NextMission()
     {
-        var progress = TreadShredProgress.Ensure();
-        return TreadShred.Progression.MissionList.NextToPlay(ListButton.Count,
+        var progression = TreadShredProgress.Ensure().Progression;
+        return MissionList.NextToPlay(ListButton.Count,
             mission => !ListButton[mission - 1].transform.Find("Medel/Lock").gameObject.activeSelf,
-            mission => progress.Progression.IsCleared(progress.SelectedTier, mission));
+            mission => progression.IsCleared(Campaign.TierOf(mission), Campaign.MapOf(mission)));
+    }
+
+    // D-019-AC-01: in order across all 120; a mission cleared before progress was synced still counts by its medal.
+    private static bool MissionUnlocked(int number)
+    {
+        var progression = TreadShredProgress.Ensure().Progression;
+        return Campaign.IsUnlocked(number,
+            mission => progression.IsCleared(Campaign.TierOf(mission), Campaign.MapOf(mission))
+                || PlayerPrefs.GetFloat("Lv" + mission) > 0f,
+            progression.IsUnlocked);
+    }
+
+    // D-019-AC-03: all 120 missions, two to a row in reading order, under a full-width header for each tier. The scene
+    // holds the first 40 rows; the rest are copies of the first.
+    private void BuildCampaignRows()
+    {
+        var grid = GetButtonLev.GetComponent<GridLayoutGroup>();
+        grid.startAxis = GridLayoutGroup.Axis.Horizontal;
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = 2;
+        var rows = new List<GameObject>();
+        foreach (Transform item in GetButtonLev.transform)
+            rows.Add(item.gameObject);
+        var template = rows[0];
+        while (rows.Count < Campaign.MissionTotal)
+            rows.Add(Instantiate(template, GetButtonLev.transform));
+        var font = template.transform.GetChild(2).GetComponent<Text>().font;
+        var sibling = 0;
+        for (var number = 1; number <= Campaign.MissionTotal; number++)
+        {
+            if (Campaign.MapOf(number) == 1)
+            {
+                AddHeader(Campaign.TierOf(number), font, grid, sibling);
+                sibling += 2;
+            }
+            var row = rows[number - 1];
+            row.transform.SetSiblingIndex(sibling++);
+            ListButton.Add(row);
+            MakeRoomForPlay(row.transform);
+            KeepLabelClearOfMedal(row.transform);
+        }
+    }
+
+    // A header takes both cells of its grid row: the label spans them, and an empty cell holds the second place.
+    private void AddHeader(DifficultyTier tier, Font font, GridLayoutGroup grid, int sibling)
+    {
+        var parent = (RectTransform)GetButtonLev.transform;
+        var cell = TreadShredUi.CreateRect("Header " + Campaign.TierName(tier), parent, Vector2.zero, grid.cellSize, typeof(RectTransform));
+        cell.SetSiblingIndex(sibling);
+        var text = TreadShredUi.CreateText(Campaign.Header(tier), cell, Vector2.zero,
+            new Vector2(grid.cellSize.x * 2f + grid.spacing.x - LabelInset, grid.cellSize.y), 64, font);
+        text.rectTransform.anchorMin = text.rectTransform.anchorMax = text.rectTransform.pivot = new Vector2(0f, 0.5f);
+        text.rectTransform.anchoredPosition = new Vector2(LabelInset, 0f);
+        text.alignment = TextAnchor.MiddleLeft;
+        text.color = TreadShredUi.AccentColor;
+        text.raycastTarget = false;
+        TreadShredUi.CreateRect("Header spacer", parent, Vector2.zero, grid.cellSize, typeof(RectTransform)).SetSiblingIndex(sibling + 1);
     }
 
     // D-041: the scroll position that brings the selected row to the middle of the list in whole-row steps.
@@ -287,7 +301,8 @@ public class Memory : MonoBehaviour {
     {
         yield return new WaitForSeconds(1f);
 
-        Application.LoadLevel(("Lv" + indexsence.ToString()));
+        // D-019: the mission's tier and map, with the promotion first when it is due.
+        TreadShredCampaign.Launch(indexsence);
     }
 
 }

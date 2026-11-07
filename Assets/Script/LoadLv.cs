@@ -155,7 +155,8 @@ public class LoadLv : MonoBehaviour {
                 boardRect.anchorMin = boardRect.anchorMax = new Vector2(0.86f, 0.64f);
             }
         }
-        TreadShredTierSelector.Attach(PanelMenu, font);
+        // D-019-AC-03: the tier comes from the mission number; D-019-AC-04: after Mission 120, say the campaign is cleared.
+        TreadShredCampaign.ShowClearedIfDue(font);
         // D-037-AC-04: and on reaching the start screen (after the first launch's straight-into-battle start, D-035).
         TreadShredStarterOffer.ShowIfOnSale(font);
     }

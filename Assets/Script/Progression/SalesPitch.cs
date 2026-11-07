@@ -11,7 +11,11 @@ namespace TreadShred.Progression
         ArmoredRedeploy,
         Armor,
         Firepower,
-        Speed
+        Speed,
+        // D-043: the special weapons, rented on cannon-only missions.
+        ArcShot,
+        TripleShot,
+        Seeker
     }
 
     public readonly struct SalesPitch
@@ -41,7 +45,11 @@ namespace TreadShred.Progression
         private const string Permanent = "EVERY LEVEL IS YOURS FOR GOOD";
 
         public static readonly SaleItem[] All =
-            { SaleItem.Overdrive, SaleItem.ArmoredRedeploy, SaleItem.Armor, SaleItem.Firepower, SaleItem.Speed };
+        {
+            SaleItem.Overdrive, SaleItem.ArmoredRedeploy, SaleItem.Armor, SaleItem.Firepower, SaleItem.Speed,
+            SaleItem.ArcShot, SaleItem.TripleShot, SaleItem.Seeker
+        };
+        private static readonly string RentalTerm = "YOURS FOR " + WeaponRental.MissionsWon + " MISSIONS WON";
 
         public static string ClipName(SaleItem item)
         {
@@ -51,6 +59,9 @@ namespace TreadShred.Progression
                 case SaleItem.ArmoredRedeploy: return "armored-redeploy";
                 case SaleItem.Armor: return "armor";
                 case SaleItem.Firepower: return "firepower";
+                case SaleItem.ArcShot: return "arc-shot";
+                case SaleItem.TripleShot: return "triple-shot";
+                case SaleItem.Seeker: return "seeker";
                 default: return "speed";
             }
         }
@@ -60,6 +71,17 @@ namespace TreadShred.Progression
 
         public static SaleItem ForOffer(GemOffer offer) =>
             offer == GemOffer.Overdrive ? SaleItem.Overdrive : SaleItem.ArmoredRedeploy;
+
+        public static SaleItem ForWeapon(Weapon weapon)
+        {
+            switch (weapon)
+            {
+                case Weapon.ArcShot: return SaleItem.ArcShot;
+                case Weapon.TripleShot: return SaleItem.TripleShot;
+                case Weapon.Seeker: return SaleItem.Seeker;
+                default: throw new System.ArgumentOutOfRangeException(nameof(weapon), weapon, "The cannon is never sold.");
+            }
+        }
 
         public static SaleItem ForTrack(UpgradeTrack track)
         {
@@ -89,6 +111,15 @@ namespace TreadShred.Progression
                 case SaleItem.Firepower:
                     return new SalesPitch("FIREPOWER", "HIT HARDER. KILL FASTER.",
                         new[] { "UP TO X" + Multiplier(UpgradeEffects.DamageMultiplier(top), "0.0") + " DAMAGE" + atTop, Permanent });
+                case SaleItem.ArcShot:
+                    return new SalesPitch(WeaponRental.OfferTitle(Weapon.ArcShot), "HIT THEM BEHIND THEIR WALLS",
+                        new[] { "SHELLS ARC OVER COVER", RentalTerm });
+                case SaleItem.TripleShot:
+                    return new SalesPitch(WeaponRental.OfferTitle(Weapon.TripleShot), "THREE SHELLS EVERY TAP",
+                        new[] { "A SPREAD THAT IS HARD TO DODGE", RentalTerm });
+                case SaleItem.Seeker:
+                    return new SalesPitch(WeaponRental.OfferTitle(Weapon.Seeker), "SHELLS THAT HUNT THEM DOWN",
+                        new[] { "HOMING SHELLS STEER AROUND WALLS", RentalTerm });
                 default:
                     return new SalesPitch("SPEED", "OUTMANEUVER EVERY TANK",
                         new[] { "UP TO X" + Multiplier(UpgradeEffects.SpeedMultiplier(top), "0.00") + " MOVE AND TURRET SPEED" + atTop, Permanent });

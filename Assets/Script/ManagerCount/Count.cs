@@ -14,9 +14,8 @@ public class Count : MonoBehaviour {
             PlayerPrefs.Save();
         }
 
-            string level = Application.loadedLevelName;
-            level = (int.Parse(level.Substring(2))).ToString();
-            Level.text = "MISSION: " + level;
+            // D-019-AC-03: the campaign number and its tier.
+            Level.text = TreadShred.Progression.Campaign.HudLabel(TreadShredProgress.Ensure().CurrentNumber());
             Time.timeScale = 0;
         
        

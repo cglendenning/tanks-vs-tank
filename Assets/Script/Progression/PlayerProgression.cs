@@ -14,6 +14,10 @@ namespace TreadShred.Progression
         // One bit per mission (bit 0 = mission 1) for each tier.
         public long[] clearedMissions = new long[3];
         public List<string> claimedMilestones = new List<string>();
+        // D-043: special weapons the player has played with (WeaponRental.Bit), and the running rental.
+        public int usedWeapons;
+        public int rentedWeapon;
+        public int rentalMissionsLeft;
     }
 
     public interface IProgressionStore
@@ -112,6 +116,10 @@ namespace TreadShred.Progression
             state.clearedMissions = restored.clearedMissions != null && restored.clearedMissions.Length == 3
                 ? (long[])restored.clearedMissions.Clone() : new long[3];
             state.claimedMilestones = new List<string>(restored.claimedMilestones ?? new List<string>());
+            // D-043: the weapons used and a running rental come back with a restored save.
+            state.usedWeapons = restored.usedWeapons;
+            state.rentedWeapon = restored.rentedWeapon;
+            state.rentalMissionsLeft = restored.rentalMissionsLeft;
             Commit();
         }
 
@@ -196,6 +204,43 @@ namespace TreadShred.Progression
             return true;
         }
 
+        /// <summary>D-043-AC-01: a mission whose tank carries a special weapon makes that weapon rentable.</summary>
+        public void WeaponUsed(Weapon weapon)
+        {
+            if (weapon == Weapon.Cannon || (state.usedWeapons & WeaponRental.Bit(weapon)) != 0)
+                return;
+            state.usedWeapons |= WeaponRental.Bit(weapon);
+            Commit();
+        }
+
+        public Weapon? RentedWeapon => state.rentalMissionsLeft > 0 ? (Weapon)state.rentedWeapon : (Weapon?)null;
+
+        public int RentalMissionsLeft => state.rentalMissionsLeft;
+
+        /// <summary>D-043-AC-02: the weapon a cannon-only mission's toggle offers, or null before any is used.</summary>
+        public Weapon? OfferedWeapon => WeaponRental.Offered(state.usedWeapons, RentedWeapon);
+
+        /// <summary>D-043-AC-04: records a paid rental; the mission it starts in is the first of the five.</summary>
+        public void StartRental(Weapon weapon)
+        {
+            if (weapon == Weapon.Cannon || (state.usedWeapons & WeaponRental.Bit(weapon)) == 0)
+                throw new InvalidOperationException(weapon + " has not been used, so it cannot be rented.");
+            state.rentedWeapon = (int)weapon;
+            state.rentalMissionsLeft = WeaponRental.MissionsWon;
+            Commit();
+        }
+
+        /// <summary>D-043-AC-05: a cannon-only mission won with a rental running uses one of its missions.</summary>
+        public void RentalMissionWon()
+        {
+            if (state.rentalMissionsLeft <= 0)
+                return;
+            state.rentalMissionsLeft--;
+            if (state.rentalMissionsLeft == 0)
+                state.rentedWeapon = 0;
+            Commit();
+        }
+
         public bool IsUnlocked(DifficultyTier tier)
         {
             return (int)tier <= state.highestUnlockedTier;
@@ -240,8 +285,10 @@ namespace TreadShred.Progression
                     && Claim("mission-" + mission))
                     gems += ProgressionRules.MilestoneMissionGems;
 
+                // D-019-AC-01: missions unlock strictly in order, so clearing a tier's last mission opens the next tier
+                // (a save from before the campaign may lack some earlier clears).
                 if (tier < DifficultyTier.Elite && (int)tier == state.highestUnlockedTier
-                    && ClearedCount(tier) == ProgressionRules.MissionCount)
+                    && mission == ProgressionRules.MissionCount)
                 {
                     var next = tier + 1;
                     state.highestUnlockedTier = (int)next;

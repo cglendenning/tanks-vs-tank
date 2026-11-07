@@ -17,6 +17,7 @@ public sealed class TreadShredWeaponToggle : MonoBehaviour
     private Button specialButton;
     private Text hint;
     private float shownAt;
+    private bool locked;
 
     /// <summary>Puts the toggle on the HUD for the mission's weapon; returns null when the mission has only the cannon.</summary>
     public static TreadShredWeaponToggle Attach(PlayerMoverment player, Weapon missionWeapon, Font font)
@@ -24,6 +25,19 @@ public sealed class TreadShredWeaponToggle : MonoBehaviour
         Hide();
         if (!WeaponRules.CanSwitch(missionWeapon))
             return null;
+        return Create(player, missionWeapon, font, false);
+    }
+
+    /// <summary>D-043-AC-02: on a cannon-only mission, CANNON beside a weapon the player has used, marked LOCKED in text
+    /// until it is rented; a tap on it opens the rental offer.</summary>
+    public static TreadShredWeaponToggle AttachLocked(PlayerMoverment player, Weapon weapon, Font font)
+    {
+        Hide();
+        return Create(player, weapon, font, true);
+    }
+
+    private static TreadShredWeaponToggle Create(PlayerMoverment player, Weapon missionWeapon, Font font, bool locked)
+    {
         var canvas = GameObject.Find("Canvas");
         if (canvas == null)
         {
@@ -37,7 +51,7 @@ public sealed class TreadShredWeaponToggle : MonoBehaviour
         root.pivot = new Vector2(0f, 1f);
         root.anchoredPosition = new Vector2(24f, -170f);
         current = root.gameObject.AddComponent<TreadShredWeaponToggle>();
-        current.Build(root, player, missionWeapon, font);
+        current.Build(root, player, missionWeapon, font, locked);
         return current;
     }
 
@@ -56,15 +70,24 @@ public sealed class TreadShredWeaponToggle : MonoBehaviour
         current = null;
     }
 
-    private void Build(RectTransform root, PlayerMoverment owner, Weapon weapon, Font font)
+    private void Build(RectTransform root, PlayerMoverment owner, Weapon weapon, Font font, bool rentable)
     {
         player = owner;
         missionWeapon = weapon;
+        locked = rentable;
         cannonButton = TreadShredUi.CreateButton(WeaponRules.Name(Weapon.Cannon), root, new Vector2(-105f, 30f),
             new Vector2(200f, 70f), 26, font, () => Select(Weapon.Cannon));
         specialButton = TreadShredUi.CreateButton(WeaponRules.Name(missionWeapon), root, new Vector2(105f, 30f),
-            new Vector2(200f, 70f), 26, font, () => Select(missionWeapon));
-        hint = TreadShredUi.CreateText(WeaponRules.SwitchHint, root, new Vector2(0f, -32f), new Vector2(420f, 34f), 22, font);
+            new Vector2(200f, 70f), 26, font, () =>
+            {
+                if (locked)
+                    TreadShredRentalOffer.Show(player, missionWeapon, font);
+                else
+                    Select(missionWeapon);
+            });
+        hint = locked
+            ? TreadShredUi.CreateText(WeaponRental.LockedLabel, root, new Vector2(105f, -32f), new Vector2(200f, 34f), 22, font)
+            : TreadShredUi.CreateText(WeaponRules.SwitchHint, root, new Vector2(0f, -32f), new Vector2(420f, 34f), 22, font);
         hint.color = TreadShredUi.DetailColor;
         shownAt = Time.unscaledTime;
         Refresh();
@@ -95,7 +118,7 @@ public sealed class TreadShredWeaponToggle : MonoBehaviour
 
     private void Update()
     {
-        hint.gameObject.SetActive(Time.unscaledTime - shownAt < WeaponRules.SwitchHintSeconds);
+        hint.gameObject.SetActive(locked || Time.unscaledTime - shownAt < WeaponRules.SwitchHintSeconds);
     }
 
     private void OnDestroy()
