@@ -20,6 +20,12 @@ namespace TreadShred.Economy
 
     public static class PurchaseMessages
     {
+        /// <summary>
+        /// D-043-AC-03: true for an outcome (cancelled, failed, unavailable, short of gems, waiting for approval);
+        /// false while the store is opening or a purchase is under way, when a paused game must stay paused.
+        /// </summary>
+        public static bool Ends(string status) => status != InProgress && status != Opening;
+
         public const string InProgress = "PURCHASE IN PROGRESS";
         public const string NotEnoughGems = "NOT ENOUGH GEMS";
         public const string Unavailable = "STORE UNAVAILABLE. TRY AGAIN SOON";

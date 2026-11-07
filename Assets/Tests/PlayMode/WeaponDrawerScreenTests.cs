@@ -131,7 +131,7 @@ namespace TreadShred.Screens.Tests
             Assert.IsEmpty(findings, ScreenAudit.Report(findings));
         }
 
-        [UnityTest(Description = "D-043-AC-04: renting the arc shot from the drawer on the triple shot's map pays 100 gems, puts it in hand with 5 LEFT (D-043-AC-06) and resumes, and the win there uses one of its missions (D-043-AC-05), on every screen shape (D-043-AC-07)")]
+        [UnityTest(Description = "D-043-AC-04: renting the arc shot from the drawer on the triple shot's map pays 100 gems, puts it in hand, waits on READY? and after GO and the 3-2-1 resumes with 5 LEFT (D-043-AC-06), and the win there uses one of its missions (D-043-AC-05), on every screen shape (D-043-AC-07)")]
         public IEnumerator RentFromTheDrawer()
         {
             var findings = new List<Finding>();
@@ -151,8 +151,14 @@ namespace TreadShred.Screens.Tests
                 ButtonStarting("RENT FOR 100 GEMS").onClick.Invoke();
                 yield return new WaitForSecondsRealtime(0.4f);
                 Assert.AreEqual(100, Wallet.Balance);
-                Assert.AreEqual(1f, Time.timeScale);
                 Assert.AreEqual(Weapon.ArcShot, InHand(), "in hand at once");
+                // D-043-AC-04: the game waits on READY?; GO plays the 3-2-1 before play resumes.
+                Assert.AreEqual(0f, Time.timeScale, "paused on READY?");
+                UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
+                    .First(b => b.GetComponentInChildren<Text>()?.text == OfferLabels.Go).onClick.Invoke();
+                for (var waited = 0f; Time.timeScale == 0f && waited < 10f; waited += 0.25f)
+                    yield return new WaitForSecondsRealtime(0.25f);
+                Assert.AreEqual(1f, Time.timeScale, "play resumes after the 3-2-1");
                 CollectionAssert.Contains(Texts(), "5 LEFT", "the countdown under the button");
                 yield return Audit("ARC SHOT RENTED", findings);
                 yield return Win();
