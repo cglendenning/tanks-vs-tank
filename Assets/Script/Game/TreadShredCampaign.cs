@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public static class TreadShredCampaign
 {
-    private const string ClearedKey = "TreadShredCampaignClearedPending";
+    internal const string ClearedKey = "TreadShredCampaignClearedPending";
 
     public static void Launch(int number)
     {

@@ -50,6 +50,13 @@ public static class TreadShredFirstMinute
         ? PlayerPrefs.GetInt(PreviewMissionOneClearedKey, 0) == 1
         : TreadShredProgress.Ensure().Progression.IsCleared(DifficultyTier.Recruit, FirstMinute.Mission);
 
+    /// <summary>D-044-AC-04: after a reset the next start screen asks again, as at a fresh install's first launch.</summary>
+    public static void ForgetLaunch()
+    {
+        launchChecked = false;
+        firstPlay = false;
+    }
+
     /// <summary>Asked by the start screen once per launch: true when it should open mission 1 instead (D-035-AC-01).</summary>
     public static bool TakeInstantStart()
     {

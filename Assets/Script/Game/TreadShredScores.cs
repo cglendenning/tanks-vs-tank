@@ -5,7 +5,7 @@ using UnityEngine;
 public static class TreadShredScores
 {
     // Live scoring (kills and mission clears) replaced the bonus-based SCORE, so HIGH SCORE starts fresh.
-    private const string HighScoreKey = "TreadShredBestRun";
+    internal const string HighScoreKey = "TreadShredBestRun";
 
     public static ScoreRun Run { get; } = new ScoreRun();
 

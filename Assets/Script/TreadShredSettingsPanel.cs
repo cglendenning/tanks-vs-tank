@@ -68,13 +68,17 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
                 new Vector2(ColumnWidth, 96f), 32, font, () => BuyPack(SlotPack(slot))));
         }
 
-        statusText = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(ColumnOffset, -200f),
+        statusText = TreadShredUi.CreateText(string.Empty, backdrop, new Vector2(ColumnOffset, -182f),
             new Vector2(ColumnWidth + 200f, 36f), 24, font);
         statusText.color = TreadShredUi.DetailColor;
 
         // D-033-AC-05: the one in-game way to a review, straight to the store's page.
         TreadShredUi.CreateButton(TreadShred.Progression.ReviewRules.RateButton, backdrop, new Vector2(-ColumnOffset, -250f),
             new Vector2(ColumnWidth, 96f), 32, font, TreadShredReviewPrompt.OpenWriteReviewPage);
+
+        // D-044-AC-01: erasing the whole game, behind a typed confirmation.
+        TreadShredUi.CreateButton(TreadShred.Save.GameReset.Title, backdrop, new Vector2(ColumnOffset, -250f),
+            new Vector2(ColumnWidth, 96f), 32, font, () => TreadShredResetPanel.Show(font));
 
         TreadShredUi.CreateButton("BACK", backdrop, new Vector2(0f, -390f), new Vector2(440f, 120f), 52, font, Close);
 

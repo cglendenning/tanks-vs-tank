@@ -15,6 +15,7 @@ public sealed class TreadShredCloudSave : MonoBehaviour
 {
     private const string WrittenAtKey = "TreadShredSaveWrittenAt";
     private const string SyncedKey = "TreadShredSaveSynced";
+    private const string ResetAtKey = "TreadShredSaveResetAt";
 
 #if UNITY_IOS && !UNITY_EDITOR
     [DllImport("__Internal")] private static extern string TreadShredCloudLoad();
@@ -32,9 +33,11 @@ public sealed class TreadShredCloudSave : MonoBehaviour
         public SaveSnapshot Load()
         {
             long.TryParse(PlayerPrefs.GetString(WrittenAtKey, "0"), out var writtenAt);
+            long.TryParse(PlayerPrefs.GetString(ResetAtKey, "0"), out var resetAt);
             return new SaveSnapshot
             {
                 writtenAtTicks = writtenAt,
+                resetAtTicks = resetAt,
                 wallet = PlayerPrefsJson.Load<WalletState>(PlayerPrefsWalletStore.Key),
                 progression = PlayerPrefsJson.Load<ProgressionState>(PlayerPrefsProgressionStore.Key),
             };
@@ -44,6 +47,7 @@ public sealed class TreadShredCloudSave : MonoBehaviour
         {
             PlayerPrefsJson.Save(PlayerPrefsWalletStore.Key, snapshot.wallet);
             PlayerPrefsJson.Save(PlayerPrefsProgressionStore.Key, snapshot.progression);
+            PlayerPrefs.SetString(ResetAtKey, snapshot.resetAtTicks.ToString());
             Stamp(snapshot.writtenAtTicks);
         }
 
@@ -128,6 +132,14 @@ public sealed class TreadShredCloudSave : MonoBehaviour
         if (playGamesCloud.ReleaseHeld(applied))
             sync.LocalSaved();
 #endif
+    }
+
+    /// <summary>D-044-AC-05: the player reset the game; the reset save replaces the local and cloud saves.</summary>
+    public static void ResetSave()
+    {
+        if (sync == null)
+            Debug.Log("[CloudSave] no platform cloud in this build; the reset is local only");
+        sync?.Reset();
     }
 
     /// <summary>Called by the local stores after every save.</summary>

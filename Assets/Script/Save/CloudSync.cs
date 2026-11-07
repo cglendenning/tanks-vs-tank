@@ -75,6 +75,26 @@ namespace TreadShred.Save
         }
 
         /// <summary>
+        /// D-044, D-025-AC-05: the player reset the game. The empty save, stamped as a reset, replaces the local save
+        /// and goes to the cloud even though it holds no progress, so every device signed in to the account takes it.
+        /// </summary>
+        public void Reset()
+        {
+            var now = utcTicks();
+            var fresh = new SaveSnapshot { writtenAtTicks = now, resetAtTicks = now };
+            applying = true;
+            try
+            {
+                local.Write(fresh);
+            }
+            finally
+            {
+                applying = false;
+            }
+            cloud.Write(fresh);
+        }
+
+        /// <summary>
         /// D-025-AC-02/03: the cloud delivered a save written elsewhere (another device, or the first sync
         /// after a reinstall). When it wins, applyInPlay replaces the live wallet and progression and the
         /// local save takes it whole. Returns true when it was applied.

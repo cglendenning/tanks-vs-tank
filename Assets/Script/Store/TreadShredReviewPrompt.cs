@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public sealed class TreadShredReviewPrompt : MonoBehaviour
 {
-    private const string StateKey = "TreadShredReviewPrompt";
+    internal const string StateKey = "TreadShredReviewPrompt";
 
     private sealed class PlayerPrefsStore : IReviewPromptStore
     {

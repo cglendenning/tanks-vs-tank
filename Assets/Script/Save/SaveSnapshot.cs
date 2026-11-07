@@ -12,6 +12,8 @@ namespace TreadShred.Save
     public sealed class SaveSnapshot
     {
         public long writtenAtTicks;
+        /// <summary>D-025-AC-05, D-044: when the player last reset the game (0 when never); the reset save carries it.</summary>
+        public long resetAtTicks;
         public WalletState wallet = new WalletState();
         public ProgressionState progression = new ProgressionState();
     }
@@ -41,6 +43,11 @@ namespace TreadShred.Save
         /// </summary>
         public static SaveSource Choose(SaveSnapshot local, SaveSnapshot cloud, bool localSynced)
         {
+            // D-025-AC-05: a reset is never undone by a save written before it, on either side.
+            if (cloud != null && cloud.resetAtTicks > (local?.writtenAtTicks ?? 0L))
+                return SaveSource.Cloud;
+            if (cloud != null && local != null && local.resetAtTicks > 0L && cloud.writtenAtTicks <= local.resetAtTicks)
+                return SaveSource.Local;
             if (!localSynced && HasProgress(cloud))
                 return SaveSource.Cloud;
             if (!HasProgress(cloud))

@@ -8,9 +8,9 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public sealed class TreadShredProgress : MonoBehaviour
 {
-    private const string TierKey = "TreadShredTier";
+    internal const string TierKey = "TreadShredTier";
     // D-019-AC-05: the tier a player has just been promoted into, until the promotion has played.
-    private const string PromotionKey = "TreadShredPromotionPending";
+    internal const string PromotionKey = "TreadShredPromotionPending";
 
     public static TreadShredProgress Instance { get; private set; }
 
