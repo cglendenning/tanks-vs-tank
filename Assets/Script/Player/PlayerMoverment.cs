@@ -144,8 +144,18 @@ public class PlayerMoverment : MonoBehaviour {
     private int missionArmorHits;
     //Biến kiểm tra dùng trên điện thoại khi không có touch nào trên object
     bool isnotoverobject;
+    // D-046-AC-03: the tank's motion, for Elite enemies that lead their shots.
+    public Vector3 Velocity { get; private set; }
+    private Vector3 lastPosition;
+    private bool moved;
+
     void Update()
     {
+        var now = transform.position;
+        if (moved && Time.deltaTime > 0f)
+            Velocity = (now - lastPosition) / Time.deltaTime;
+        lastPosition = now;
+        moved = true;
 
         if (Application.platform == RuntimePlatform.Android || Application.platform == RuntimePlatform.IPhonePlayer)
         {

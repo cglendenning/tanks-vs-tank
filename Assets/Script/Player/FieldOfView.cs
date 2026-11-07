@@ -15,6 +15,8 @@ public class FieldOfView : MonoBehaviour {
 
     void Start()
     {
+        // D-046-AC-02: Veteran and Elite enemies spot the tank from farther (the tank's view decides who fires).
+        viewRadius *= TreadShred.Progression.TierCombat.For(TreadShredProgress.Ensure().SelectedTier).SightRange;
         StartCoroutine(FindTargetWithDelay(.2f));
 
     }

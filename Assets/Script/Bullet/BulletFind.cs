@@ -114,7 +114,7 @@ public class BulletFind : MonoBehaviour {
 
                 ManagerScore.instance.CurDieEmnemy += 1;
                 TreadShredImpact.Kill(other.transform.position);
-                ManagerScore.instance.Victory();
+                ManagerScore.instance.EnemyKilled();
 
                 ManagerScore.instance.Rung();
                 MusicManager.instance.ExplosionTank();

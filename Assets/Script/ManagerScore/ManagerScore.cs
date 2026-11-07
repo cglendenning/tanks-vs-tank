@@ -36,6 +36,23 @@ public class ManagerScore : MonoBehaviour
     private readonly TreadShred.Progression.MissionKills kills = new TreadShred.Progression.MissionKills();
 
     /// <summary>True for an enemy's first reported death; false when it was already counted this frame or earlier.</summary>
+    /// <summary>
+    /// An enemy was destroyed, whichever shell or kill path did it: the next wave comes first when it is due (D-046-AC-01),
+    /// then the victory count drops.
+    /// </summary>
+    public void EnemyKilled()
+    {
+        TreadShredWaves.EnemyDestroyed();
+        Victory();
+    }
+
+    /// <summary>D-046-AC-01: a wave of reinforcements joins the enemies the victory waits on.</summary>
+    public void ReinforcementsArrived(int count)
+    {
+        CountEmnemy += count;
+        SumEmnemy += count;
+    }
+
     public bool ClaimKill(GameObject enemy)
     {
         return kills.Claim(enemy.GetInstanceID());
@@ -59,6 +76,8 @@ public class ManagerScore : MonoBehaviour
         // D-033: a mission today, and its active time, count toward real play.
         TreadShredReviewPrompt.MissionStarted();
         SumEmnemy = CountEmnemy;
+        // D-046-AC-01: Veteran and Elite bring the map's enemies back in waves.
+        TreadShredWaves.Begin(this);
         LogMissionStart();
         if (CanvasGame == null)
         {

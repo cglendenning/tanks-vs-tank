@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using TreadShred.Progression;
 
 public class BulletEmnemy : MonoBehaviour {
 
@@ -51,6 +52,16 @@ public class BulletEmnemy : MonoBehaviour {
             return;
         if (canbullet && gameObject.GetComponent<BoxCollider>().enabled)
         {
+            // D-046-AC-04: on Veteran and Elite every attack is a volley that cycles through every weapon.
+            var combat = TierCombat.For(TreadShredProgress.Ensure().SelectedTier);
+            if (combat.VolleyShots > 0)
+            {
+                canbullet = false;
+                TreadShredFirstMinute.EnemyFired();
+                StartCoroutine(Volley(combat));
+                StartCoroutine(DelayBulletPlayer(3f / TreadShredProgress.Ensure().TierModifiers.EnemyFireRate));
+                return;
+            }
             if (gameObject.tag != "emnemyred")
             {
                 canbullet = false;
@@ -78,6 +89,117 @@ public class BulletEmnemy : MonoBehaviour {
         }
        
     }
+   // D-046-AC-04: the shot this enemy fires next, so its volleys keep cycling through the weapons.
+   int volleyShot;
+   static GameObject cannonShell, arcShell, seekerShell;
+
+   IEnumerator Volley(TierCombat combat)
+   {
+       for (var shot = 0; shot < combat.VolleyShots; shot++)
+       {
+           if (shot > 0)
+               yield return new WaitForSeconds(TierCombat.VolleyGap);
+           if (!enabled || player == null)
+               yield break;
+           Fire(TierCombat.VolleyWeapon(volleyShot++), combat);
+       }
+   }
+
+   void Fire(EnemyWeapon weapon, TierCombat combat)
+   {
+       // D-046-AC-02: shells fly faster on Veteran and Elite.
+       var speed = 15f * combat.ShellSpeed;
+       var aim = Aim(combat, speed);
+       switch (weapon)
+       {
+           case EnemyWeapon.TripleShot:
+               foreach (var angle in new[] { -TierCombat.TripleSpreadDegrees, 0f, TierCombat.TripleSpreadDegrees })
+                   Launch(Shell(ref cannonShell, "BulletEmnemy"), Quaternion.AngleAxis(angle, Vector3.up) * aim * speed);
+               break;
+           case EnemyWeapon.ArcShot:
+               Lob(Shell(ref arcShell, "BulletRed"), combat);
+               break;
+           case EnemyWeapon.Seeker when OnNavMesh():
+               var seeker = Launch(Shell(ref seekerShell, "BulletFindPlayer"), aim * 5f * combat.ShellSpeed);
+               var agent = seeker != null ? seeker.GetComponent<UnityEngine.AI.NavMeshAgent>() : null;
+               if (agent != null)
+                   agent.speed *= combat.ShellSpeed;
+               break;
+           default:
+               // The cannon, and the seeker on a map without a navigation mesh to steer it.
+               Launch(Shell(ref cannonShell, "BulletEmnemy"), aim * speed);
+               break;
+       }
+   }
+
+   Vector3 Barrel => (pointbullet.position - tower.position).normalized;
+
+   // D-046-AC-03: the barrel's line, or on Elite the line to where the tank will be when the shell arrives, at the
+   // barrel's elevation.
+   Vector3 Aim(TierCombat combat, float speed)
+   {
+       var barrel = Barrel;
+       if (!combat.LeadsShots || PlayerMoverment.instance == null)
+           return barrel;
+       var from = pointbullet.position;
+       var target = player.transform.position;
+       var velocity = PlayerMoverment.instance.Velocity;
+       var ahead = TierCombat.Lead(from.x, from.z, target.x, target.z, velocity.x, velocity.z, speed);
+       var flat = new Vector3(ahead.x - from.x, 0f, ahead.z - from.z);
+       if (flat.sqrMagnitude < 0.0001f)
+           return barrel;
+       var level = new Vector2(barrel.x, barrel.z).magnitude;
+       return (flat.normalized * level + Vector3.up * barrel.y).normalized;
+   }
+
+   // D-046-AC-04: the arc shot lobs over walls and comes down where the tank is (or, on Elite, will be).
+   void Lob(GameObject prefab, TierCombat combat)
+   {
+       if (player == null)
+           return;
+       var target = player.transform.position;
+       if (combat.LeadsShots && PlayerMoverment.instance != null)
+           target += PlayerMoverment.instance.Velocity * 1.1f;
+       var from = pointbullet.position;
+       var flat = new Vector3(target.x - from.x, 0f, target.z - from.z);
+       var time = Mathf.Clamp(flat.magnitude / (12f * combat.ShellSpeed), 0.8f, 1.6f);
+       var velocity = flat / time + Vector3.up * ((target.y - from.y) / time + 0.5f * -Physics.gravity.y * time);
+       var shell = Launch(prefab, velocity);
+       if (shell == null)
+           return;
+       var body = shell.GetComponent<Rigidbody>();
+       if (body != null)
+           body.useGravity = true;
+       // A lobbed shell that lands without a hit does not lie on the ground.
+       Destroy(shell, 4f);
+   }
+
+   GameObject Launch(GameObject prefab, Vector3 velocity)
+   {
+       if (prefab == null)
+           return null;
+       var rotation = Quaternion.FromToRotation(Barrel, velocity.normalized) * pointbullet.rotation;
+       var shell = Instantiate(prefab, pointbullet.position, rotation);
+       TreadShredEnemyShells.Fired(shell);
+       var body = shell.GetComponent<Rigidbody>();
+       if (body != null)
+           body.linearVelocity = velocity;
+       return shell;
+   }
+
+   bool OnNavMesh() => UnityEngine.AI.NavMesh.SamplePosition(pointbullet.position, out _, 2f, UnityEngine.AI.NavMesh.AllAreas);
+
+   static GameObject Shell(ref GameObject cached, string name)
+   {
+       if (cached == null)
+       {
+           cached = Resources.Load<GameObject>("EnemyShells/" + name);
+           if (cached == null)
+               Debug.LogError("[Volley] Resources/EnemyShells/" + name + " is missing; that shot is skipped");
+       }
+       return cached;
+   }
+
    bool canbullet = true;
    IEnumerator DelayBulletPlayer(float delay)
    {     

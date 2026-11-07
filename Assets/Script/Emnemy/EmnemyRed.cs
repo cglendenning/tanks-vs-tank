@@ -23,7 +23,7 @@ public class EmnemyRed : MonoBehaviour {
             completed = false;
             TreadShredImpact.Kill(transform.position);
             ManagerScore.instance.CurDieEmnemy += 1;
-            ManagerScore.instance.Victory();
+            ManagerScore.instance.EnemyKilled();
             gameObject.layer = 0;
             transform.GetChild(0).gameObject.SetActive(false);
             transform.GetChild(1).gameObject.SetActive(false);
