@@ -31,7 +31,10 @@ namespace TreadShred.Screens.Tests
         [UnityTest(Description = "D-009-AC-03: with Overdrive active the mission HUD shows OVERDRIVE ACTIVE, hidden while paused, and it fits on every screen shape")]
         public IEnumerator HudShowsActiveOverdrive()
         {
-            PlayerPrefs.SetInt(CombatBoosts.OverdriveKey, 1);
+            // D-045: Overdrive is supply.
+            var progress = GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null);
+            var progression = (PlayerProgression)progress.GetType().GetProperty("Progression").GetValue(progress);
+            progression.Replace(new ProgressionState { supply = new[] { 0, 0, 0, 1, 0, 0, 0 } });
             try
             {
                 Time.timeScale = 1f;
@@ -39,14 +42,14 @@ namespace TreadShred.Screens.Tests
                 yield return null;
                 yield return new WaitForSecondsRealtime(1.5f);
                 Assert.IsTrue(Showing(OfferLabels.OverdriveActive), "the HUD says Overdrive is on");
-                Assert.AreEqual(1, PlayerPrefs.GetInt(CombatBoosts.OverdriveKey, 0), "starting a mission does not use it up");
+                Assert.AreEqual(1, progression.Supply(SupplyTrack.Overdrive), "starting a mission does not use it up");
                 var findings = new List<Finding>();
                 yield return Audit("mission with overdrive", findings);
                 Assert.IsEmpty(findings, ScreenAudit.Report(findings));
             }
             finally
             {
-                PlayerPrefs.DeleteKey(CombatBoosts.OverdriveKey);
+                progression.Replace(new ProgressionState());
                 GameType("TreadShredOverdriveBadge").GetMethod("Hide").Invoke(null, null);
             }
         }

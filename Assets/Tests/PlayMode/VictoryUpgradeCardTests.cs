@@ -54,7 +54,7 @@ namespace TreadShred.Screens.Tests
             UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
                 .FirstOrDefault(b => b.gameObject.activeInHierarchy && (b.GetComponentInChildren<Text>()?.text ?? string.Empty).StartsWith(label, StringComparison.Ordinal));
 
-        [UnityTest(Description = "D-009-AC-03: with Overdrive carried over the victory card offers the cheapest upgrade beside Overdrive's status, a coins upgrade applies with UNDO beside it, with every track maxed only the status shows, and each state fits every screen shape")]
+        [UnityTest(Description = "D-009-AC-03: with Overdrive carried over the victory card offers the cheapest upgrade beside Overdrive's status, a coins upgrade applies with UNDO beside it, with every track at level 10 it offers a unit of supply (D-045) beside the status, and each state fits every screen shape")]
         public IEnumerator CarriedOverdriveOffersAnUpgrade()
         {
             var progression = (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
@@ -80,9 +80,10 @@ namespace TreadShred.Screens.Tests
                 yield return Audit("victory card after an upgrade", findings);
 
                 var max = ProgressionRules.LevelsPerTrack;
-                progression.Replace(new ProgressionState { coins = 5000, upgradeLevels = new[] { max, max, max } });
+                progression.Replace(new ProgressionState { coins = 5000, upgradeLevels = new[] { max, max, max }, supply = new[] { 0, 0, 0, 1, 0, 0, 0 } });
                 yield return Win();
-                Assert.Contains(OfferLabels.OverdriveStatus(0), Texts(), "only the status, with every track maxed");
+                Assert.Contains(OfferLabels.OverdriveStatus(0), Texts(), "Overdrive's status stays");
+                Assert.IsNotNull(CardButton("UPGRADE FOR 100 GEMS"), "never maxed: a unit of armor supply (D-045)");
                 Assert.IsNull(CardButton(OfferLabels.OverdriveActive), "still no button that sells nothing");
                 yield return Audit("victory with Overdrive carried over and every track maxed", findings);
             }

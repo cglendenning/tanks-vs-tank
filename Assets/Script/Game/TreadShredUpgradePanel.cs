@@ -213,9 +213,10 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
         gemsText.text = OfferLabels.Owned(TreadShredStore.Ensure().Wallet.Balance);
         foreach (var track in Tracks)
         {
-            // D-045: armor and a track at level 10 show the supply held; the others their coin level.
+            // D-045: the supply held; without any, firepower and speed show their coin level (LEVEL 10 / 10 when it tops
+            // out) and armor, which has no coin ladder, NO SUPPLY.
             var supply = Progression.Supply((SupplyTrack)(int)track);
-            levelTexts[track].text = Progression.BuysSupply(track)
+            levelTexts[track].text = supply > 0 || ProgressionRules.GemOnly(track)
                 ? ProgressionLabels.SupplyLine(supply, Progression.SupplyMissionsLeft((SupplyTrack)(int)track))
                 : "LEVEL " + Progression.Level(track) + " / " + ProgressionRules.LevelsPerTrack;
             effectTexts[track].text = PreviewLine(track);

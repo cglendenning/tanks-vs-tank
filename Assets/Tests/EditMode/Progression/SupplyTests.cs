@@ -116,13 +116,19 @@ namespace TreadShred.Progression.Tests
                 progression.Supply(SupplyTrack.Seeker)));
         }
 
-        [Test(Description = "D-045-AC-06: a restored save carries the supply and its clock")]
+        [Test(Description = "D-045-AC-06: a restored save carries the supply and its clock, and RESET GAME clears them with the rest")]
         public void RestoreCarriesTheSupply()
         {
             var (progression, _) = Player(0);
             progression.Replace(new ProgressionState { supply = new[] { 1, 0, 0, 2, 0, 0, 0 }, supplyWins = 3, supplyNext = 3 });
             Assert.AreEqual((1, 2), (progression.Supply(SupplyTrack.Armor), progression.Supply(SupplyTrack.Overdrive)));
             Assert.AreEqual((SupplyTrack.Overdrive, 2), (progression.NextSupplyUse.Value, progression.MissionsToNextSupplyUse));
+
+            // RESET GAME (D-044) replaces the progression with a new one.
+            StringAssert.Contains("progress.Progression.Replace(new ProgressionState());", Script("Game/TreadShredGameReset.cs"));
+            progression.Replace(new ProgressionState());
+            Assert.AreEqual((0, 0), (progression.Supply(SupplyTrack.Armor), progression.Supply(SupplyTrack.Overdrive)));
+            Assert.IsNull(progression.NextSupplyUse);
         }
     }
 }

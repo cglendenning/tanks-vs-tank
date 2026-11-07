@@ -56,6 +56,7 @@ public class BulletEmnemy : MonoBehaviour {
                 canbullet = false;
                 TreadShredFirstMinute.EnemyFired();
                 GameObject obj = Instantiate(Bullet, pointbullet.position, pointbullet.rotation) as GameObject;
+                TreadShredEnemyShells.Fired(obj);
                 Vector3 dir = tower.position - pointbullet.position;
 
                 if (gameObject.tag != "emnemyorange" && gameObject.tag != "emnemyblack")
@@ -93,6 +94,7 @@ public class BulletEmnemy : MonoBehaviour {
        if (TreadShredFirstMinute.FirstPlay)
            yield break;
        GameObject obj = Instantiate(Bullet, pointbullet.position, pointbullet.rotation) as GameObject;
+       TreadShredEnemyShells.Fired(obj);
 
        Vector3 dir = tower.position - pointbullet.position;
        if (gameObject.tag == "emnemyblack")

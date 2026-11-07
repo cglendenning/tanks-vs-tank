@@ -188,7 +188,7 @@ namespace TreadShred.Screens.Tests
                 yield return Load(2);
                 Assert.AreEqual(Weapon.Seeker, InHand(), "a cannon-only mission starts on the running rental");
                 Assert.IsNotNull(Under("TreadShredWeaponToggle", "SEEKER"));
-                CollectionAssert.Contains(Texts(), "3 LEFT");
+                CollectionAssert.Contains(Texts(), "5 LEFT", "a 1.9.5 rental of 3 missions comes back as one unit (D-045-AC-05)");
             }
             finally
             {

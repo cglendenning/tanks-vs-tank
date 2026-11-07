@@ -676,9 +676,13 @@ public class PlayerMoverment : MonoBehaviour {
         image.color = color;
     }
 
-    // D-020: restore the tank in place at full armor after a paid revive.
+    // D-020: restore the tank in place at full armor after a paid revive, with the enemy shells still in flight cleared
+    // so fire aimed at the destroyed tank never hits the revived one (D-020-AC-07).
     public void Revive()
     {
+        var cleared = TreadShredEnemyShells.Clear();
+        if (cleared > 0)
+            Debug.Log("[Revive] cleared " + cleared + " enemy shells in flight");
         countdie = missionArmorHits;
         ShowExtraArmor();
         if (shieldFade != null)
