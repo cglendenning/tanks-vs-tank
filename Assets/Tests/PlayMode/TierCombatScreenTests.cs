@@ -37,12 +37,12 @@ namespace TreadShred.Screens.Tests
         private static float SightRadius() =>
             (float)GameType("FieldOfView").GetField("viewRadius").GetValue(UnityEngine.Object.FindFirstObjectByType(GameType("FieldOfView")));
 
-        private static IEnumerator Play(DifficultyTier tier)
+        private static IEnumerator Play(DifficultyTier tier, string map = "Lv1")
         {
             Progression.Replace(new ProgressionState { clearedMissions = new[] { All, All, 0L }, highestUnlockedTier = 2 });
             Progress.GetType().GetMethod("SelectTier").Invoke(Progress, new object[] { tier });
             Time.timeScale = 1f;
-            SceneManager.LoadScene("Lv1");
+            SceneManager.LoadScene(map);
             yield return null;
             yield return new WaitForSecondsRealtime(2f);
             for (var waited = 0f; Time.timeScale == 0f && waited < 10f; waited += 0.25f)
@@ -88,24 +88,29 @@ namespace TreadShred.Screens.Tests
                 var size = Alive();
                 Assert.Greater(size, 0, "the map has enemies");
                 yield return Destroy((size + 1) / 2);
-                Assert.AreEqual(size - (size + 1) / 2 + size, Alive(), "half destroyed: the whole map's enemies come back");
-                Assert.AreEqual(Alive(), Remaining(), "the victory waits for the reinforcements too");
+                Assert.AreEqual(size - (size + 1) / 2 + size, Remaining(), "half destroyed: the whole map's enemies come back, and the victory waits for them");
+                Assert.Greater(Alive(), size - (size + 1) / 2, "those whose spot is clear are already on the map");
                 foreach (var screen in ScreenAudit.Shapes)
                 {
                     yield return ScreenAudit.Present(screen);
                     findings.AddRange(ScreenAudit.Inspect(screen, "VETERAN REINFORCEMENTS"));
                 }
-                yield return Destroy(Alive());
+                // Waiting reinforcements appear as their spots clear; the mission ends when the victory count reaches 0.
+                for (var round = 0; round < 40 && Remaining() > 0; round++)
+                {
+                    yield return Destroy(Alive());
+                    yield return new WaitForSecondsRealtime(0.25f);
+                }
                 yield return new WaitForSecondsRealtime(0.5f);
-                Assert.AreEqual(0, Alive(), "Veteran sends no third wave");
+                Assert.AreEqual((0, 0), (Remaining(), Alive()), "every Veteran enemy destroyed, and no third wave");
 
                 yield return Play(DifficultyTier.Elite);
                 size = Alive();
                 var half = (size + 1) / 2;
                 yield return Destroy(half);
-                Assert.AreEqual(2 * size - half, Alive(), "the second wave");
+                Assert.AreEqual(2 * size - half, Remaining(), "the second wave");
                 yield return Destroy(half);
-                Assert.AreEqual(3 * size - 2 * half, Alive(), "half again down: Elite's third wave arrives");
+                Assert.AreEqual(3 * size - 2 * half, Remaining(), "half again down: Elite's third wave arrives");
             }
             finally
             {
@@ -114,6 +119,50 @@ namespace TreadShred.Screens.Tests
                 Progress.GetType().GetMethod("SelectTier").Invoke(Progress, new object[] { DifficultyTier.Recruit });
             }
             Assert.IsEmpty(findings, ScreenAudit.Report(findings));
+        }
+
+        [UnityTest(Description = "D-046-AC-01: on mission 47's map (Veteran) reinforcements never appear inside an enemy or the tank, every enemy stays inside the walls, and destroying every wave wins the mission")]
+        public IEnumerator ReinforcementsStayInsideTheWalls()
+        {
+            try
+            {
+                yield return Play(DifficultyTier.Veteran, "Lv7");
+                // The walls (tagged thanh) bound the map.
+                var walls = GameObject.FindGameObjectsWithTag("thanh").SelectMany(w => w.GetComponentsInChildren<Collider>()).Select(c => c.bounds).ToList();
+                Assert.IsNotEmpty(walls, "the map has walls");
+                var area = walls[0];
+                foreach (var wall in walls)
+                    area.Encapsulate(wall);
+                float minX = area.min.x - 0.5f, maxX = area.max.x + 0.5f, minZ = area.min.z - 0.5f, maxZ = area.max.z + 0.5f;
+                Debug.Log($"[D-046] map 7 walls x {minX:0.0}..{maxX:0.0}, z {minZ:0.0}..{maxZ:0.0}");
+                var start = Enemies().Select(e => e.transform.position).ToList();
+                yield return Destroy((start.Count + 1) / 2);
+                for (var sample = 0; sample < 12; sample++)
+                {
+                    var alive = Enemies().Select(e => e.transform.position).ToList();
+                    for (var a = 0; a < alive.Count; a++)
+                    {
+                        Assert.IsTrue(alive[a].x >= minX && alive[a].x <= maxX && alive[a].z >= minZ && alive[a].z <= maxZ,
+                            $"an enemy at {alive[a]} left the walls (sample {sample})");
+                        for (var b = a + 1; b < alive.Count; b++)
+                            Assert.Greater(Vector3.Distance(alive[a], alive[b]), 1f, $"two enemies on one spot at {alive[a]} (sample {sample})");
+                    }
+                    yield return new WaitForSecondsRealtime(0.25f);
+                }
+
+                for (var round = 0; round < 40 && Remaining() > 0; round++)
+                {
+                    yield return Destroy(Alive());
+                    yield return new WaitForSecondsRealtime(0.25f);
+                }
+                Assert.AreEqual(0, Remaining(), "every wave destroyed: the mission is won");
+            }
+            finally
+            {
+                Time.timeScale = 1f;
+                Progression.Replace(new ProgressionState());
+                Progress.GetType().GetMethod("SelectTier").Invoke(Progress, new object[] { DifficultyTier.Recruit });
+            }
         }
 
         [UnityTest(Description = "D-046-AC-06: on map 1 a target goes down to one shell on Recruit, two on Veteran and three on Elite")]
