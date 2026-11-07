@@ -155,8 +155,7 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
             if (!offer.Accept())
                 return;
             TreadShredAnalytics.Log(GameEvents.OfferAccepted("starter_pack", 0, true));
-            revivesThisMission++;
-            Finish();
+            Revived();
             if (player != null)
                 player.Revive();
         }, showStatus);
@@ -194,8 +193,7 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
             if (!offer.Accept())
                 return;
             TreadShredAnalytics.Log(GameEvents.OfferAccepted("revive", cost, packBought));
-            revivesThisMission++;
-            Finish();
+            Revived();
             if (player != null)
                 player.Revive();
         }, showStatus);
@@ -225,6 +223,14 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
         Finish();
         if (player != null)
             player.Die();
+    }
+
+    // D-020-AC-06: the revive keeps the game paused; READY? lets the player start the 3-2-1.
+    private void Revived()
+    {
+        revivesThisMission++;
+        Destroy(gameObject);
+        TreadShredReadyPanel.Show(TreadShredUi.FindFont(GameObject.Find("Canvas")));
     }
 
     private void Finish()

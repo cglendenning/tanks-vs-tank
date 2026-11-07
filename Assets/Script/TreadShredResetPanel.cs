@@ -28,11 +28,13 @@ public sealed class TreadShredResetPanel : MonoBehaviour
         var backdrop = TreadShredUi.CreateBackdrop(root, 0.96f);
         TreadShredUi.CreateText(GameReset.Title, backdrop, new Vector2(0f, 420f), new Vector2(900f, 90f), 72, font)
             .color = TreadShredUi.TitleColor;
-        Wrapped(TreadShredUi.CreateText(GameReset.Erases, backdrop, new Vector2(0f, 315f), new Vector2(1300f, 100f), 34, font),
+        Wrapped(TreadShredUi.CreateText(GameReset.Erases, backdrop, new Vector2(0f, 320f), new Vector2(1300f, 100f), 34, font),
             Color.white);
         Wrapped(TreadShredUi.CreateText(GameReset.Reach(Application.platform == RuntimePlatform.Android), backdrop,
-            new Vector2(0f, 215f), new Vector2(1300f, 80f), 30, font), TreadShredUi.AccentColor);
-        TreadShredUi.CreateText(GameReset.Prompt, backdrop, new Vector2(0f, 135f), new Vector2(900f, 44f), 34, font)
+            new Vector2(0f, 240f), new Vector2(1300f, 44f), 30, font), TreadShredUi.AccentColor);
+        TreadShredUi.CreateText(GameReset.ScoreStays, backdrop, new Vector2(0f, 190f), new Vector2(1300f, 40f), 28, font)
+            .color = TreadShredUi.DetailColor;
+        TreadShredUi.CreateText(GameReset.Prompt, backdrop, new Vector2(0f, 128f), new Vector2(900f, 44f), 34, font)
             .color = TreadShredUi.DetailColor;
         typed = Field(backdrop, font, new Vector2(0f, 45f));
         typed.onValueChanged.AddListener(value =>

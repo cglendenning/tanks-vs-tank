@@ -92,6 +92,11 @@ namespace TreadShred.Economy
         // D-035-AC-06: after the first play's free Overdrive, the victory card offers to keep it.
         public const string KeepOverdrive = "KEEP OVERDRIVE";
 
+        // D-020-AC-06: after a paid revive the game waits for the player; GO plays the 3-2-1 first.
+        public const string Ready = "READY?";
+        public const string Go = "GO";
+        public const string NotYet = "NOT YET";
+
         // Overdrive waits for the next mission, so the panel must say it is on.
         public const string OverdriveActive = "OVERDRIVE ACTIVE";
 

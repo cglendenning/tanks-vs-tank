@@ -16,9 +16,11 @@ namespace TreadShred.Save
         public const string Erase = "ERASE EVERYTHING";
         public const string Keep = "KEEP MY GAME";
 
-        /// <summary>D-044-AC-01: the platform cloud save goes too, on every device signed in to the account.</summary>
+        public const string ScoreStays = "YOUR BEST SCORE STAYS ON THE LEADERBOARD.";
+
+        /// <summary>D-044-AC-01: the platform cloud backup goes too, on every device signed in to the account.</summary>
         public static string Reach(bool android) =>
-            "IT ALSO ERASES THE SAVE IN YOUR " + (android ? "GOOGLE PLAY GAMES" : "ICLOUD") + " ACCOUNT. IT CANNOT BE UNDONE.";
+            "IT ALSO ERASES YOUR GAME'S BACKUP IN " + (android ? "GOOGLE PLAY GAMES" : "ICLOUD") + ". IT CANNOT BE UNDONE.";
 
         /// <summary>D-044-AC-02: the typed word, in any letter case and ignoring surrounding spaces.</summary>
         public static bool Confirms(string typed) =>

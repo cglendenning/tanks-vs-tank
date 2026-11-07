@@ -84,6 +84,9 @@ namespace TreadShred.Screens.Tests
             Assert.IsNull(GameObject.Find("TreadShredWeaponToggle"), "hidden while paused");
             pauseGame.Invoke(pause, null);
             yield return null;
+            // D-020-AC-06: resuming plays the 3-2-1 first; the weapon button returns with play.
+            for (var waited = 0f; Time.timeScale == 0f && waited < 10f; waited += 0.25f)
+                yield return new WaitForSecondsRealtime(0.25f);
             Assert.IsNotNull(GameObject.Find("TreadShredWeaponToggle"), "back when play resumes");
             Time.timeScale = 1f;
 

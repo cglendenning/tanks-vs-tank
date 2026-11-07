@@ -5,8 +5,9 @@ using UnityEngine;
 
 /// <summary>
 /// D-044: erases everything the game saved, here and in the platform cloud, so the game plays like a fresh install
-/// by a new player. Attribution bookkeeping (TreadShredAttribution) and the store-capture switch are not game state
-/// and stay. The caller returns to the start screen.
+/// by a new player. The best score stays (it matches the platform leaderboard, which keeps it anyway); attribution
+/// bookkeeping (TreadShredAttribution) and the store-capture switch are not game state and stay. The caller returns to
+/// the start screen.
 /// </summary>
 public static class TreadShredGameReset
 {
@@ -26,7 +27,6 @@ public static class TreadShredGameReset
         yield return CombatBoosts.OverdriveLostKey;
         yield return TreadShredFirstMinute.InstantStartUsedKey;
         yield return TreadShredFirstMinute.PreviewMissionOneClearedKey;
-        yield return TreadShredScores.HighScoreKey;
         yield return TreadShredReviewPrompt.StateKey;
         foreach (var key in LegacyKeys)
             yield return key;

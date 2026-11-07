@@ -15,11 +15,11 @@ namespace TreadShred.Save.Tests
         private long now = 1000;
         private long Clock() => now += 10;
 
-        // Saved values that are not the player's game: attribution bookkeeping, the store-capture switch and the
-        // save's own sync stamps (CloudSync.Reset rewrites those).
+        // Saved values a reset keeps: the best score (it matches the leaderboard), attribution bookkeeping, the
+        // store-capture switch and the save's own sync stamps (CloudSync.Reset rewrites those).
         private static readonly string[] Kept =
         {
-            "attribution_purchases_usd_cents", "attribution_skan_registered", "TreadShredStoreCaptureMode",
+            "TreadShredBestRun", "attribution_purchases_usd_cents", "attribution_skan_registered", "TreadShredStoreCaptureMode",
             "TreadShredSaveWrittenAt", "TreadShredSaveSynced", "TreadShredSaveResetAt"
         };
 
@@ -53,14 +53,14 @@ namespace TreadShred.Save.Tests
             Assert.AreEqual(("RESET GAME", "ERASE EVERYTHING", "KEEP MY GAME"), (GameReset.Title, GameReset.Erase, GameReset.Keep));
         }
 
-        [Test(Description = "D-044-AC-01: the confirmation names what is erased, bought gems included, that the platform cloud save goes too and that it cannot be undone")]
+        [Test(Description = "D-044-AC-01: the confirmation names what is erased, bought gems included, that the game's backup in the platform cloud goes too and cannot be undone, and that the best score stays on the leaderboard")]
         public void TheConfirmationSaysWhatIsErased()
         {
             foreach (var part in new[] { "MISSIONS", "MEDALS", "COINS", "GEMS (BOUGHT GEMS TOO)", "UPGRADES", "WEAPONS", "SETTINGS" })
                 StringAssert.Contains(part, GameReset.Erases);
-            StringAssert.Contains("ICLOUD ACCOUNT", GameReset.Reach(android: false));
-            StringAssert.Contains("GOOGLE PLAY GAMES ACCOUNT", GameReset.Reach(android: true));
-            StringAssert.Contains("CANNOT BE UNDONE", GameReset.Reach(android: false));
+            Assert.AreEqual("IT ALSO ERASES YOUR GAME'S BACKUP IN ICLOUD. IT CANNOT BE UNDONE.", GameReset.Reach(android: false));
+            Assert.AreEqual("IT ALSO ERASES YOUR GAME'S BACKUP IN GOOGLE PLAY GAMES. IT CANNOT BE UNDONE.", GameReset.Reach(android: true));
+            Assert.AreEqual("YOUR BEST SCORE STAYS ON THE LEADERBOARD.", GameReset.ScoreStays);
         }
 
         [Test(Description = "D-025-AC-05: a reset save replaces every save written before it on either side, and a save written after it wins as usual")]
@@ -121,13 +121,13 @@ namespace TreadShred.Save.Tests
             Assert.AreEqual(1, tablet.Progression.ClearedCount(DifficultyTier.Recruit), "new progress after the reset syncs");
         }
 
-        [Test(Description = "D-044-AC-03: the reset erases every value the game saves, medals for all 120 missions included, and keeps only attribution bookkeeping, the capture switch and the save's sync stamps")]
+        [Test(Description = "D-044-AC-03: the reset erases every value the game saves, medals for all 120 missions included, and keeps only the best score, attribution bookkeeping, the capture switch and the save's sync stamps")]
         public void TheResetCoversEverySavedKey()
         {
             var reset = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("TreadShredGameReset")).First(t => t != null);
             var erased = new HashSet<string>((IEnumerable<string>)reset.GetMethod("ErasedKeys").Invoke(null, null));
             CollectionAssert.IsSupersetOf(erased, new[] { "Lv1", "Lvs1", "Lv120", "Lvs120", "Sound", "Music", "Vibrate", "Camera" });
-            CollectionAssert.IsEmpty(erased.Intersect(Kept), "attribution and sync stamps stay");
+            CollectionAssert.IsEmpty(erased.Intersect(Kept), "the best score, attribution and sync stamps stay");
 
             var saved = new HashSet<string>();
             foreach (var file in Directory.GetFiles(Path.Combine(Application.dataPath, "Script"), "*.cs", SearchOption.AllDirectories))

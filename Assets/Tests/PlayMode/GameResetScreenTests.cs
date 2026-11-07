@@ -63,12 +63,13 @@ namespace TreadShred.Screens.Tests
             yield return null;
         }
 
-        [UnityTest(Description = "D-044-AC-04: RESET GAME under Settings asks for the typed word (a near miss and KEEP MY GAME change nothing); erasing starts the game over at the start screen with no missions, coins, upgrades, medals or best run, settings at their defaults and only the starter gems, keeping attribution bookkeeping, and Settings and the confirmation pass the screen audit on every screen shape")]
+        [UnityTest(Description = "D-044-AC-04: RESET GAME under Settings asks for the typed word (a near miss and KEEP MY GAME change nothing); erasing starts the game over at the start screen with no missions, coins, upgrades or medals, the best score kept, settings at their defaults and only the starter gems, keeping attribution bookkeeping, and Settings and the confirmation pass the screen audit on every screen shape")]
         public IEnumerator ResetStartsTheGameOver()
         {
             var findings = new List<Finding>();
             var saved = PlayerPrefs.GetString(WalletKey, JsonUtility.ToJson(new WalletState()));
             var hadAttribution = PlayerPrefs.HasKey(AttributionKey);
+            var bestRun = PlayerPrefs.GetInt("TreadShredBestRun", 0);
             var attribution = PlayerPrefs.GetInt(AttributionKey, 0);
             try
             {
@@ -91,7 +92,7 @@ namespace TreadShred.Screens.Tests
                 yield return null;
                 CollectionAssert.IsSupersetOf(Texts(), new[]
                 {
-                    Words("Title"), Words("Erases"), Words("Prompt"), "IT ALSO ERASES THE SAVE IN YOUR ICLOUD ACCOUNT. IT CANNOT BE UNDONE."
+                    Words("Title"), Words("Erases"), Words("Prompt"), Words("ScoreStays"), "IT ALSO ERASES YOUR GAME'S BACKUP IN ICLOUD. IT CANNOT BE UNDONE."
                 });
                 var erase = ButtonLabeled(Words("Erase"));
                 Assert.IsFalse(erase.interactable, "off until RESET is typed");
@@ -131,7 +132,7 @@ namespace TreadShred.Screens.Tests
                 Assert.IsFalse(Wallet.StarterPackBought, "the Starter Pack is on offer again");
                 Assert.AreEqual(0f, PlayerPrefs.GetFloat("Lv1", 0f), "medals erased");
                 Assert.AreEqual(0f, PlayerPrefs.GetFloat("Sound", 0f), "sound back on, its default");
-                Assert.AreEqual(0, PlayerPrefs.GetInt("TreadShredBestRun", 0), "best run erased");
+                Assert.AreEqual(98765, PlayerPrefs.GetInt("TreadShredBestRun", 0), "the best score stays");
                 Assert.AreEqual(7, PlayerPrefs.GetInt(AttributionKey, 0), "attribution bookkeeping stays");
             }
             finally
@@ -143,6 +144,7 @@ namespace TreadShred.Screens.Tests
                     if (open != null)
                         UnityEngine.Object.Destroy(open);
                 }
+                PlayerPrefs.SetInt("TreadShredBestRun", bestRun);
                 if (hadAttribution)
                     PlayerPrefs.SetInt(AttributionKey, attribution);
                 else

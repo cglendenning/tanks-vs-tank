@@ -67,6 +67,10 @@ namespace TreadShred.Screens.Tests
                     StringAssert.EndsWith("FOR " + cost + " GEMS", revive.GetComponentInChildren<Text>().text);
                     revive.onClick.Invoke();
                     yield return new WaitForSecondsRealtime(1f);
+                    // D-020-AC-06: play resumes after READY? and the 3-2-1.
+                    UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
+                        .First(b => b.GetComponentInChildren<Text>()?.text == "GO").onClick.Invoke();
+                    yield return WaitForPlay();
                 }
                 yield return DestroyTank();
                 Assert.IsNull(GameObject.Find("TreadShredRevive"), "no third revive in the same play of the mission");

@@ -650,20 +650,31 @@ public class PlayerMoverment : MonoBehaviour {
             extraArmor.text = TreadShred.Progression.ProgressionLabels.ExtraArmor(countdie, Heart.Count);
     }
 
+    // Lit shields on the HUD (-1 before the first hit), and the shields in the order they go out.
+    private int shieldsShown = -1;
+    private int[] shieldLine;
+
     private void SetShields(float alpha)
     {
         foreach (var heart in Heart)
-        {
-            if (heart == null)
-                continue;
-            heart.transform.localScale = Vector3.one;
-            var image = heart.GetComponent<Image>();
-            if (image == null)
-                continue;
-            var color = image.color;
-            color.a = alpha;
-            image.color = color;
-        }
+            ShowShield(heart, alpha, Vector3.one);
+        shieldsShown = alpha > 0.5f ? Heart.Count : 0;
+    }
+
+    private static void ShowShield(GameObject heart, bool lit) =>
+        ShowShield(heart, lit ? 1f : TreadShred.Progression.ShieldRules.DimAlpha, Vector3.one);
+
+    private static void ShowShield(GameObject heart, float alpha, Vector3 scale)
+    {
+        if (heart == null)
+            return;
+        heart.transform.localScale = scale;
+        var image = heart.GetComponent<Image>();
+        if (image == null)
+            return;
+        var color = image.color;
+        color.a = alpha;
+        image.color = color;
     }
 
     // D-020: restore the tank in place at full armor after a paid revive.
@@ -701,143 +712,43 @@ public class PlayerMoverment : MonoBehaviour {
         }
     }
 
-   // D-017-AC-09: real-time waits, so the revive panel's pause cannot freeze a shield mid-fade.
+   // D-017-AC-09: every shield shows the hits left at once, so a hit landing during another's pulse can never leave a
+   // middle shield out alone; only the shield this hit took pulses (in real time, so a pause cannot freeze it) and dims.
    IEnumerator DelayHeath()
    {
-      
-
-       switch (countdie)
+       var line = ShieldLine();
+       var lit = TreadShred.Progression.ShieldRules.Lit(countdie, line.Length);
+       var before = shieldsShown < 0 ? line.Length : shieldsShown;
+       shieldsShown = lit;
+       var losing = lit < before ? line.Length - lit - 1 : -1;
+       for (var place = 0; place < line.Length; place++)
+           ShowShield(Heart[line[place]], place == losing || TreadShred.Progression.ShieldRules.IsLit(place, countdie, line.Length));
+       if (losing < 0 || Heart[line[losing]] == null)
+           yield break;
+       var shield = Heart[line[losing]].transform;
+       for (var step = 0; step < 10; step++)
        {
-           case 2:
-
-               for (int i = 0; i < 10; i++)
-               {
-                   if (i<5)
-                   {
-                       yield return new WaitForSecondsRealtime(0.05f);
-                       Heart[0].gameObject.transform.localScale += new Vector3(0.1f, 0.1f, 0);
-                   }
-                   else
-                   {
-                       yield return new WaitForSecondsRealtime(0.05f);
-                       Heart[0].gameObject.transform.localScale += new Vector3(-0.1f,-0.1f, 0);
-                   }
-                   
-               }
-              
-               Color a = Heart[0].gameObject.GetComponent<Image>().color;
-               a.a = 0.15f;
-               Heart[0].gameObject.GetComponent<Image>().color = a;
-               break;
-           case 1:
-
-               for (int i = 0; i < 10; i++)
-               {
-                   if (i < 5)
-                   {
-                       yield return new WaitForSecondsRealtime(0.05f);
-                       Heart[1].gameObject.transform.localScale += new Vector3(0.1f, 0.1f, 0);
-                   }
-                   else
-                   {
-                       yield return new WaitForSecondsRealtime(0.05f);
-                       Heart[1].gameObject.transform.localScale += new Vector3(-0.1f, -0.1f, 0);
-                   }
-
-               }
-               Color b = Heart[1].gameObject.GetComponent<Image>().color;
-               b.a = 0.15f;
-               Heart[1].gameObject.GetComponent<Image>().color = b;
-               break;
-           case 0:
-
-               if (Heart[1].gameObject.GetComponent<Image>().color.a < 0.5f)
-               {
-
-                   for (int i = 0; i < 10; i++)
-                   {
-                       if (i < 5)
-                       {
-                           yield return new WaitForSecondsRealtime(0.05f);
-                           Heart[2].gameObject.transform.localScale += new Vector3(0.1f, 0.1f, 0);
-                       }
-                       else
-                       {
-                           yield return new WaitForSecondsRealtime(0.05f);
-                           Heart[2].gameObject.transform.localScale += new Vector3(-0.1f, -0.1f, 0);
-                       }
-
-                   }
-                   Color c = Heart[2].gameObject.GetComponent<Image>().color;
-                   c.a = 0.15f;
-                   Heart[2].gameObject.GetComponent<Image>().color = c;
-                   break;
-
-               }
-               else
-               {
-
-                   for (int i = 0; i < 10; i++)
-                   {
-                       if (i < 5)
-                       {
-                           yield return new WaitForSecondsRealtime(0.05f);
-                           Heart[0].gameObject.transform.localScale += new Vector3(0.1f, 0.1f, 0);
-                       }
-                       else
-                       {
-                           yield return new WaitForSecondsRealtime(0.05f);
-                           Heart[0].gameObject.transform.localScale += new Vector3(-0.1f, -0.1f, 0);
-                       }
-
-                   }
-
-                   Color a1 = Heart[0].gameObject.GetComponent<Image>().color;
-                   a1.a = 0.15f;
-                   Heart[0].gameObject.GetComponent<Image>().color = a1;
-
-                   for (int i = 0; i < 10; i++)
-                   {
-                       if (i < 5)
-                       {
-                           yield return new WaitForSecondsRealtime(0.05f);
-                           Heart[1].gameObject.transform.localScale += new Vector3(0.1f, 0.1f, 0);
-                       }
-                       else
-                       {
-                           yield return new WaitForSecondsRealtime(0.05f);
-                           Heart[1].gameObject.transform.localScale += new Vector3(-0.1f, -0.1f, 0);
-                       }
-
-                   }
-                   Color b1 = Heart[1].gameObject.GetComponent<Image>().color;
-                   b1.a = 0.15f;
-                   Heart[1].gameObject.GetComponent<Image>().color = b1;
-
-                   for (int i = 0; i < 10; i++)
-                   {
-                       if (i < 5)
-                       {
-                           yield return new WaitForSecondsRealtime(0.05f);
-                           Heart[2].gameObject.transform.localScale += new Vector3(0.1f, 0.1f, 0);
-                       }
-                       else
-                       {
-                           yield return new WaitForSecondsRealtime(0.05f);
-                           Heart[2].gameObject.transform.localScale += new Vector3(-0.1f, -0.1f, 0);
-                       }
-
-                   }
-                   Color c1 = Heart[2].gameObject.GetComponent<Image>().color;
-                   c1.a = 0.15f;
-                   Heart[2].gameObject.GetComponent<Image>().color = c1;
-                   break;
-               }
-           default:
-               break;
+           yield return new WaitForSecondsRealtime(0.05f);
+           shield.localScale += (step < 5 ? 0.1f : -0.1f) * new Vector3(1f, 1f, 0f);
        }
-
+       ShowShield(Heart[line[losing]], false);
    }
+
+   // D-017-AC-09: the shields in the order they go out, from the one beside +N (the leftmost), whatever order the
+   // scene lists them in.
+   private int[] ShieldLine()
+   {
+       if (shieldLine == null || shieldLine.Length != Heart.Count)
+       {
+           shieldLine = new int[Heart.Count];
+           for (var i = 0; i < shieldLine.Length; i++)
+               shieldLine[i] = i;
+           System.Array.Sort(shieldLine, (a, b) => ShieldX(a).CompareTo(ShieldX(b)));
+       }
+       return shieldLine;
+   }
+
+   private float ShieldX(int index) => Heart[index] != null ? Heart[index].transform.position.x : 0f;
 
 
 }

@@ -60,13 +60,16 @@ public class ManagerButton : MonoBehaviour {
         }
         else
         {
-            Time.timeScale = 1;
-           
-            CountObj.GetComponent<Animator>().enabled = true;
             PauseGameObj.SetActive(false);
             TreadShredOverdriveBadge.SetVisible(true);
-            TreadShredWeaponToggle.SetVisible(true);
             TreadShredMissionLabel.SetVisible(true);
+            // D-020-AC-06: play resumes after the 3-2-1, never straight into fire; the weapon button returns with it.
+            if (!Count.Replay())
+            {
+                Debug.LogWarning("[Pause] no countdown in this scene; play resumes at once");
+                Time.timeScale = 1;
+                TreadShredWeaponToggle.SetVisible(true);
+            }
             BgIg.SetActive(true);
             KillScore.SetActive(true);
             Heart.SetActive(true);
