@@ -17,13 +17,24 @@ public static class TreadShredCampaign
         var progress = TreadShredProgress.Ensure();
         var tier = Campaign.TierOf(number);
         progress.SelectTier(tier);
+        // A promotion the victory screen never got to play (the app closed first) plays before the tier's first mission.
         if (progress.PendingPromotion == tier && Campaign.MapOf(number) == 1)
         {
-            progress.PromotionPlayed();
+            TakePromotion();
             TreadShredPromotion.Show(tier, TreadShredUi.FindFont(GameObject.Find("Canvas")), () => Load(number));
             return;
         }
         Load(number);
+    }
+
+    /// <summary>D-019-AC-05: the promotion due (Mission 40 or 80 just cleared for the first time), taken so it plays once.</summary>
+    public static DifficultyTier? TakePromotion()
+    {
+        var progress = TreadShredProgress.Ensure();
+        var due = progress.PendingPromotion;
+        if (due != null)
+            progress.PromotionPlayed();
+        return due;
     }
 
     /// <summary>NEXT MISSION: the following mission number, or the mission list after the last one.</summary>

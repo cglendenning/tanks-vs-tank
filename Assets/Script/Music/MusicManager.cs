@@ -62,12 +62,20 @@ public class MusicManager : MonoBehaviour {
             source.Play();
     }
 
+    // D-019-AC-05: a promotion's march stands in for the victory music, so only the battle music stops.
+    public void StopBattleMusic()
+    {
+        if (ismusic)
+            return;
+        transform.GetChild(2).gameObject.GetComponent<AudioSource>().Stop();
+    }
+
     public void Victory()
     {
         if (ismusic)
             return;
 
-        transform.GetChild(2).gameObject.GetComponent<AudioSource>().Stop();
+        StopBattleMusic();
         var source = transform.GetChild(5).gameObject.GetComponent<AudioSource>();
         // D-027-AC-04: the victory music plays once and never loops.
         source.loop = false;

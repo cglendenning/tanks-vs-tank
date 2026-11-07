@@ -309,7 +309,13 @@ public class ManagerScore : MonoBehaviour
         PlayerMoverment.instance.isstop = true;
         CanvasGame.transform.GetChild(2).gameObject.SetActive(false);
         CanvasGame.transform.GetChild(10).gameObject.SetActive(false);
-        MusicManager.instance.Victory();
+        // D-019-AC-05: the first clear of Mission 40 or 80 plays the promotion over the victory screen; its march stands
+        // in for the victory music, and the Starter Pack waits until it ends.
+        var promotion = FailureObj != null && FailureObj.activeSelf ? null : TreadShredCampaign.TakePromotion();
+        if (promotion == null)
+            MusicManager.instance.Victory();
+        else
+            MusicManager.instance.StopBattleMusic();
         CaculaterScore(true);
         TreadShredImpact.MissionOver();
         VictoryofFail.SetActive(true);
@@ -323,7 +329,10 @@ public class ManagerScore : MonoBehaviour
             HighlightNextMission();
         }
         // D-037-AC-04: while the Starter Pack is on sale its interstitial opens over every result screen.
-        TreadShredStarterOffer.ShowIfOnSale(TreadShredUi.FindFont(VictoryofFail));
+        if (promotion is DifficultyTier tier)
+            TreadShredPromotion.Show(tier, TreadShredUi.FindFont(VictoryofFail), () => TreadShredStarterOffer.ShowIfOnSale(TreadShredUi.FindFont(VictoryofFail)));
+        else
+            TreadShredStarterOffer.ShowIfOnSale(TreadShredUi.FindFont(VictoryofFail));
     }
     public void Failure()
     {

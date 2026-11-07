@@ -159,7 +159,7 @@ namespace TreadShred.Screens.Tests
             }
         }
 
-        [UnityTest(Description = "D-019-AC-05: the first clear of Mission 40 then NEXT MISSION plays the promotion (shell casings, the shell-rain sound, PROMOTED TO VETERAN, what changes, the gems) and then Mission 41 on Veteran, named in the HUD (D-019-AC-03, D-019-AC-04)")]
+        [UnityTest(Description = "D-019-AC-05: the first clear of Mission 40 plays the promotion over the victory screen: casings rain for the whole march, the march and the shell-rain sound play together, with PROMOTED TO VETERAN, what changes and the gems; it ends on its own and NEXT MISSION then goes to Mission 41 on Veteran; each passes the screen audit")]
         public IEnumerator FortyLeadsToTheVeteranPromotion()
         {
             var findings = new List<Finding>();
@@ -169,35 +169,44 @@ namespace TreadShred.Screens.Tests
             IEnumerator Body()
             {
                 PlayerPrefs.SetFloat("Sound", 0f);
+                PlayerPrefs.SetFloat("Music", 0f);
                 Progression.Replace(new ProgressionState { clearedMissions = new[] { All >> 1, 0L, 0L } });
                 yield return LoadMission(40);
                 CollectionAssert.Contains(Texts().Select(t => t.text), "MISSION 40 · RECRUIT", "the HUD names the mission and tier");
                 var gems = Wallet.Balance;
                 yield return Win();
-                yield return NextMission();
 
                 var promotion = GameObject.Find("TreadShredPromotion");
-                Assert.IsNotNull(promotion, "the promotion plays before Mission 41");
+                Assert.IsNotNull(promotion, "the promotion plays the moment Mission 40 is cleared, before NEXT MISSION");
                 var texts = Texts().Select(t => t.text).ToList();
                 CollectionAssert.Contains(texts, "PROMOTED TO VETERAN");
                 CollectionAssert.Contains(texts, "ENEMIES ARE TOUGHER, FASTER AND FIRE MORE OFTEN");
                 CollectionAssert.Contains(texts, "+30 GEMS FOR YOUR PROMOTION");
                 Assert.AreEqual(gems + ProgressionRules.TierUnlockGems(DifficultyTier.Veteran) + ProgressionRules.MilestoneMissionGems, Wallet.Balance,
                     "the promotion gems and Mission 40's milestone gems were paid");
-                Assert.AreEqual(70, promotion.GetComponentsInChildren<Image>().Count(i => i.name == "Casing"));
-                var sound = promotion.GetComponent<AudioSource>();
-                Assert.IsNotNull(sound, "the shell rain plays");
-                Assert.AreEqual("ShellRain", sound.clip.name);
-                Assert.IsTrue(sound.isPlaying);
+                var sounds = promotion.GetComponents<AudioSource>();
+                CollectionAssert.AreEquivalent(new[] { "PromotionMarch", "ShellRain" }, sounds.Select(a => a.clip.name), "the march and the shell rain");
+                Assert.IsTrue(sounds.All(a => a.isPlaying), "playing together");
                 yield return new WaitForSecondsRealtime(1.2f);
                 yield return Audit("PROMOTION TO VETERAN", findings);
 
+                // About six seconds in, casings are still coming down.
+                yield return new WaitForSecondsRealtime(3f);
+                Assert.IsNotNull(GameObject.Find("TreadShredPromotion"), "still playing");
+                Assert.Greater(promotion.GetComponentsInChildren<Image>().Count(i => i.name == "Casing" && i.rectTransform.anchoredPosition.y > -400f),
+                    0, "the rain is still falling");
+
+                for (var waited = 0f; GameObject.Find("TreadShredPromotion") != null && waited < 8f; waited += 0.25f)
+                    yield return new WaitForSecondsRealtime(0.25f);
+                Assert.IsNull(GameObject.Find("TreadShredPromotion"), "it ends on its own with the march");
+
+                yield return NextMission();
                 for (var waited = 0f; SceneManager.GetActiveScene().name != "Lv1" && waited < 10f; waited += 0.25f)
                     yield return new WaitForSecondsRealtime(0.25f);
                 yield return new WaitForSecondsRealtime(2.5f);
                 Assert.AreEqual("Lv1", SceneManager.GetActiveScene().name, "Mission 41 plays the first map");
                 CollectionAssert.Contains(Texts().Select(t => t.text), "MISSION 41 · VETERAN");
-                Assert.IsNull(GameObject.Find("TreadShredPromotion"));
+                Assert.IsNull(GameObject.Find("TreadShredPromotion"), "the promotion played once");
                 yield return Audit("MISSION 41 ON VETERAN", findings);
             }
         }

@@ -1,8 +1,9 @@
 """Builds the D-019 promotion's shell rain from CC0 recordings of real brass casings hitting concrete.
 
 Cuts every impact out of the source recordings, keeps the bright ringing hits (brass) over dull thuds, writes the best
-as one-shots, then mixes a 3-second rain: a dense burst that thins out, each casing with its own gain, slight pitch and
-pan. Output: Assets/Resources/Audio/ShellRain.ogg (approved by the owner 2026-11-06).
+as one-shots, then mixes a rain as long as the promotion's march: a dense first burst, a steady fall, and a thinning
+tail as the march's last chord rings out, each casing with its own gain, slight pitch and pan.
+Output: Assets/Resources/Audio/ShellRain.ogg (sound approved by the owner 2026-11-06, length 2026-11-07).
 
 Sources, all CC0 (public domain: commercial use, no attribution required), from Freesound's public previews:
   "Brass bullet shell casing drop onto concrete, multiple takes" by GrayJoy, https://freesound.org/people/GrayJoy/sounds/210102/
@@ -13,7 +14,15 @@ Rebuild: convert each preview to 44.1 kHz mono WAV with ffmpeg (each download in
   python3 -E scripts/make-shell-rain.py <out_dir> <source.wav>...
   ffmpeg -i <out_dir>/shell-rain.wav -c:a libvorbis -q:a 7 Assets/Resources/Audio/ShellRain.ogg
 The mix is seeded, so the same sources give the same file.
+
+The promotion's march (owner request 2026-11-07): the closing phrase and final chord of John Philip Sousa's
+"The Washington Post" (1889; composition public domain, Sousa died 1932), performed by the U.S. Army Band, a work of
+the U.S. federal government and so public domain ({{PD-USGov-Army}} on Wikimedia Commons). Source:
+  https://commons.wikimedia.org/wiki/File:Washington_Post_March_-_U.S._Army_Band.ogg
+  (from https://www.usarmyband.com/Audio/ceremonial_music_guide.html)
+Rebuild: python3 -E scripts/make-shell-rain.py --march <downloaded.ogg> Assets/Resources/Audio/PromotionMarch.ogg
 """
+import subprocess
 import sys
 import wave
 from pathlib import Path
@@ -21,6 +30,9 @@ from pathlib import Path
 import numpy as np
 
 RATE = 44100
+# The rain runs as long as the march: MARCH_SECONDS plus the last chord's ring-out.
+MARCH_START, MARCH_SECONDS = 143.5, 10.0
+SECONDS = MARCH_SECONDS + 0.3
 rng = np.random.default_rng(20261106)
 
 
@@ -94,11 +106,13 @@ def main(out_dir, sources):
     for n, h in enumerate(bright[:16]):
         save(out / f"casing-{n + 1:02d}.wav", h / np.abs(h).max() * 0.89)
 
-    # The rain: 34 casings over ~2.2 s, densest at the start, then a few late stragglers and the ring-out.
-    length = int(3.2 * RATE)
+    # The rain: a dense first burst, then about nine casings a second, thinning over the last chord, then the ring-out.
+    length = int(SECONDS * RATE)
     mix = np.zeros((length, 2), dtype=np.float32)
-    onsets = np.sort(np.concatenate([rng.gamma(1.6, 0.28, 28), rng.uniform(1.2, 2.3, 6)]))
-    onsets = onsets[onsets < 2.4]
+    steady = np.cumsum(rng.exponential(1 / 9.0, 160)) + 0.8
+    onsets = np.sort(np.concatenate([rng.gamma(1.6, 0.28, 28), steady[steady < SECONDS - 1.6],
+                                     rng.uniform(SECONDS - 1.6, SECONDS - 0.9, 4)]))
+    onsets = onsets[onsets < SECONDS - 0.8]
     for t in onsets:
         h = bright[rng.integers(len(bright))]
         h = repitch(h / np.abs(h).max(), rng.uniform(0.93, 1.08)) * 10 ** (rng.uniform(-14, -2) / 20)
@@ -112,5 +126,17 @@ def main(out_dir, sources):
     print(f"shell-rain.wav: {len(onsets)} casings, {length / RATE:.1f} s")
 
 
+def march(source, out_ogg):
+    """Cuts the promotion's march: the closing phrase, a short fade-in, the final chord's own decay, loudness-matched."""
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(MARCH_START), "-t", str(MARCH_SECONDS), "-i", str(source),
+                    "-af", "afade=t=in:st=0:d=0.3,afade=t=out:st=" + str(MARCH_SECONDS - 1.0) + ":d=1.0,"
+                    "loudnorm=I=-14:TP=-1.5:LRA=11", "-ar", str(RATE), "-ac", "2", "-c:a", "libvorbis", "-q:a", "6",
+                    str(out_ogg)], check=True)
+    print(f"{out_ogg}: {MARCH_SECONDS:.1f} s of the march from {MARCH_START:.1f} s")
+
+
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2:])
+    if sys.argv[1] == "--march":
+        march(sys.argv[2], sys.argv[3])
+    else:
+        main(sys.argv[1], sys.argv[2:])
