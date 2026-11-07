@@ -45,6 +45,14 @@ public class BulletVong : MonoBehaviour {
         }
 
 
+        // D-046-AC-06: on Veteran and Elite a target takes the tier's health; a hit it survives only bursts the shell.
+        if (other.gameObject.tag == "targetMask" && TreadShredTargetHealth.Survives(other.gameObject))
+        {
+            Instantiate(PrefabExplosionBullet, transform.position, Quaternion.Euler(-90, 0, 0));
+            Destroy(gameObject);
+            return;
+        }
+
         if (other.gameObject.tag == "targetMask" && ManagerScore.instance.ClaimKill(other.gameObject))
         {
             PlayerPrefs.SetFloat("CountKill", (PlayerPrefs.GetFloat("CountKill") + 1));

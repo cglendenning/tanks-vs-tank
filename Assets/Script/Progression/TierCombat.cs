@@ -81,6 +81,12 @@ namespace TreadShred.Progression
             return (targetX + velocityX * flight, targetZ + velocityZ * flight);
         }
 
+        /// <summary>D-046-AC-06: a one-hit target's health on a tier, in tenths of a hit as EmnemyRed keeps it.</summary>
+        public static int TargetHealth(float enemyHealth) => (int)Math.Round(10f * enemyHealth);
+
+        /// <summary>D-046-AC-06: what one of the tank's shells takes off, in tenths of a hit, with firepower.</summary>
+        public static int ShellDamage(float damageMultiplier) => Math.Max(1, (int)Math.Round(10f * damageMultiplier));
+
         private static float Distance(float ax, float az, float bx, float bz) =>
             (float)Math.Sqrt((bx - ax) * (bx - ax) + (bz - az) * (bz - az));
     }

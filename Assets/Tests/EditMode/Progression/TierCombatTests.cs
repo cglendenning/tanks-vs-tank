@@ -47,6 +47,16 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual(5f * flight, ahead.x, 0.3f, "the shell and the tank arrive together");
         }
 
+        [Test(Description = "D-046-AC-06: a one-hit target takes the tier's enemy health, 2 hits on Veteran and 3 on Elite, firepower cutting it as for every enemy, and every shell that can destroy a target checks it first")]
+        public void TargetsTakeTierHealth()
+        {
+            int Hits(float health, float firepower) => (TierCombat.TargetHealth(health) + TierCombat.ShellDamage(firepower) - 1) / TierCombat.ShellDamage(firepower);
+            Assert.AreEqual((1, 2, 3), (Hits(1f, 1f), Hits(2f, 1f), Hits(3f, 1f)), "Recruit, Veteran, Elite with base firepower");
+            Assert.AreEqual((1, 2), (Hits(2f, 2f), Hits(3f, 2f)), "x2.0 firepower halves it");
+            foreach (var shell in new[] { "Bullet/Bullet3.cs", "Bullet/BulletVong.cs", "Bullet/BulletFind.cs" })
+                StringAssert.Contains("TreadShredTargetHealth.Survives(other.gameObject)", Script(shell), shell);
+        }
+
         [Test(Description = "D-046-AC-04: each Veteran attack is a volley of 3 shells and each Elite one of 4, 0.25 s apart, cycling cannon, triple shot, arc shot and seeker; the enemy shells load for every map")]
         public void VolleysCycleEveryWeapon()
         {

@@ -104,6 +104,14 @@ public class BulletFind : MonoBehaviour {
                 Destroy(gameObject);
             }
 
+            // D-046-AC-06: on Veteran and Elite a target takes the tier's health; a hit it survives only bursts the shell.
+            if (other.gameObject.tag == "targetMask" && TreadShredTargetHealth.Survives(other.gameObject))
+            {
+                Instantiate(PrefabExplosionBullet, transform.position, Quaternion.Euler(-90, 0, 0));
+                Destroy(gameObject);
+                return;
+            }
+
             // D-032-AC-01: completed stops this round counting twice; ClaimKill stops two rounds counting one enemy.
             if (other.gameObject.tag == "targetMask" && completed && ManagerScore.instance.ClaimKill(other.gameObject))
             {

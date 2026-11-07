@@ -116,6 +116,30 @@ namespace TreadShred.Screens.Tests
             Assert.IsEmpty(findings, ScreenAudit.Report(findings));
         }
 
+        [UnityTest(Description = "D-046-AC-06: on map 1 a target goes down to one shell on Recruit, two on Veteran and three on Elite")]
+        public IEnumerator TargetsTakeTierHealth()
+        {
+            try
+            {
+                var tiers = new[] { (DifficultyTier.Recruit, 1), (DifficultyTier.Veteran, 2), (DifficultyTier.Elite, 3) };
+                foreach (var (tier, hits) in tiers)
+                {
+                    yield return Play(tier);
+                    var target = Enemies().First(e => e.GetComponent(GameType("EmnemyRed")) == null).gameObject;
+                    var survives = GameType("TreadShredTargetHealth").GetMethod("Survives");
+                    for (var shell = 1; shell < hits; shell++)
+                        Assert.IsTrue((bool)survives.Invoke(null, new object[] { target }), tier + ": shell " + shell + " leaves it standing");
+                    Assert.IsFalse((bool)survives.Invoke(null, new object[] { target }), tier + ": shell " + hits + " destroys it");
+                }
+            }
+            finally
+            {
+                Time.timeScale = 1f;
+                Progression.Replace(new ProgressionState());
+                Progress.GetType().GetMethod("SelectTier").Invoke(Progress, new object[] { DifficultyTier.Recruit });
+            }
+        }
+
         [UnityTest(Description = "D-046-AC-04: on Veteran one enemy's attack is a volley of three shells a quarter second apart: a cannon shell, a triple shot and an arc shot")]
         public IEnumerator OneEnemyFiresAVolley()
         {
