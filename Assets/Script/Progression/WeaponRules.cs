@@ -17,8 +17,8 @@ namespace TreadShred.Progression
     /// </summary>
     public static class WeaponRules
     {
-        public const string SwitchHint = "TAP TO SWITCH";
-        public const float SwitchHintSeconds = 6f;
+        /// <summary>D-038-AC-04: inside the weapon button, under the weapon's name, whenever there is a choice.</summary>
+        public const string SwitchHint = "(TAP TO CHANGE)";
 
         public static string Name(Weapon weapon)
         {

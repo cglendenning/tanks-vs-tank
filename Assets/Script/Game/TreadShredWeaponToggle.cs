@@ -1,23 +1,26 @@
+using System.Linq;
 using TreadShred.Economy;
 using TreadShred.Progression;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// D-038, D-043: the weapon button under the pause button names the weapon in hand, with a running rental's missions
-/// left. Tapping it pauses the game and slides out the drawer: the cannon, the mission's own special weapon and every
-/// weapon the player has used, each available, rented or LOCKED with its price. A tap puts a weapon in hand and slides
-/// the drawer back; a locked one opens its rental offer. A cannon-only mission shows nothing before any special weapon
-/// has been used. The HUD's touches never fire (PlayerMoverment skips touches over UI).
+/// D-038, D-043: the weapon button under the pause button names the weapon in hand, with (TAP TO CHANGE) inside it
+/// and a running rental's missions left under it. Tapping it pauses the game and slides the other weapons out in one
+/// row beside it, just under the HUD bar, so the battlefield stays clear: the cannon, the mission's own special weapon
+/// and every weapon the player has used, each available, rented or LOCKED with its price. A tap puts a weapon in hand
+/// and slides the row back; a locked one opens its rental offer. A cannon-only mission shows nothing before any
+/// special weapon has been used. The HUD's touches never fire (PlayerMoverment skips touches over UI).
 /// </summary>
 public sealed class TreadShredWeaponToggle : MonoBehaviour
 {
-    private const float ButtonWidth = 300f;
-    private const float RowWidth = 400f;
-    private const float RowHeight = 78f;
-    private const float RowGap = 8f;
+    private const float ButtonWidth = 320f;
+    private const float ButtonHeight = 96f;
+    private const float CellWidth = 290f;
+    private const float CellGap = 10f;
+    private const float Left = 24f;
+    private const float Top = -170f;
     private const float SlideSeconds = 0.18f;
-    private const float ClosedX = -RowWidth - 60f;
 
     private static TreadShredWeaponToggle current;
 
@@ -27,13 +30,12 @@ public sealed class TreadShredWeaponToggle : MonoBehaviour
     private Button weaponButton;
     private RectTransform barBack;
     private RectTransform barFill;
-    private Text left;
-    private Text hint;
+    private Text missionsLeft;
     private GameObject blocker;
     private RectTransform drawer;
-    private float shownAt = -1f;
     private bool open;
     private float slide;
+    private bool started;
 
     /// <summary>Puts the weapon button on the HUD; returns null when there is nothing to choose (D-038-AC-01).</summary>
     public static TreadShredWeaponToggle Attach(PlayerMoverment player, Weapon missionWeapon, Font font)
@@ -49,10 +51,10 @@ public sealed class TreadShredWeaponToggle : MonoBehaviour
         }
 
         var root = TreadShredUi.CreateRect("TreadShredWeaponToggle", (RectTransform)canvas.transform, Vector2.zero,
-            new Vector2(RowWidth, 150f), typeof(RectTransform));
+            new Vector2(ButtonWidth, 130f), typeof(RectTransform));
         root.anchorMin = root.anchorMax = new Vector2(0f, 1f);
         root.pivot = new Vector2(0f, 1f);
-        root.anchoredPosition = new Vector2(24f, -170f);
+        root.anchoredPosition = new Vector2(Left, Top);
         current = root.gameObject.AddComponent<TreadShredWeaponToggle>();
         current.Build(root, (RectTransform)canvas.transform, player, missionWeapon, font);
         return current;
@@ -98,43 +100,53 @@ public sealed class TreadShredWeaponToggle : MonoBehaviour
         player = owner;
         missionWeapon = weapon;
         font = hudFont;
-        weaponButton = TreadShredUi.CreateButton(string.Empty, root, Vector2.zero, new Vector2(ButtonWidth, 70f), 28, font, Toggle);
+        weaponButton = Cell(root, ButtonWidth, WeaponRules.SwitchHint, Toggle, out _);
         Place((RectTransform)weaponButton.transform, 0f, 0f);
-        barBack = Bar(root, new Color(1f, 1f, 1f, 0.25f));
-        Place(barBack, 0f, -78f);
-        barFill = Bar(barBack, TreadShredUi.AccentColor);
-        left = TreadShredUi.CreateText(string.Empty, root, Vector2.zero, new Vector2(140f, 30f), 22, font);
-        left.alignment = TextAnchor.MiddleLeft;
-        Place(left.rectTransform, ButtonWidth * 0.72f, -70f);
-        hint = TreadShredUi.CreateText(WeaponRules.SwitchHint, root, Vector2.zero, new Vector2(ButtonWidth, 30f), 22, font);
-        hint.color = TreadShredUi.DetailColor;
-        Place(hint.rectTransform, 0f, -100f);
+        barBack = Bar(root, ButtonWidth * 0.62f, new Color(1f, 1f, 1f, 0.25f));
+        Place(barBack, 0f, -ButtonHeight - 10f);
+        barFill = Bar(barBack, ButtonWidth * 0.62f, TreadShredUi.AccentColor);
+        missionsLeft = TreadShredUi.CreateText(string.Empty, root, Vector2.zero, new Vector2(ButtonWidth * 0.36f, 30f), 22, font);
+        missionsLeft.alignment = TextAnchor.MiddleLeft;
+        Place(missionsLeft.rectTransform, ButtonWidth * 0.66f, -ButtonHeight);
 
-        // While the drawer is open, a clear layer over the whole HUD takes stray taps and closes it.
+        // While the row is out, a clear layer over the rest of the HUD takes stray taps and closes it; the row sits
+        // beside that layer, not inside it, and slides out from behind the button.
         blocker = TreadShredUi.CreateRect("TreadShredWeaponDrawerBlocker", canvas, Vector2.zero, Vector2.zero,
             typeof(RectTransform), typeof(Image), typeof(Button)).gameObject;
         var blockerRect = (RectTransform)blocker.transform;
         blockerRect.anchorMin = Vector2.zero;
         blockerRect.anchorMax = Vector2.one;
         blockerRect.offsetMin = blockerRect.offsetMax = Vector2.zero;
-        blocker.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.35f);
+        blocker.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
         blocker.GetComponent<Button>().onClick.AddListener(() => Close(true));
-        // The drawer sits beside the blocker, not inside it, so the blocker holds no buttons of its own.
-        drawer = TreadShredUi.CreateRect("TreadShredWeaponDrawer", canvas, Vector2.zero, new Vector2(RowWidth, 10f),
+        drawer = TreadShredUi.CreateRect("TreadShredWeaponDrawer", canvas, Vector2.zero, new Vector2(10f, ButtonHeight),
             typeof(RectTransform));
         drawer.anchorMin = drawer.anchorMax = drawer.pivot = new Vector2(0f, 1f);
         blocker.SetActive(false);
         drawer.gameObject.SetActive(false);
-
-        // The hint's seconds start when play does, after the countdown (time stopped until then).
-        shownAt = -1f;
+        // The countdown already holds the game still; the button appears when play starts, so the row never opens
+        // over the countdown's title.
+        weaponButton.gameObject.SetActive(false);
         Redraw();
     }
 
-    private static RectTransform Bar(RectTransform parent, Color color)
+    // A weapon button or cell: the name on top, a second line under it (the instruction, or the rental's status).
+    private Button Cell(RectTransform parent, float width, string second, UnityEngine.Events.UnityAction tap, out Text secondLine)
     {
-        var bar = TreadShredUi.CreateRect("RentalBar", parent, Vector2.zero, new Vector2(ButtonWidth * 0.68f, 10f),
-            typeof(RectTransform), typeof(Image));
+        var button = TreadShredUi.CreateButton(string.Empty, parent, Vector2.zero, new Vector2(width, ButtonHeight), 30, font, tap);
+        var name = button.GetComponentInChildren<Text>();
+        name.rectTransform.sizeDelta = new Vector2(width - 18f, 46f);
+        name.rectTransform.anchoredPosition = new Vector2(0f, 17f);
+        secondLine = TreadShredUi.CreateText(second, (RectTransform)button.transform, new Vector2(0f, -24f),
+            new Vector2(width - 18f, 32f), 24, font);
+        secondLine.raycastTarget = false;
+        return button;
+    }
+
+    private static RectTransform Bar(RectTransform parent, float width, Color color)
+    {
+        var bar = TreadShredUi.CreateRect("RentalBar", parent, Vector2.zero, new Vector2(width, 10f), typeof(RectTransform),
+            typeof(Image));
         bar.GetComponent<Image>().color = color;
         bar.GetComponent<Image>().raycastTarget = false;
         return bar;
@@ -148,26 +160,29 @@ public sealed class TreadShredWeaponToggle : MonoBehaviour
 
     private Weapon InHand => player != null ? player.WeaponInHand : missionWeapon;
 
-    private int RentalLeft(Weapon weapon) => TreadShredProgress.Ensure().Progression.RentalLeft(weapon);
-
     private void Redraw()
     {
         var inHand = InHand;
         TreadShredUi.SetLabel(weaponButton, WeaponRules.Name(inHand));
         TreadShredUi.StylePrimary(weaponButton);
         // D-043-AC-06: the rental's missions left under the button while its weapon is in hand.
-        var rental = inHand != missionWeapon ? RentalLeft(inHand) : 0;
-        barBack.gameObject.SetActive(rental > 0);
-        left.gameObject.SetActive(rental > 0);
+        var rental = inHand != missionWeapon ? TreadShredProgress.Ensure().Progression.RentalLeft(inHand) : 0;
+        barBack.gameObject.SetActive(started && rental > 0);
+        missionsLeft.gameObject.SetActive(started && rental > 0);
         if (rental > 0)
         {
-            barFill.anchorMin = barFill.anchorMax = barFill.pivot = new Vector2(0f, 0.5f);
-            barFill.sizeDelta = new Vector2(barBack.sizeDelta.x * WeaponRental.BarFill(rental), barBack.sizeDelta.y);
-            barFill.anchoredPosition = Vector2.zero;
-            left.text = WeaponRental.Left(rental);
+            ShowFill(barFill, barBack.sizeDelta.x, rental);
+            missionsLeft.text = WeaponRental.Left(rental);
         }
         if (open)
-            BuildRows();
+            BuildRow();
+    }
+
+    private static void ShowFill(RectTransform fill, float width, int missions)
+    {
+        fill.anchorMin = fill.anchorMax = fill.pivot = new Vector2(0f, 0.5f);
+        fill.sizeDelta = new Vector2(width * WeaponRental.BarFill(missions), fill.sizeDelta.y);
+        fill.anchoredPosition = Vector2.zero;
     }
 
     private void Toggle()
@@ -184,9 +199,11 @@ public sealed class TreadShredWeaponToggle : MonoBehaviour
         Time.timeScale = 0f;
         blocker.SetActive(true);
         drawer.gameObject.SetActive(true);
-        blocker.transform.SetAsLastSibling();
-        drawer.SetAsLastSibling();
-        BuildRows();
+        // Under the button and above the rest of the HUD: the clear layer, then the row.
+        var index = transform.GetSiblingIndex();
+        blocker.transform.SetSiblingIndex(index);
+        drawer.SetSiblingIndex(index + 1);
+        BuildRow();
         TreadShredBack.Opened(this, () => Close(true));
     }
 
@@ -200,47 +217,46 @@ public sealed class TreadShredWeaponToggle : MonoBehaviour
             Time.timeScale = 1f;
     }
 
-    // D-038-AC-02, D-043-AC-02: one row per weapon in the drawer.
-    private void BuildRows()
+    // D-038-AC-02, D-043-AC-02: one cell per weapon other than the one in hand, in one row.
+    private void BuildRow()
     {
-        foreach (Transform row in drawer)
-            Destroy(row.gameObject);
-        var entries = TreadShredProgress.Ensure().Progression.Drawer(missionWeapon);
+        foreach (Transform cell in drawer)
+            Destroy(cell.gameObject);
+        var entries = TreadShredProgress.Ensure().Progression.Drawer(missionWeapon).Where(e => e.Weapon != InHand).ToList();
         var store = TreadShredStore.Ensure();
         var plan = store.PlanFor(WeaponRental.CostGems);
         var price = plan.CanSpendNow ? WeaponRental.CostGems + " GEMS" : store.PriceFor(plan.PackToBuy) ?? WeaponRental.CostGems + " GEMS";
-        var top = (RectTransform)transform;
-        var y = top.anchoredPosition.y - 120f;
         for (var i = 0; i < entries.Count; i++)
         {
             var entry = entries[i];
-            var row = TreadShredUi.CreateButton(WeaponRules.Name(entry.Weapon), drawer, Vector2.zero, new Vector2(RowWidth, RowHeight),
-                28, font, () => Choose(entry));
-            Place((RectTransform)row.transform, 0f, -i * (RowHeight + RowGap));
-            var label = row.GetComponentInChildren<Text>();
-            label.rectTransform.offsetMin = new Vector2(16f, 26f);
-            label.rectTransform.offsetMax = new Vector2(-16f, -4f);
-            var status = TreadShredUi.CreateText(Status(entry, price), (RectTransform)row.transform, Vector2.zero,
-                new Vector2(RowWidth - 32f, 26f), 20, font);
-            status.rectTransform.anchorMin = status.rectTransform.anchorMax = status.rectTransform.pivot = new Vector2(0.5f, 0f);
-            status.rectTransform.anchoredPosition = new Vector2(0f, 6f);
+            var cell = Cell(drawer, CellWidth, Status(entry, price), () => Choose(entry), out var status);
+            TreadShredUi.SetLabel(cell, WeaponRules.Name(entry.Weapon));
+            Place((RectTransform)cell.transform, i * (CellWidth + CellGap), 0f);
             status.color = entry.State == DrawerState.Locked ? TreadShredUi.TitleColor : TreadShredUi.DetailColor;
-            status.raycastTarget = false;
-            if (entry.Weapon == InHand && entry.State != DrawerState.Locked)
-                TreadShredUi.StylePrimary(row);
-            else
-                TreadShredUi.StyleStandard(row);
+            TreadShredUi.StyleStandard(cell);
+            if (entry.State == DrawerState.Rented)
+            {
+                var back = Bar((RectTransform)cell.transform, CellWidth - 40f, new Color(1f, 1f, 1f, 0.25f));
+                back.anchorMin = back.anchorMax = back.pivot = new Vector2(0.5f, 0f);
+                back.anchoredPosition = new Vector2(0f, 4f);
+                back.sizeDelta = new Vector2(CellWidth - 40f, 5f);
+                var fill = Bar(back, CellWidth - 40f, TreadShredUi.AccentColor);
+                fill.sizeDelta = new Vector2(fill.sizeDelta.x, 5f);
+                ShowFill(fill, CellWidth - 40f, entry.MissionsLeft);
+            }
         }
-        drawer.anchoredPosition = new Vector2(Mathf.Lerp(ClosedX, 24f, slide), y);
+        drawer.sizeDelta = new Vector2(Mathf.Max(10f, entries.Count * (CellWidth + CellGap)), ButtonHeight);
+        drawer.anchoredPosition = new Vector2(SlidX(), Top);
     }
 
-    private string Status(DrawerEntry entry, string price)
+    // Out: beside the button; in: tucked behind it.
+    private float SlidX() => Mathf.Lerp(Left, Left + ButtonWidth + CellGap, slide);
+
+    private static string Status(DrawerEntry entry, string price)
     {
         if (entry.State == DrawerState.Locked)
             return WeaponRental.LockedLabel + " · " + price;
-        if (entry.State == DrawerState.Rented)
-            return WeaponRental.Left(entry.MissionsLeft);
-        return entry.Weapon == InHand ? "IN HAND" : string.Empty;
+        return entry.State == DrawerState.Rented ? WeaponRental.Left(entry.MissionsLeft) : string.Empty;
     }
 
     private void Choose(DrawerEntry entry)
@@ -260,17 +276,18 @@ public sealed class TreadShredWeaponToggle : MonoBehaviour
 
     private void Update()
     {
-        if (shownAt < 0f && Time.timeScale > 0f)
-            shownAt = Time.unscaledTime;
-        // The open drawer replaces the hint.
-        hint.gameObject.SetActive(!open && missionWeapon != Weapon.Cannon
-            && (shownAt < 0f || Time.unscaledTime - shownAt < WeaponRules.SwitchHintSeconds));
-        // D-038-AC-02: the drawer slides out from the left edge and back.
+        if (!started && Time.timeScale > 0f)
+        {
+            started = true;
+            weaponButton.gameObject.SetActive(true);
+            Redraw();
+        }
+        // D-038-AC-02: the row slides out from behind the button and back.
         var target = open ? 1f : 0f;
         if (Mathf.Approximately(slide, target))
             return;
         slide = Mathf.MoveTowards(slide, target, Time.unscaledDeltaTime / SlideSeconds);
-        drawer.anchoredPosition = new Vector2(Mathf.Lerp(ClosedX, 24f, slide), drawer.anchoredPosition.y);
+        drawer.anchoredPosition = new Vector2(SlidX(), Top);
         if (!open && Mathf.Approximately(slide, 0f))
         {
             blocker.SetActive(false);

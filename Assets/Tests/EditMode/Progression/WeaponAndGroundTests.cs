@@ -21,7 +21,7 @@ namespace TreadShred.Progression.Tests
             StringAssert.Contains("if (TreadShredProgress.Ensure().Progression.Drawer(missionWeapon).Count < 2)\n            return null;", Script("Game/TreadShredWeaponToggle.cs"));
         }
 
-        [Test(Description = "D-038-AC-02: the drawer names the cannon and the special weapons from R-WEAPONS, in the order of the tank's weapon types, the one in hand in the accent style")]
+        [Test(Description = "D-038-AC-02: the drawer names the cannon and the special weapons from R-WEAPONS, in the order of the tank's weapon types, the one in hand on the accent-styled button")]
         public void ToggleNamesBothWeapons()
         {
             Assert.AreEqual(new[] { "CANNON", "ARC SHOT", "TRIPLE SHOT", "SEEKER" },
@@ -34,7 +34,7 @@ namespace TreadShred.Progression.Tests
             Assert.Less(types.IndexOf("banvong", System.StringComparison.Ordinal), types.IndexOf("bandan3", System.StringComparison.Ordinal));
             Assert.Less(types.IndexOf("bandan3", System.StringComparison.Ordinal), types.IndexOf("bandanduoi", System.StringComparison.Ordinal),
                 "Weapon casts from PlayerType, so the orders must match");
-            StringAssert.Contains("TreadShredUi.StylePrimary(row);", Script("Game/TreadShredWeaponToggle.cs"));
+            StringAssert.Contains("TreadShredUi.StylePrimary(weaponButton);", Script("Game/TreadShredWeaponToggle.cs"), "the weapon in hand is the accent-styled button");
         }
 
         [Test(Description = "D-038-AC-03: a tap in the drawer switches weapons, and only the cannon, the mission's weapon or a rented one can be in hand")]
@@ -48,11 +48,12 @@ namespace TreadShred.Progression.Tests
             StringAssert.Contains("if (EventSystem.current.IsPointerOverGameObject(touch.fingerId) == false)", player, "a touch on the HUD never fires");
         }
 
-        [Test(Description = "D-038-AC-04: TAP TO SWITCH shows for the first seconds, and the toggle hides while paused and once the mission ends")]
+        [Test(Description = "D-038-AC-04: (TAP TO CHANGE) sits inside the weapon button whenever there is a choice, and the button hides while paused and once the mission ends")]
         public void ToggleHintAndHiding()
         {
-            Assert.AreEqual(("TAP TO SWITCH", 6f), (WeaponRules.SwitchHint, WeaponRules.SwitchHintSeconds));
-            StringAssert.Contains("Time.unscaledTime - shownAt < WeaponRules.SwitchHintSeconds", Script("Game/TreadShredWeaponToggle.cs"));
+            Assert.AreEqual("(TAP TO CHANGE)", WeaponRules.SwitchHint);
+            StringAssert.Contains("weaponButton = Cell(root, ButtonWidth, WeaponRules.SwitchHint, Toggle, out _);", Script("Game/TreadShredWeaponToggle.cs"),
+                "the instruction sits inside the weapon button");
             var pause = Script("ManagerScore/ManagerButton.cs");
             StringAssert.Contains("TreadShredWeaponToggle.SetVisible(false);", pause);
             StringAssert.Contains("TreadShredWeaponToggle.SetVisible(true);", pause);

@@ -84,7 +84,7 @@ namespace TreadShred.Screens.Tests
             return new ProgressionState { clearedMissions = new[] { (1L << 40) - 1, 0L, 0L }, usedWeapons = WeaponRental.Bit(weapon), rentals = rentals };
         }
 
-        [UnityTest(Description = "D-038-AC-02: on the triple shot's map with the arc shot used, the weapon button names the triple shot; tapping it pauses on a drawer of CANNON, TRIPLE SHOT (in hand) and ARC SHOT (LOCKED · 100 GEMS), and choosing the cannon puts it in hand and resumes (D-038-AC-03), on every screen shape (D-038-AC-05)")]
+        [UnityTest(Description = "D-038-AC-02: on the triple shot's map with the arc shot used, the weapon button names the triple shot; tapping it pauses on one row beside it of CANNON and ARC SHOT (LOCKED · 100 GEMS), every name legible, and choosing the cannon puts it in hand and resumes (D-038-AC-03), on every screen shape (D-038-AC-05)")]
         public IEnumerator DrawerChoosesAWeapon()
         {
             var findings = new List<Finding>();
@@ -101,7 +101,19 @@ namespace TreadShred.Screens.Tests
                 Under("TreadShredWeaponToggle", "TRIPLE SHOT").onClick.Invoke();
                 yield return new WaitForSecondsRealtime(0.4f);
                 Assert.AreEqual(0f, Time.timeScale, "the drawer pauses the game");
-                CollectionAssert.IsSupersetOf(Texts(), new[] { "CANNON", "TRIPLE SHOT", "ARC SHOT", "IN HAND", "LOCKED · 100 GEMS" });
+                CollectionAssert.IsSupersetOf(Texts(), new[] { "CANNON", "TRIPLE SHOT", "ARC SHOT", "LOCKED · 100 GEMS" });
+                // D-038-AC-02, D-038-AC-05: one row level with the button, every weapon's name visible.
+                var weaponButton = (RectTransform)Under("TreadShredWeaponToggle", "TRIPLE SHOT").transform;
+                var cells = GameObject.Find("TreadShredWeaponDrawer").GetComponentsInChildren<Button>();
+                Assert.AreEqual(2, cells.Length, "the cannon and the arc shot beside the triple shot in hand");
+                foreach (var cell in cells)
+                {
+                    var name = cell.GetComponentInChildren<Text>();
+                    Assert.IsTrue(name.text.Length > 0 && name.rectTransform.rect.height >= 20f && name.rectTransform.rect.width >= 100f,
+                        $"'{name.text}' is legible ({name.rectTransform.rect.size})");
+                    Assert.AreEqual(weaponButton.position.y, cell.transform.position.y, 1f, "in the button's row");
+                    Assert.Greater(cell.transform.position.x, weaponButton.position.x, "beside the button");
+                }
                 yield return Audit("WEAPON DRAWER", findings);
 
                 Under("TreadShredWeaponDrawer", "CANNON").onClick.Invoke();
