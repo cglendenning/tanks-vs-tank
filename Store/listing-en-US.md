@@ -12,10 +12,10 @@ against the build before every submission. Lines marked (iOS) appear only on the
 - **App Store promotional text (170):** Become unstoppable. Install and you're in battle within seconds, with your first win under a minute away. No ads, no sign-up. Every win upgrades your tank for good.
 - **App Store keywords (100):** offline,games,wifi,tanks,shooter,army,war,military,combat,arcade,action,armor,blast,battles,tactical
 
-## What's new (1.9.5)
+## What's new (1.9.6)
 
-- **App Store What's New:** Tread Shred 1.9.5: a one-time Starter Pack for new commanders. Switch between your cannon and your mission's special weapon with one tap. The ground changes every five missions, so you can see how far you've come. Your upgrades now show on screen while you fight, and the mission list opens on your next mission. Fixes: the shell that arcs over walls now takes one hit of armor, and your shields clear when your tank is destroyed.
-- **Google Play release notes:** A one-time Starter Pack for new commanders. Switch between your cannon and your mission's special weapon with one tap. New ground every five missions. Your upgrades show on screen while you fight, and the mission list opens on your next mission. Fixes: the shell that arcs over walls takes one hit of armor, and shields clear when your tank is destroyed.
+- **App Store What's New:** Tread Shred 1.9.6: Veteran and Elite now fight back. Enemies return in waves, spot you from farther away and fire volleys that mix cannon, triple shot, arc shot and seeker, and Elite gunners lead their shots. Clear mission 40 or 80 to earn your promotion, with a full military march. Once an upgrade is maxed, gems buy supply instead: extra armor, firepower, speed or Overdrive for your next missions. Revives now wait on READY? with a 3-2-1 countdown and clear every shell in the air. New in Settings: RESET GAME starts your campaign over and keeps your best score. Fix: the game stays paused while the store is open.
+- **Google Play release notes:** Veteran and Elite fight back: enemy waves, longer sight and mixed-weapon volleys, and Elite gunners lead their shots. Earn a promotion at missions 40 and 80. Maxed upgrades turn gems into supply: armor, firepower, speed or Overdrive. Revives wait on READY? with a 3-2-1 countdown and clear every shell in the air. RESET GAME in Settings keeps your best score. Fix: the game stays paused while the store is open.
 
 ## Description
 
