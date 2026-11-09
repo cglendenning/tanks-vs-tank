@@ -82,6 +82,11 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
 
         TreadShredUi.CreateButton("BACK", backdrop, new Vector2(0f, -390f), new Vector2(440f, 120f), 52, font, Close);
 
+        // D-014-AC-04: the installed version beside BACK, so a player or reviewer can name the build they have.
+        var version = TreadShredUi.CreateText(VersionLabel(Application.version), backdrop, new Vector2(-ColumnOffset - 60f, -390f),
+            new Vector2(400f, 36f), 24, font);
+        version.color = TreadShredUi.DetailColor;
+
         var store = TreadShredStore.Ensure();
         store.Wallet.BalanceChanged += OnBalanceChanged;
         Refresh();
@@ -89,6 +94,9 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
         if (store.StarterPackOnSale)
             TreadShredAnalytics.Log(GameEvents.OfferShown("starter_pack", store.Wallet.Balance));
     }
+
+    /// <summary>D-014-AC-04: the build sets Application.version from the release version, so this matches the store.</summary>
+    public static string VersionLabel(string version) => "VERSION " + version;
 
     private Button CreateToggleRow(string label, float y, RectTransform parent, System.Action toggle)
     {
