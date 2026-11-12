@@ -114,7 +114,7 @@ public class BulletEmnemy : MonoBehaviour {
        {
            case EnemyWeapon.TripleShot:
                foreach (var angle in new[] { -TierCombat.TripleSpreadDegrees, 0f, TierCombat.TripleSpreadDegrees })
-                   Launch(Shell(ref cannonShell, "BulletEmnemy"), Quaternion.AngleAxis(angle, Vector3.up) * aim * speed);
+                   Launch(Shell(ref cannonShell, "BulletEmnemy"), Quaternion.AngleAxis(angle, Vector3.up) * aim * speed, straight: true);
                break;
            case EnemyWeapon.ArcShot:
                Lob(Shell(ref arcShell, "BulletRed"), combat);
@@ -127,29 +127,37 @@ public class BulletEmnemy : MonoBehaviour {
                break;
            default:
                // The cannon, and the seeker on a map without a navigation mesh to steer it.
-               Launch(Shell(ref cannonShell, "BulletEmnemy"), aim * speed);
+               Launch(Shell(ref cannonShell, "BulletEmnemy"), aim * speed, straight: true);
                break;
        }
    }
 
    Vector3 Barrel => (pointbullet.position - tower.position).normalized;
 
-   // D-046-AC-03: the barrel's line, or on Elite the line to where the tank will be when the shell arrives, at the
-   // barrel's elevation.
+   // D-046-AC-03/04: the line to the middle of the tank's hit box, where it is, or on Elite where it will be when the
+   // shell arrives. Not the barrel's level line: a tall turret's (the red tanks') passes over the tank (mission 52).
    Vector3 Aim(TierCombat combat, float speed)
    {
-       var barrel = Barrel;
-       if (!combat.LeadsShots || PlayerMoverment.instance == null)
-           return barrel;
        var from = pointbullet.position;
-       var target = player.transform.position;
-       var velocity = PlayerMoverment.instance.Velocity;
-       var ahead = TierCombat.Lead(from.x, from.z, target.x, target.z, velocity.x, velocity.z, speed);
-       var flat = new Vector3(ahead.x - from.x, 0f, ahead.z - from.z);
-       if (flat.sqrMagnitude < 0.0001f)
-           return barrel;
-       var level = new Vector2(barrel.x, barrel.z).magnitude;
-       return (flat.normalized * level + Vector3.up * barrel.y).normalized;
+       var hitBox = HitBox();
+       var target = hitBox.center;
+       if (combat.LeadsShots && PlayerMoverment.instance != null)
+       {
+           var velocity = PlayerMoverment.instance.Velocity;
+           var ahead = TierCombat.Lead(from.x, from.z, target.x, target.z, velocity.x, velocity.z, speed);
+           target = new Vector3(ahead.x, target.y, ahead.z);
+       }
+       var line = target - from;
+       return line.sqrMagnitude < 0.0001f ? Barrel : line.normalized;
+   }
+
+   // The tank's hit box: the trigger its shells strike (Bullet), or a tank-sized box at its position without one.
+   Bounds HitBox()
+   {
+       foreach (var collider in player.GetComponentsInChildren<Collider>())
+           if (collider.isTrigger && collider.enabled)
+               return collider.bounds;
+       return new Bounds(player.transform.position + Vector3.up * 0.9f, new Vector3(1.5f, 1.8f, 1.5f));
    }
 
    // D-046-AC-04: the arc shot lobs over walls and comes down where the tank is (or, on Elite, will be).
@@ -174,7 +182,9 @@ public class BulletEmnemy : MonoBehaviour {
        Destroy(shell, 4f);
    }
 
-   GameObject Launch(GameObject prefab, Vector3 velocity)
+   // Shells keep the height they leave the muzzle at (locked on the prefab); a straight one aimed down at the tank is
+   // let descend, and is gone when it reaches the ground past a tank that moved, or after 4 s.
+   GameObject Launch(GameObject prefab, Vector3 velocity, bool straight = false)
    {
        if (prefab == null)
            return null;
@@ -183,9 +193,27 @@ public class BulletEmnemy : MonoBehaviour {
        TreadShredEnemyShells.Fired(shell);
        var body = shell.GetComponent<Rigidbody>();
        if (body != null)
+       {
+           if (straight)
+               body.constraints &= ~RigidbodyConstraints.FreezePositionY;
            body.linearVelocity = velocity;
+       }
+       if (straight)
+       {
+           // Descending, it crosses other enemy tanks' height: it passes through them instead of striking or shoving them.
+           var shellCollider = shell.GetComponent<Collider>();
+           if (shellCollider != null)
+               foreach (var enemy in FindObjectsByType<BulletEmnemy>(FindObjectsSortMode.None))
+                   foreach (var enemyCollider in enemy.GetComponentsInChildren<Collider>())
+                       Physics.IgnoreCollision(shellCollider, enemyCollider);
+           var drop = pointbullet.position.y - HitBox().min.y - ShellClearance;
+           Destroy(shell, velocity.y < -0.01f ? Mathf.Min(drop / -velocity.y, StraightLifetime) : StraightLifetime);
+       }
        return shell;
    }
+
+   const float ShellClearance = 0.3f;
+   const float StraightLifetime = 4f;
 
    bool OnNavMesh() => UnityEngine.AI.NavMesh.SamplePosition(pointbullet.position, out _, 2f, UnityEngine.AI.NavMesh.AllAreas);
 
