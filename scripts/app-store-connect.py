@@ -218,7 +218,7 @@ def create_profile(api, kind, certificate_serial, udid=None, identifier=BUNDLE_I
 def listing_copy():
     """The approved App Store copy (store_copy.py): the (Android) lines are left out, What's New included."""
     copy = store_copy.copy_for("ios")
-    return {key: copy[key] for key in ("subtitle", "promotionalText", "keywords", "description", "whatsNew")}
+    return {key: copy[key] for key in ("name", "subtitle", "promotionalText", "keywords", "description", "whatsNew")}
 
 
 def listing(api, version):
