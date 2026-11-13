@@ -250,7 +250,7 @@ def listing(api, version):
     for loc in api.call("GET", f"/v1/appInfos/{info['id']}/appInfoLocalizations?limit=50")["data"]:
         if loc["attributes"]["locale"] == "en-US":
             api.call("PATCH", f"/v1/appInfoLocalizations/{loc['id']}", {"data": {"type": "appInfoLocalizations", "id": loc["id"],
-                     "attributes": {"name": "Tread Shred", "subtitle": copy["subtitle"]}}})
+                     "attributes": {"name": copy["name"], "subtitle": copy["subtitle"]}}})
         else:
             api.call("DELETE", f"/v1/appInfoLocalizations/{loc['id']}")
             removed += 1

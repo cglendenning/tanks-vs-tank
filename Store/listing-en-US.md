@@ -6,16 +6,16 @@ against the build before every submission. Lines marked (iOS) appear only on the
 
 ## Both stores
 
-- **Name / title:** Tread Shred
+- **Name / title:** Tread Shred: Offline Tank Game
 - **App Store subtitle (30):** Tank battle in seconds. No ads
 - **Google Play short description (80):** In battle in seconds. Blast tanks, keep every upgrade, climb the board. No ads.
 - **App Store promotional text (170):** Become unstoppable. Install and you're in battle within seconds, with your first win under a minute away. No ads, no sign-up. Every win upgrades your tank for good.
 - **App Store keywords (100):** offline,games,wifi,tanks,shooter,army,war,military,combat,arcade,action,armor,blast,battles,tactical
 
-## What's new (1.9.6)
+## What's new (1.9.7)
 
-- **App Store What's New:** Tread Shred 1.9.6: Veteran and Elite now fight back. Enemies return in waves, spot you from farther away and fire volleys that mix cannon, triple shot, arc shot and seeker, and Elite gunners lead their shots. Clear mission 40 or 80 to earn your promotion, with a full military march. Once an upgrade is maxed, gems buy supply instead: extra armor, firepower, speed or Overdrive for your next missions. Revives now wait on READY? with a 3-2-1 countdown and clear every shell in the air. New in Settings: RESET GAME starts your campaign over and keeps your best score. Fix: the game stays paused while the store is open.
-- **Google Play release notes:** Veteran and Elite fight back: enemy waves, longer sight and mixed-weapon volleys, and Elite gunners lead their shots. Earn a promotion at missions 40 and 80. Maxed upgrades turn gems into supply: armor, firepower, speed or Overdrive. Revives wait on READY? with a 3-2-1 countdown and clear every shell in the air. RESET GAME in Settings keeps your best score. Fix: the game stays paused while the store is open.
+- **App Store What's New:** Tread Shred 1.9.7: the game's version now shows in Settings. Fix: on Veteran and Elite, the red tanks' cannon and triple shots now hit your tank instead of flying over it.
+- **Google Play release notes:** The game's version now shows in Settings. Fix: on Veteran and Elite, the red tanks' cannon and triple shots now hit your tank instead of flying over it.
 
 ## Description
 
