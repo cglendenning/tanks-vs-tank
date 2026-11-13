@@ -22,6 +22,10 @@ set -euo pipefail
 
 BUNDLE_ID="com.tgts.tanksvstank"
 KEY="TreadShredStoreCaptureMode"
+# social cuts organic short-form clips (TikTok, YouTube Shorts, Instagram Reels) from the captures: 9:16, the
+# hook over the first 3 s, NO ADS. JUST COMBAT. under the next 9 s, then the end card with the store badges,
+# with the game's music. SOCIAL_CLIPS lists one clip per line as capture-name|start-seconds|hook|action-seconds:
+# the footage after the hook, cut before the result screen's offers open over a short mission's win.
 # mode:seconds:name — modes are the constants in TreadShredStoreCaptureMode.cs.
 read -r -a SCENES <<<"${CAPTURE_SCENES:-17:40:trailer 11:7:upgrades 6:6:mission-select}"
 
@@ -114,6 +118,33 @@ assemble() {
 image_segment() {
   local img="$1" dur="$2" w="$3" h="$4" out="$5"
   ffmpeg -loglevel error -y -loop 1 -t "$dur" -i "$img" -vf "fps=30,scale=$w:$h,setsar=1" -an "${ENCODE[@]}" "$out"
+}
+
+# Owner direction 2026-11-13: daily organic clips. Hooks avoid apostrophes and colons (drawtext quoting).
+DEFAULT_SOCIAL="trailer|2|ONE TANK. NO MERCY.|9
+overdrive|2|OVERDRIVE. NOTHING SURVIVES|9
+firepower|2|MAX FIREPOWER|9
+speed|2|FULL SPEED. FULL SEND.|9
+armor|1|TAKE THE HIT. KEEP ROLLING.|4
+armored-redeploy|2|BACK FROM THE WRECK|7
+arc-shot|1|SHOOT OVER THE WALL|5
+triple-shot|1|THREE SHELLS AT ONCE|7
+seeker|1|SHELLS THAT HUNT|5"
+
+social() {
+  local clips="$1" endcard="$2" out="$3" work w=1080 h=1920 i=0 name start hook action
+  mkdir -p "$out"
+  work="$(mktemp -d)"
+  image_segment "$endcard" 2.5 "$w" "$h" "$work/end.mp4"
+  # The list comes in on descriptor 3: ffmpeg reads standard input and would swallow the remaining lines.
+  while IFS='|' read -r -u 3 name start hook action; do
+    [ -n "$name" ] || continue
+    i=$((i + 1))
+    segment "$clips/$name.mp4" "$start" 3 "$hook" "$w" "$h" zoom "$work/$i-hook.mp4"
+    segment "$clips/$name.mp4" "$(add "$start" 3)" "${action:-9}" "NO ADS. JUST COMBAT." "$w" "$h" zoom "$work/$i-body.mp4"
+    assemble "$out/$(printf %02d "$i")-$name.mp4" "$work/$i-hook.mp4" "$work/$i-body.mp4" "$work/end.mp4"
+  done 3<<<"${SOCIAL_CLIPS:-$DEFAULT_SOCIAL}"
+  rm -rf "$work"
 }
 
 value_ad() {
@@ -212,6 +243,7 @@ case "${1:-}" in
   capture) [ $# -eq 4 ] || { echo "usage: $0 capture <simulator-udid> <app> <clips-dir>" >&2; exit 2; }; capture "$2" "$3" "$4" ;;
   compose) [ $# -eq 3 ] || { echo "usage: $0 compose <clips-dir> <out-dir>" >&2; exit 2; }; compose "$2" "$3" ;;
   clips) [ $# -eq 3 ] || { echo "usage: $0 clips <clips-dir> <out-dir>" >&2; exit 2; }; clips "$2" "$3" ;;
+  social) [ $# -eq 4 ] || { echo "usage: $0 social <clips-dir> <endcard.jpg> <out-dir>" >&2; exit 2; }; social "$2" "$3" "$4" ;;
   value-ad) [ $# -eq 5 ] || { echo "usage: $0 value-ad <clips-dir> <opening.mp4> <endcard.jpg> <out-dir>" >&2; exit 2; }; value_ad "$2" "$3" "$4" "$5" ;;
   screenshots) [ $# -eq 5 ] || { echo "usage: $0 screenshots <simulator-udid> <app> <WxH> <out-dir>" >&2; exit 2; }; screenshots "$2" "$3" "$4" "$5" ;;
   *) sed -n '2,16p' "$0" >&2; exit 2 ;;
