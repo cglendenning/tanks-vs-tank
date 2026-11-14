@@ -37,7 +37,7 @@ public sealed class TreadShredWarChestOffer : MonoBehaviour
             return false;
         ShownThisSession = true;
         var root = TreadShredUi.CreateOverlay("TreadShredWarChestOffer", 110);
-        root.gameObject.AddComponent<TreadShredWarChestOffer>().Build(root, font, false);
+        root.gameObject.AddComponent<TreadShredWarChestOffer>().Build(root, font, WarChest.Subtitle, true);
         return true;
     }
 
@@ -52,10 +52,20 @@ public sealed class TreadShredWarChestOffer : MonoBehaviour
         var root = TreadShredUi.CreateOverlay("TreadShredWarChestOffer", 110);
         var offer = root.gameObject.AddComponent<TreadShredWarChestOffer>();
         offer.onClosed = closed;
-        offer.Build(root, font, true);
+        offer.Build(root, font, WarChest.AfterDriveSubtitle, false);
     }
 
-    private void Build(RectTransform root, Font font, bool afterDrive)
+    /// <summary>D-047-AC-06: the reveal from the upgrades screen's button: the purchase alone, then back to the upgrades.</summary>
+    public static void ShowToBuy(Font font)
+    {
+        if (!TreadShredStore.Ensure().WarChestOnSale || FindFirstObjectByType<TreadShredWarChestOffer>() != null)
+            return;
+        var root = TreadShredUi.CreateOverlay("TreadShredWarChestOffer", 110);
+        root.gameObject.AddComponent<TreadShredWarChestOffer>().Build(root, font, WarChest.Subtitle, false);
+    }
+
+    /// <param name="offerDrive">After a loss the free test drive leads; everywhere else the purchase stands alone.</param>
+    private void Build(RectTransform root, Font font, string subtitle, bool offerDrive)
     {
         this.font = font;
         var store = TreadShredStore.Ensure();
@@ -67,7 +77,7 @@ public sealed class TreadShredWarChestOffer : MonoBehaviour
         TreadShredUi.StylePanel(panel.gameObject);
         TreadShredUi.CreateText(WarChest.Title, panel, new Vector2(0f, 420f), new Vector2(1400f, 100f), 84, font).color =
             TreadShredUi.TitleColor;
-        TreadShredUi.CreateText(afterDrive ? WarChest.AfterDriveSubtitle : WarChest.Subtitle, panel, new Vector2(0f, 352f),
+        TreadShredUi.CreateText(subtitle, panel, new Vector2(0f, 352f),
             new Vector2(1400f, 40f), 30, font).color =
             TreadShredUi.AccentColor;
 
@@ -100,7 +110,7 @@ public sealed class TreadShredWarChestOffer : MonoBehaviour
         var yours = TreadShredUi.CreateText(WarChest.YoursFor(price), panel, new Vector2(0f, -198f), new Vector2(1400f, 68f), 56, font);
         yours.color = TreadShredUi.AccentColor;
         Hide(yours.gameObject);
-        if (afterDrive)
+        if (!offerDrive)
         {
             buyButton = TreadShredUi.CreateButton(WarChest.BuyButton(price), panel, new Vector2(0f, -300f), new Vector2(780f, 110f), 40,
                 font, Buy);

@@ -23,6 +23,7 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
     private readonly Dictionary<UpgradeTrack, Button> buttons = new Dictionary<UpgradeTrack, Button>();
     private UpgradePurchase shop;
     private Button undoButton;
+    private Button warChestButton;
     private Text overdriveState;
     private Button overdriveButton;
 
@@ -104,6 +105,11 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
         undoButton = TreadShredUi.CreateButton(ProgressionLabels.Undo, backdrop, new Vector2(-470f, -390f),
             new Vector2(300f, 100f), 30, font, Undo);
         TreadShredUi.ShrinkToFit(undoButton.GetComponentInChildren<Text>(), 18);
+        // D-047-AC-06: the War Chest stays for sale here, beside DONE, until it is bought.
+        warChestButton = TreadShredUi.CreateButton(WarChest.StoreButton(TreadShredStore.Ensure().PriceFor(GemCatalog.WarChest)), backdrop,
+            new Vector2(470f, -390f), new Vector2(330f, 100f), 30, font, () => TreadShredWarChestOffer.ShowToBuy(font));
+        TreadShredUi.StylePrimary(warChestButton);
+        TreadShredUi.ShrinkToFit(warChestButton.GetComponentInChildren<Text>(), 18);
 
         var store = TreadShredStore.Ensure();
         shop = new UpgradePurchase(Progression, store.Wallet, store.Purchases, OnUpgraded, ShowStatus);
@@ -225,6 +231,7 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
             buttons[track].interactable = !TreadShredStore.Ensure().PurchaseInProgress;
         }
         undoButton.gameObject.SetActive(shop != null && shop.CanUndo);
+        warChestButton.gameObject.SetActive(TreadShredStore.Ensure().WarChestOnSale);
         // D-045: Overdrive is supply too, so more can always be added.
         var overdrive = Progression.Supply(SupplyTrack.Overdrive);
         overdriveState.text = overdrive > 0

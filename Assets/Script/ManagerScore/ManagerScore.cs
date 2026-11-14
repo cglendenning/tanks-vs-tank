@@ -358,9 +358,13 @@ public class ManagerScore : MonoBehaviour
             TreadShredPromotion.Show(tier, TreadShredUi.FindFont(VictoryofFail), () => TreadShredStarterOffer.ShowIfOnSale(TreadShredUi.FindFont(VictoryofFail)));
         else
             TreadShredStarterOffer.ShowIfOnSale(TreadShredUi.FindFont(VictoryofFail));
+        // D-047-AC-07: a free War Chest mission ends here; its reveal takes the place of any other War Chest offer.
+        TreadShredFreeWarChest.MissionOver(TreadShredUi.FindFont(VictoryofFail));
         // D-047-AC-04: a lost mission is where the War Chest is offered, once a session, after the Starter Pack's window.
         if (FailureObj != null && FailureObj.activeSelf)
             TreadShredWarChestOffer.ShowAfterLoss(TreadShredUi.FindFont(VictoryofFail));
+        // D-047-AC-07: and on its variable schedule the free War Chest arrives on this screen.
+        TreadShredFreeWarChest.ResultScreen((RectTransform)VictoryofFail.transform, TreadShredUi.FindFont(VictoryofFail));
     }
     public void Failure()
     {

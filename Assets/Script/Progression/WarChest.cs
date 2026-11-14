@@ -38,6 +38,18 @@ namespace TreadShred.Progression
         public const string TestDriveNote = "ALL WAR CHEST GEAR ON";
         public const string AfterDriveSubtitle = "THAT WAS THE WAR CHEST. KEEP ALL OF IT";
 
+        /// <summary>D-047-AC-06: the upgrades screen's button, there whenever the chest is on sale.</summary>
+        public static string StoreButton(string price) => Title + (string.IsNullOrEmpty(price) ? string.Empty : ": " + price);
+
+        /// <summary>D-047-AC-07: the free War Chest that arrives on result screens, and what it says once taken.</summary>
+        public const string FreeButton = "FREE WAR CHEST";
+        public const string ArmedLabel = "ARMED: NEXT MISSION";
+        public const string FreeNote = "FREE WAR CHEST: ALL GEAR ON";
+
+        /// <summary>D-047-AC-07: the free War Chest arrives after a random 2 to 4 result screens.</summary>
+        public const int ArrivalMinScreens = 2;
+        public const int ArrivalMaxScreens = 4;
+
         /// <summary>The drive's countdown, in whole seconds rounded up: TEST DRIVE 0:30.</summary>
         public static string TestDriveClock(float secondsLeft)
         {
