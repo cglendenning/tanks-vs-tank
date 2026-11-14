@@ -32,6 +32,34 @@ namespace TreadShred.Progression
         /// <summary>How long each item takes to land; the close button waits for the last.</summary>
         public const float RevealSeconds = 0.45f;
 
+        /// <summary>D-047-AC-05: the free test drive: the lost mission again, with everything in the chest on.</summary>
+        public const float TestDriveSeconds = 30f;
+        public const string TestDriveButton = "TEST DRIVE IT FREE";
+        public const string TestDriveNote = "ALL WAR CHEST GEAR ON";
+        public const string AfterDriveSubtitle = "THAT WAS THE WAR CHEST. KEEP ALL OF IT";
+
+        /// <summary>The drive's countdown, in whole seconds rounded up: TEST DRIVE 0:30.</summary>
+        public static string TestDriveClock(float secondsLeft)
+        {
+            var seconds = Math.Max(0, (int)Math.Ceiling(secondsLeft));
+            return "TEST DRIVE " + seconds / 60 + ":" + (seconds % 60).ToString("00", CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>The weapons the chest holds, as WeaponRental bits.</summary>
+        public static int WeaponBits
+        {
+            get
+            {
+                var bits = 0;
+                foreach (var item in Items)
+                {
+                    if (IsWeapon(item.Track))
+                        bits |= WeaponRental.Bit(WeaponOf(item.Track));
+                }
+                return bits;
+            }
+        }
+
         public static readonly IReadOnlyList<WarChestItem> Items = new[]
         {
             new WarChestItem(SupplyTrack.Armor, 3),

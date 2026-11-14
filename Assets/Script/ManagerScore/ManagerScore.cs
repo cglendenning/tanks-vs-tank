@@ -286,6 +286,12 @@ public class ManagerScore : MonoBehaviour
         CountEmnemy--;
         if (CountEmnemy < 1)
         {
+            // D-047-AC-05: clearing the map ends a test drive before anything is counted.
+            if (TreadShredTestDrive.Active)
+            {
+                TreadShredTestDrive.Finish();
+                return;
+            }
             if (wf == false)
             {
                 TreadShredOverdriveBadge.Hide();
@@ -358,6 +364,12 @@ public class ManagerScore : MonoBehaviour
     }
     public void Failure()
     {
+        // D-047-AC-05: losing the tank ends a test drive before anything is counted.
+        if (TreadShredTestDrive.Active)
+        {
+            TreadShredTestDrive.Finish();
+            return;
+        }
 
 
 

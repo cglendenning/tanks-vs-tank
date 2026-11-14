@@ -275,7 +275,38 @@ namespace TreadShred.Progression
             Commit();
         }
 
-        public bool HasUsed(Weapon weapon) => weapon != Weapon.Cannon && (state.usedWeapons & WeaponRental.Bit(weapon)) != 0;
+        public bool HasUsed(Weapon weapon) => weapon != Weapon.Cannon && (UsedWeapons & WeaponRental.Bit(weapon)) != 0;
+
+        // D-047-AC-05: the War Chest's units while it is test driven. They count in the mission like units held, but
+        // live only here: never saved, never used up, and gone when the drive ends (or the app closes).
+        private int[] testDrive;
+
+        public bool TestDriving => testDrive != null;
+
+        public void StartTestDrive()
+        {
+            testDrive = new int[SupplyRules.TrackCount];
+            foreach (var item in WarChest.Items)
+                testDrive[(int)item.Track] += item.Units;
+        }
+
+        public void EndTestDrive() => testDrive = null;
+
+        // The units in effect: those held, plus the War Chest's during a test drive.
+        private int[] InEffect
+        {
+            get
+            {
+                if (testDrive == null)
+                    return SupplyUnits;
+                var units = (int[])SupplyUnits.Clone();
+                for (var track = 0; track < units.Length; track++)
+                    units[track] += testDrive[track];
+                return units;
+            }
+        }
+
+        private int UsedWeapons => testDrive == null ? state.usedWeapons : state.usedWeapons | WarChest.WeaponBits;
 
         /// <summary>D-043-AC-06, D-045: the missions won a weapon's supply lasts; 0 when it holds none.</summary>
         public int RentalLeft(Weapon weapon) => weapon == Weapon.Cannon ? 0 : SupplyMissionsLeft(SupplyRules.ForWeapon(weapon));
@@ -298,16 +329,16 @@ namespace TreadShred.Progression
         private static SupplyTrack SupplyOf(UpgradeTrack track) => (SupplyTrack)(int)track;
 
         /// <summary>D-045: the units a track holds.</summary>
-        public int Supply(SupplyTrack track) => SupplyUnits[(int)track];
+        public int Supply(SupplyTrack track) => InEffect[(int)track];
 
         /// <summary>D-045: the missions won until a track's last unit is used up, if nothing more is bought.</summary>
         public int SupplyMissionsLeft(SupplyTrack track) =>
-            SupplyRules.MissionsLeft(SupplyUnits, state.supplyWins, state.supplyNext, track);
+            SupplyRules.MissionsLeft(InEffect, state.supplyWins, state.supplyNext, track);
 
         /// <summary>D-045: the track the next use takes from (null when none is held) and the missions won until then.</summary>
-        public SupplyTrack? NextSupplyUse => SupplyRules.NextTrack(SupplyUnits, state.supplyNext);
+        public SupplyTrack? NextSupplyUse => SupplyRules.NextTrack(InEffect, state.supplyNext);
 
-        public int MissionsToNextSupplyUse => SupplyRules.MissionsToNextUse(SupplyUnits, state.supplyWins, state.supplyNext);
+        public int MissionsToNextSupplyUse => SupplyRules.MissionsToNextUse(InEffect, state.supplyWins, state.supplyNext);
 
         /// <summary>D-045: one unit paid for (the caller has taken the gems).</summary>
         public void AddSupply(SupplyTrack track)
@@ -342,6 +373,9 @@ namespace TreadShred.Progression
         /// <summary>D-045: a mission won counts toward the next use; every fifth uses one unit up, in rotation.</summary>
         public void SupplyMissionWon()
         {
+            // D-047-AC-05: a test drive uses nothing up.
+            if (TestDriving)
+                return;
             var wins = state.supplyWins;
             var next = state.supplyNext;
             SupplyRules.MissionWon(SupplyUnits, ref wins, ref next);
@@ -353,7 +387,7 @@ namespace TreadShred.Progression
         }
 
         /// <summary>D-038-AC-02, D-043-AC-02: the weapon drawer for a mission whose own tank carries <paramref name="native"/>.</summary>
-        public IReadOnlyList<DrawerEntry> Drawer(Weapon native) => WeaponRental.Drawer(native, state.usedWeapons, Rentals);
+        public IReadOnlyList<DrawerEntry> Drawer(Weapon native) => WeaponRental.Drawer(native, UsedWeapons, Rentals);
 
         /// <summary>D-038-AC-02, D-043-AC-05: the weapon a mission starts on.</summary>
         public Weapon StartingWeapon(Weapon native) => WeaponRental.Starting(native, Rentals);

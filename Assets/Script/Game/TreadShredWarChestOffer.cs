@@ -8,8 +8,9 @@ using UnityEngine.UI;
 
 /// <summary>
 /// D-047-AC-04: the War Chest interstitial, opened over the failure screen once a session while the chest is on sale.
-/// Each item lands one at a time with its worth, then the total, the price and the button; NOT NOW (and Back) wait
-/// until the last item has landed. Closes itself once the chest is bought.
+/// Each item lands one at a time with its worth, then the total, the price and the buttons; NOT NOW (and Back) wait
+/// until the last item has landed. Closes itself once the chest is bought. D-047-AC-05: after a loss it also offers
+/// the free test drive, and when a drive ends it opens again to sell what the player just used.
 /// </summary>
 public sealed class TreadShredWarChestOffer : MonoBehaviour
 {
@@ -24,6 +25,10 @@ public sealed class TreadShredWarChestOffer : MonoBehaviour
     private Text statusText;
     private Button buyButton;
     private System.Action<string> showStatus;
+    private Font font;
+
+    // After a test drive: what closing it does (replay the mission without the gear).
+    private System.Action onClosed;
 
     /// <summary>Opens the interstitial after a lost mission when the War Chest is on sale and it has not been offered this session.</summary>
     public static bool ShowAfterLoss(Font font)
@@ -32,12 +37,27 @@ public sealed class TreadShredWarChestOffer : MonoBehaviour
             return false;
         ShownThisSession = true;
         var root = TreadShredUi.CreateOverlay("TreadShredWarChestOffer", 110);
-        root.gameObject.AddComponent<TreadShredWarChestOffer>().Build(root, font);
+        root.gameObject.AddComponent<TreadShredWarChestOffer>().Build(root, font, false);
         return true;
     }
 
-    private void Build(RectTransform root, Font font)
+    /// <summary>D-047-AC-05: the reveal once a test drive ends; closing it (or buying) runs <paramref name="closed"/>.</summary>
+    public static void ShowAfterTestDrive(Font font, System.Action closed)
     {
+        if (!TreadShredStore.Ensure().WarChestOnSale)
+        {
+            closed();
+            return;
+        }
+        var root = TreadShredUi.CreateOverlay("TreadShredWarChestOffer", 110);
+        var offer = root.gameObject.AddComponent<TreadShredWarChestOffer>();
+        offer.onClosed = closed;
+        offer.Build(root, font, true);
+    }
+
+    private void Build(RectTransform root, Font font, bool afterDrive)
+    {
+        this.font = font;
         var store = TreadShredStore.Ensure();
         var unitPrice = store.PriceFor(GemCatalog.Packs[0]);
         var price = store.PriceFor(GemCatalog.WarChest);
@@ -47,7 +67,8 @@ public sealed class TreadShredWarChestOffer : MonoBehaviour
         TreadShredUi.StylePanel(panel.gameObject);
         TreadShredUi.CreateText(WarChest.Title, panel, new Vector2(0f, 420f), new Vector2(1400f, 100f), 84, font).color =
             TreadShredUi.TitleColor;
-        TreadShredUi.CreateText(WarChest.Subtitle, panel, new Vector2(0f, 352f), new Vector2(1400f, 40f), 30, font).color =
+        TreadShredUi.CreateText(afterDrive ? WarChest.AfterDriveSubtitle : WarChest.Subtitle, panel, new Vector2(0f, 352f),
+            new Vector2(1400f, 40f), 30, font).color =
             TreadShredUi.AccentColor;
 
         // Four items down the left, three down the right, in the order they land.
@@ -79,10 +100,25 @@ public sealed class TreadShredWarChestOffer : MonoBehaviour
         var yours = TreadShredUi.CreateText(WarChest.YoursFor(price), panel, new Vector2(0f, -198f), new Vector2(1400f, 68f), 56, font);
         yours.color = TreadShredUi.AccentColor;
         Hide(yours.gameObject);
-        buyButton = TreadShredUi.CreateButton(WarChest.BuyButton(price), panel, new Vector2(0f, -300f), new Vector2(780f, 110f), 40,
-            font, Buy);
-        TreadShredUi.StylePrimary(buyButton);
-        Hide(buyButton.gameObject);
+        if (afterDrive)
+        {
+            buyButton = TreadShredUi.CreateButton(WarChest.BuyButton(price), panel, new Vector2(0f, -300f), new Vector2(780f, 110f), 40,
+                font, Buy);
+            TreadShredUi.StylePrimary(buyButton);
+            Hide(buyButton.gameObject);
+        }
+        else
+        {
+            // Experience first: the free drive leads, the purchase stands beside it.
+            var drive = TreadShredUi.CreateButton(WarChest.TestDriveButton, panel, new Vector2(-345f, -300f), new Vector2(660f, 110f),
+                40, font, TestDrive);
+            TreadShredUi.StylePrimary(drive);
+            Hide(drive.gameObject);
+            buyButton = TreadShredUi.CreateButton(WarChest.BuyButton(price), panel, new Vector2(345f, -300f), new Vector2(660f, 110f), 34,
+                font, Buy);
+            TreadShredUi.ShrinkToFit(buyButton.GetComponentInChildren<Text>(), 24);
+            Hide(buyButton.gameObject);
+        }
         statusText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(0f, -375f), new Vector2(1400f, 30f), 24, font);
         statusText.color = TreadShredUi.DetailColor;
         notNow = TreadShredUi.CreateButton("NOT NOW", panel, new Vector2(0f, -435f), new Vector2(360f, 70f), 28, font, Close)
@@ -139,6 +175,13 @@ public sealed class TreadShredWarChestOffer : MonoBehaviour
         buyButton.interactable = !TreadShredStore.Ensure().PurchaseInProgress;
     }
 
+    private void TestDrive()
+    {
+        var driveFont = font;
+        Destroy(gameObject);
+        TreadShredTestDrive.Begin(driveFont);
+    }
+
     private void Buy()
     {
         statusText.text = string.Empty;
@@ -162,7 +205,11 @@ public sealed class TreadShredWarChestOffer : MonoBehaviour
 
     private void Close()
     {
-        if (this != null)
-            Destroy(gameObject);
+        if (this == null)
+            return;
+        Destroy(gameObject);
+        var closed = onClosed;
+        onClosed = null;
+        closed?.Invoke();
     }
 }

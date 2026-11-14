@@ -32,6 +32,9 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
     /// <summary>Shows the offer and returns true, or returns false when no revive is allowed.</summary>
     public static bool TryOffer(PlayerMoverment player)
     {
+        // D-047-AC-05: a test drive ends with the tank, with no revive offer.
+        if (TreadShredTestDrive.Active)
+            return false;
         var scene = SceneManager.GetActiveScene().handle;
         if (scene != missionScene)
         {
