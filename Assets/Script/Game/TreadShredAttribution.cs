@@ -7,11 +7,12 @@ using System.Runtime.InteropServices;
 #endif
 
 /// <summary>
-/// D-023: install attribution for AppLovin campaigns. On Android, Tenjin's SDK (Plugins/Android/TreadShredTenjin.java)
+/// D-023: install attribution across ad channels. On Android, Tenjin's SDK (Plugins/Android/TreadShredTenjin.java)
 /// reports installs and verified purchases, and Tenjin forwards them to AppLovin. On iOS, purchases set SKAdNetwork
 /// conversion values (Plugins/iOS/TreadShredAdAttribution.m); Apple reports the install and its value to AppLovin and
 /// sends a copy to Tenjin. Tenjin's iOS SDK is not used: its server is a declared tracking domain, which iOS blocks
-/// without the tracking prompt D-005 forbids. Every failure is logged and none reaches gameplay.
+/// without the tracking prompt D-005 forbids. Apple Ads installs are tagged from Apple's AdServices attribution, which
+/// needs no prompt either. Every failure is logged and none reaches gameplay.
 /// </summary>
 public sealed class TreadShredAttribution : MonoBehaviour
 {
@@ -30,7 +31,59 @@ public sealed class TreadShredAttribution : MonoBehaviour
     private void Start()
     {
         Run("start", Platform.Start);
+#if UNITY_IOS && !UNITY_EDITOR
+        StartCoroutine(AppleAds());
+#endif
     }
+
+#if UNITY_IOS && !UNITY_EDITOR
+    private const string AppleAdsCheckedKey = "attribution_apple_ads_checked";
+
+    // D-023-AC-01: once per install, ask Apple which Apple Ads campaign brought it and tag the player for Analytics.
+    // Apple answers 404 until its attribution is ready and asks for retries 5 seconds apart; any other failure waits for
+    // the next launch.
+    private System.Collections.IEnumerator AppleAds()
+    {
+        if (PlayerPrefs.GetInt(AppleAdsCheckedKey, 0) == 1)
+            yield break;
+        string token = null;
+        Run("apple ads token", () => token = Platform.AppleAdsToken());
+        if (string.IsNullOrEmpty(token))
+            yield break;
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            using (var request = new UnityEngine.Networking.UnityWebRequest(Attribution.AppleAdsEndpoint, "POST"))
+            {
+                request.uploadHandler = new UnityEngine.Networking.UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(token));
+                request.downloadHandler = new UnityEngine.Networking.DownloadHandlerBuffer();
+                request.SetRequestHeader("Content-Type", "text/plain");
+                request.timeout = 20;
+                yield return request.SendWebRequest();
+                if (request.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
+                {
+                    var acquisition = Attribution.FromAppleAds(request.downloadHandler.text);
+                    if (acquisition != null)
+                    {
+                        Debug.Log("[Attribution] " + acquisition.Value.Source + " / " + acquisition.Value.Campaign);
+                        TreadShredAnalytics.SetUserProperty(GameEvents.AcquisitionSource, acquisition.Value.Source);
+                        TreadShredAnalytics.SetUserProperty(GameEvents.AcquisitionCampaign, acquisition.Value.Campaign);
+                    }
+                    else
+                    {
+                        Debug.Log("[Attribution] Apple Ads did not bring this install");
+                    }
+                    PlayerPrefs.SetInt(AppleAdsCheckedKey, 1);
+                    PlayerPrefs.Save();
+                    yield break;
+                }
+                Debug.LogWarning("[Attribution] Apple Ads attribution attempt " + attempt + " failed: " + request.responseCode + " " + request.error);
+                if (request.responseCode != 404)
+                    yield break;
+            }
+            yield return new WaitForSecondsRealtime(5f);
+        }
+    }
+#endif
 
     // Tenjin counts a session each time the player comes back to the game.
     private void OnApplicationPause(bool pausing)
@@ -117,6 +170,12 @@ public sealed class TreadShredAttribution : MonoBehaviour
 
         [DllImport("__Internal")]
         private static extern void TreadShredUpdateConversionValue(int fineValue, string coarseValue);
+
+        [DllImport("__Internal")]
+        private static extern string TreadShredAppleAdsToken();
+
+        /// <summary>D-023-AC-01: this install's AdServices token; null when iOS cannot give one.</summary>
+        public static string AppleAdsToken() => TreadShredAppleAdsToken();
 
         // The first conversion value on a fresh install starts Apple's attribution for it.
         public static void Start()

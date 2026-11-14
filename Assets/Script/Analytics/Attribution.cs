@@ -12,10 +12,29 @@ namespace TreadShred.Analytics
         public string Campaign { get; }
     }
 
-    // D-021-AC-05: what Tenjin reports about an Android install, as the acquisition user properties.
+    // D-021-AC-05: what Tenjin reports about an Android install, and what Apple Ads reports about an iPhone install, as
+    // the acquisition user properties.
     public static class Attribution
     {
         public const string AppLovin = "applovin";
+        public const string AppleAds = "apple_ads";
+
+        /// <summary>D-023-AC-01: Apple's attribution API, which answers for an AdServices token with no tracking prompt.</summary>
+        public const string AppleAdsEndpoint = "https://api-adservices.apple.com/api/v1/";
+
+        /// <summary>
+        /// D-023-AC-01: an install an Apple Ads campaign brought, from Apple's answer; null for any other install (which
+        /// may still have come from another channel, so it is not called organic) or an answer that cannot be read.
+        /// </summary>
+        public static Acquisition? FromAppleAds(string answer)
+        {
+            if (string.IsNullOrWhiteSpace(answer) ||
+                !System.Text.RegularExpressions.Regex.IsMatch(answer, "\"attribution\"\\s*:\\s*true\\b"))
+                return null;
+            // Apple's answer is one flat JSON object; its campaign is a whole number.
+            var campaign = System.Text.RegularExpressions.Regex.Match(answer, "\"campaignId\"\\s*:\\s*(\\d+)");
+            return new Acquisition(AppleAds, campaign.Success ? Fit(campaign.Groups[1].Value) : NoCampaign);
+        }
         public const string Organic = "organic";
         public const string NoCampaign = "none";
 
