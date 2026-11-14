@@ -53,3 +53,7 @@ Assets/StreamingAssets/google-services-desktop.json.meta
 # Generated from google-services.json by the Firebase Unity plugin; carries the same API key.
 Assets/Plugins/Android/FirebaseApp.androidlib/res/values/google-services.xml
 Assets/Plugins/Android/FirebaseApp.androidlib/res/values/google-services.xml.meta
+
+# Scenes a PlayMode run creates and removes; one left behind by a stopped run is never committed.
+/Assets/InitTestScene*.unity
+/Assets/InitTestScene*.unity.meta
