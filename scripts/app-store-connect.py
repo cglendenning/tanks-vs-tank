@@ -16,6 +16,7 @@
     ... app-store-connect.py status <version>
     ... app-store-connect.py creative-assets <video>...
     ... app-store-connect.py starter-pack [<review-screenshot.png>]
+    ... app-store-connect.py war-chest [<review-screenshot.png>]
     ... app-store-connect.py custom-pages [--submit]
 listing: finds or creates that iOS version (it stays invisible until submitted),
 writes the approved English copy from Store/listing-en-US.md (D-030) and the
@@ -460,6 +461,12 @@ STARTER_PACK = {"product_id": "treadshred.starter300", "usd": "0.99", "name": "S
                 "description": "One time only: 300 gems for boosts",
                 "review_note": "One-time pack of 300 gems for $0.99. It appears on the revive panel the first time the "
                                "tank is destroyed, and in Settings (in place of the 100-gem pack) until it is bought."}
+# D-047: the one-time War Chest, $4.99, 15 units of supply (the 1,500 gems they cost) equipped at once.
+WAR_CHEST = {"product_id": "treadshred.warchest", "usd": "4.99", "name": "War Chest",
+             "description": "One time: armor, firepower, speed and every weapon",
+             "review_note": "One-time bundle for $4.99: 15 units of supply (armor, firepower, speed, Overdrive, Arc Shot, "
+                            "Triple Shot and Seeker) equipped at once. It is offered over the failure screen when a mission "
+                            "is lost, at most once per launch, after the Starter Pack's first 15 minutes."}
 
 
 def missing(api, path):
@@ -472,22 +479,22 @@ def missing(api, path):
         raise
 
 
-def starter_pack(api, review_screenshot=None):
-    """Creates the Starter Pack in App Store Connect where anything is missing: the consumable product, its English
-    name and description and the $0.99 price in every territory. A review screenshot, when given, replaces the one
-    there."""
+def one_time_pack(api, pack, review_screenshot=None):
+    """Creates a one-time pack (pack, WAR_CHEST) in App Store Connect where anything is missing: the consumable
+    product, its English name and description and its US price in every territory. A review screenshot, when given,
+    replaces the one there."""
     app = api.call("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"][0]["id"]
-    found = api.call("GET", f"/v1/apps/{app}/inAppPurchasesV2?filter[productId]={STARTER_PACK['product_id']}")["data"]
+    found = api.call("GET", f"/v1/apps/{app}/inAppPurchasesV2?filter[productId]={pack['product_id']}")["data"]
     iap = found[0] if found else api.call("POST", "/v2/inAppPurchases", {"data": {"type": "inAppPurchases",
-        "attributes": {"name": STARTER_PACK["name"], "productId": STARTER_PACK["product_id"], "inAppPurchaseType": "CONSUMABLE",
-                       "familySharable": False, "reviewNote": STARTER_PACK["review_note"]},
+        "attributes": {"name": pack["name"], "productId": pack["product_id"], "inAppPurchaseType": "CONSUMABLE",
+                       "familySharable": False, "reviewNote": pack["review_note"]},
         "relationships": {"app": {"data": {"type": "apps", "id": app}}}}})["data"]
     iap_id = iap["id"]
-    print(f"{STARTER_PACK['product_id']}: {'found' if found else 'created'} ({iap_id})", flush=True)
+    print(f"{pack['product_id']}: {'found' if found else 'created'} ({iap_id})", flush=True)
 
     if missing(api, f"/v2/inAppPurchases/{iap_id}/inAppPurchaseLocalizations"):
-        api.create("inAppPurchaseLocalizations", {"locale": "en-US", "name": STARTER_PACK["name"],
-                                                  "description": STARTER_PACK["description"]},
+        api.create("inAppPurchaseLocalizations", {"locale": "en-US", "name": pack["name"],
+                                                  "description": pack["description"]},
                    {"inAppPurchaseV2": {"data": {"type": "inAppPurchases", "id": iap_id}}})
         print("  en-US name and description written", flush=True)
 
@@ -495,10 +502,10 @@ def starter_pack(api, review_screenshot=None):
         point, path = None, f"/v2/inAppPurchases/{iap_id}/pricePoints?filter[territory]=USA&limit=200"
         while point is None and path:
             page = api.call("GET", path)
-            point = next((p for p in page["data"] if p["attributes"]["customerPrice"] == STARTER_PACK["usd"]), None)
+            point = next((p for p in page["data"] if p["attributes"]["customerPrice"] == pack["usd"]), None)
             path = (page.get("links") or {}).get("next", "").replace("https://api.appstoreconnect.apple.com", "") or None
         if point is None:
-            raise SystemExit(f"no US price point of ${STARTER_PACK['usd']}")
+            raise SystemExit(f"no US price point of ${pack['usd']}")
         api.call("POST", "/v1/inAppPurchasePriceSchedules", {"data": {"type": "inAppPurchasePriceSchedules", "relationships": {
             "inAppPurchase": {"data": {"type": "inAppPurchases", "id": iap_id}},
             "baseTerritory": {"data": {"type": "territories", "id": "USA"}},
@@ -506,7 +513,7 @@ def starter_pack(api, review_screenshot=None):
             "included": [{"type": "inAppPurchasePrices", "id": "${base}", "attributes": {"startDate": None},
                           "relationships": {"inAppPurchasePricePoint": {"data": {"type": "inAppPurchasePricePoints",
                                                                                  "id": point["id"]}}}}]})
-        print(f"  US ${STARTER_PACK['usd']} price set, other territories at Apple's equivalents", flush=True)
+        print(f"  US ${pack['usd']} price set, other territories at Apple's equivalents", flush=True)
 
     if missing(api, f"/v2/inAppPurchases/{iap_id}/inAppPurchaseAvailability"):
         territories = [t["id"] for t in api.call("GET", "/v1/territories?limit=200")["data"]]
@@ -523,7 +530,7 @@ def starter_pack(api, review_screenshot=None):
         upload_asset(api, "inAppPurchaseAppStoreReviewScreenshots", "inAppPurchases", iap_id, review_screenshot,
                      relationship="inAppPurchaseV2")
         print(f"  review screenshot uploaded: {Path(review_screenshot).name}", flush=True)
-    print(f"{STARTER_PACK['product_id']}: {api.call('GET', f'/v2/inAppPurchases/{iap_id}')['data']['attributes']['state']}")
+    print(f"{pack['product_id']}: {api.call('GET', f'/v2/inAppPurchases/{iap_id}')['data']['attributes']['state']}")
 
 
 def review_items(api, app):
@@ -694,7 +701,9 @@ def main():
     elif command == ["creative-assets"] and len(sys.argv) >= 3:
         creative_assets(api, sys.argv[2:])
     elif command == ["starter-pack"] and len(sys.argv) in (2, 3):
-        starter_pack(api, sys.argv[2] if len(sys.argv) == 3 else None)
+        one_time_pack(api, STARTER_PACK, sys.argv[2] if len(sys.argv) == 3 else None)
+    elif command == ["war-chest"] and len(sys.argv) in (2, 3):
+        one_time_pack(api, WAR_CHEST, sys.argv[2] if len(sys.argv) == 3 else None)
     elif command == ["custom-pages"] and len(sys.argv) == 2:
         custom_pages(api)
     elif command == ["custom-pages"] and len(sys.argv) == 3 and sys.argv[2] == "--submit":

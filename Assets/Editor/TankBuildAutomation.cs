@@ -23,10 +23,10 @@ public static class TankBuildAutomation
     // 1.9.5: the one-time Starter Pack (D-037). Every store release needs a new version and build number.
     // Builds 25 / 13 replace 24 / 12 in review, adding the six-wins rating prompt (owner decision 2026-11-05).
     // 1.9.7: the version on the settings screen (D-014-AC-04); held for more changes before release (owner, 2026-11-09).
-    private const string ReleaseVersion = "1.9.7";
-    // Build 28 replaces 27 in review with iOS Analytics starting at launch (D-021-AC-06; owner approval 2026-11-13).
-    private const int ReleaseBuildNumber = 28;
-    private const int AndroidReleaseBuildNumber = 15;
+    private const string ReleaseVersion = "1.9.8";
+    // 1.9.8 adds the War Chest (D-047); 1.9.7 shipped as iOS build 28 and Android 15.
+    private const int ReleaseBuildNumber = 29;
+    private const int AndroidReleaseBuildNumber = 16;
 
     [MenuItem("Tread Shred/Build/iOS device project")]
     public static void BuildIosDeviceProject()

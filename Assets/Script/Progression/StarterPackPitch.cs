@@ -1,6 +1,5 @@
 using System;
 using System.Globalization;
-using System.Text.RegularExpressions;
 using TreadShred.Economy;
 
 namespace TreadShred.Progression
@@ -57,7 +56,7 @@ namespace TreadShred.Progression
         /// <summary>The pack's worth against the regular pack's price; in plain multiples when the store's prices are not in dollars.</summary>
         public static string ValueLine(string regularPrice, string starterPrice)
         {
-            if (Dollars(regularPrice, out var regular) && !string.IsNullOrEmpty(starterPrice))
+            if (OfferLabels.TryDollars(regularPrice, out var regular) && !string.IsNullOrEmpty(starterPrice))
                 return "$" + (regular * ValueMultiple).ToString("0.00", CultureInfo.InvariantCulture) + " OF GEAR FOR " + starterPrice +
                     ". YOU PICK WHAT.";
             return ValueMultiple + "X THE GEAR OF A REGULAR PACK. YOU PICK WHAT.";
@@ -78,13 +77,5 @@ namespace TreadShred.Progression
         public static string StoreButton(int armorHits, string price) =>
             "STARTER PACK: " + Headline(armorHits).Replace(" YOUR", string.Empty) + " + MORE" +
             (string.IsNullOrEmpty(price) ? string.Empty : ": " + price);
-
-        private static bool Dollars(string price, out decimal amount)
-        {
-            amount = 0m;
-            var match = price == null ? null : Regex.Match(price, @"^\$(\d+\.\d{2})$");
-            return match != null && match.Success &&
-                decimal.TryParse(match.Groups[1].Value, NumberStyles.Number, CultureInfo.InvariantCulture, out amount);
-        }
     }
 }

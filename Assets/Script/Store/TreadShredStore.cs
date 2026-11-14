@@ -51,7 +51,8 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
         Wallet = new GemWallet(new PlayerPrefsWalletStore());
         Wallet.GrantStarterIfNeeded();
         Wallet.OpenStarterPackWindow(DateTime.UtcNow);
-        purchases = new PurchaseFlow(Wallet, this, () => IsAvailable(GemCatalog.StarterPack.ProductId));
+        purchases = new PurchaseFlow(Wallet, this, () => IsAvailable(GemCatalog.StarterPack.ProductId),
+            warChestAvailable: () => IsAvailable(GemCatalog.WarChest.ProductId));
         SceneManager.sceneLoaded += OnSceneLoaded;
         ConnectStore();
     }
@@ -78,6 +79,9 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
 
     /// <summary>D-037-AC-02: the player has not bought the Starter Pack and the store offers its product.</summary>
     public bool StarterPackOnSale => purchases.StarterPackOnSale;
+
+    /// <summary>D-047-AC-02: the War Chest is on sale (never during the Starter Pack's window).</summary>
+    public bool WarChestOnSale => purchases.WarChestOnSale;
 
     /// <summary>D-037-AC-07: the Starter Pack's countdown; zero when it is not on sale.</summary>
     public TimeSpan StarterPackTimeLeft => purchases.StarterPackTimeLeft;
@@ -190,6 +194,7 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
     {
         storeController.FetchProducts(GemCatalog.Packs
             .Append(GemCatalog.StarterPack)
+            .Append(GemCatalog.WarChest)
             .Select(pack => new ProductDefinition(pack.ProductId, ProductType.Consumable))
             .ToList());
     }
@@ -242,6 +247,9 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
         Debug.Log("[Store] " + result + " " + product.definition.id + "; balance " + Wallet.Balance);
         if (result == CreditResult.Credited)
         {
+            // D-047-AC-03: the War Chest's gems become its supply before the order is confirmed.
+            if (product.definition.id == GemCatalog.WarChest.ProductId)
+                TreadShredProgress.Ensure().Progression.EquipWarChest();
             TreadShredAnalytics.Log(TreadShred.Analytics.GameEvents.GemPackPurchased(product.definition.id,
                 (double)product.metadata.localizedPrice, product.metadata.isoCurrencyCode, order.Info.TransactionID));
             awaitingAttribution[order.Info.TransactionID] =

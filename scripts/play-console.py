@@ -41,6 +41,8 @@ LEADERBOARD = {
 PACKS = [("treadshred.gems100", 100, "0.99"), ("treadshred.gems550", 550, "4.99"), ("treadshred.gems1200", 1200, "9.99")]
 # D-037 R-STARTER-PACK: the one-time Starter Pack, sold apart from the regular packs (GemCatalog.StarterPack).
 STARTER_PACK = ("treadshred.starter300", 300, "0.99")
+# D-047 R-WAR-CHEST: the one-time War Chest, 15 units of supply (1,500 gems) equipped at once (GemCatalog.WarChest).
+WAR_CHEST = ("treadshred.warchest", 1500, "4.99")
 PURCHASE_OPTION = "buy"
 
 
@@ -74,8 +76,9 @@ def money(usd):
 
 
 def products(auth):
-    for product_id, gems, usd in PACKS + [STARTER_PACK]:
+    for product_id, gems, usd in PACKS + [STARTER_PACK, WAR_CHEST]:
         starter = product_id == STARTER_PACK[0]
+        chest = product_id == WAR_CHEST[0]
         converted = call("POST", "/pricing:convertRegionPrices", auth, {"price": money(usd)})
         regions = [{"regionCode": code, "price": entry["price"], "availability": "AVAILABLE"}
                    for code, entry in sorted(converted.get("convertedRegionPrices", {}).items())]
@@ -83,8 +86,10 @@ def products(auth):
         product = {
             "packageName": PACKAGE,
             "productId": product_id,
-            "listings": [{"languageCode": "en-US", "title": f"STARTER PACK: {gems:,} GEMS" if starter else f"{gems:,} GEMS",
-                          "description": ("ONE TIME ONLY. " if starter else "") +
+            "listings": [{"languageCode": "en-US", "title": "WAR CHEST" if chest else
+                          f"STARTER PACK: {gems:,} GEMS" if starter else f"{gems:,} GEMS",
+                          "description": "ONE TIME ONLY. ARMOR, FIREPOWER, SPEED, OVERDRIVE AND EVERY SPECIAL WEAPON." if chest else
+                                         ("ONE TIME ONLY. " if starter else "") +
                                          f"{gems:,} GEMS FOR COMBAT BOOSTS AND TANK UPGRADES."}],
             "purchaseOptions": [{
                 "purchaseOptionId": PURCHASE_OPTION,

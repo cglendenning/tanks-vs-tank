@@ -316,6 +316,29 @@ namespace TreadShred.Progression
             Commit();
         }
 
+        /// <summary>
+        /// D-047-AC-03: the War Chest's gems, just credited, become its supply on every track at once, and its special
+        /// weapons join the drawer so they can be used on any mission now. A unit the gems no longer cover stays as gems.
+        /// </summary>
+        public void EquipWarChest()
+        {
+            foreach (var item in WarChest.Items)
+            {
+                for (var unit = 0; unit < item.Units; unit++)
+                {
+                    if (!wallet.TrySpend(SupplyRules.UnitGems))
+                    {
+                        Commit();
+                        return;
+                    }
+                    SupplyUnits[(int)item.Track]++;
+                }
+                if (WarChest.IsWeapon(item.Track))
+                    state.usedWeapons |= WeaponRental.Bit(WarChest.WeaponOf(item.Track));
+            }
+            Commit();
+        }
+
         /// <summary>D-045: a mission won counts toward the next use; every fifth uses one unit up, in rotation.</summary>
         public void SupplyMissionWon()
         {

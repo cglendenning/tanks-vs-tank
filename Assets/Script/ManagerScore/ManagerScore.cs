@@ -352,6 +352,9 @@ public class ManagerScore : MonoBehaviour
             TreadShredPromotion.Show(tier, TreadShredUi.FindFont(VictoryofFail), () => TreadShredStarterOffer.ShowIfOnSale(TreadShredUi.FindFont(VictoryofFail)));
         else
             TreadShredStarterOffer.ShowIfOnSale(TreadShredUi.FindFont(VictoryofFail));
+        // D-047-AC-04: a lost mission is where the War Chest is offered, once a session, after the Starter Pack's window.
+        if (FailureObj != null && FailureObj.activeSelf)
+            TreadShredWarChestOffer.ShowAfterLoss(TreadShredUi.FindFont(VictoryofFail));
     }
     public void Failure()
     {

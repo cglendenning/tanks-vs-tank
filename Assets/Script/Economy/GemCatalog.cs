@@ -59,12 +59,21 @@ namespace TreadShred.Economy
         // sale ever chooses it.
         public static readonly GemPack StarterPack = new GemPack("treadshred.starter300", 300, 99);
 
+        // D-047: the one-time War Chest (R-WAR-CHEST): its gems are the 15 supply units it equips at once, so it is never
+        // a pack a one-tap purchase chooses.
+        public static readonly GemPack WarChest = new GemPack("treadshred.warchest", 1500, 499);
+
         // R-STARTER-PACK offer_minutes: how long after the player's first launch the Starter Pack is on sale.
         public static readonly TimeSpan StarterPackWindow = TimeSpan.FromMinutes(15);
 
         public static bool IsStarterPack(GemPack pack)
         {
             return pack != null && string.Equals(pack.ProductId, StarterPack.ProductId, StringComparison.Ordinal);
+        }
+
+        public static bool IsWarChest(GemPack pack)
+        {
+            return pack != null && string.Equals(pack.ProductId, WarChest.ProductId, StringComparison.Ordinal);
         }
 
         public static int Cost(GemOffer offer)
@@ -88,7 +97,9 @@ namespace TreadShred.Economy
                 if (string.Equals(Packs[i].ProductId, productId, StringComparison.Ordinal))
                     return Packs[i];
             }
-            return string.Equals(StarterPack.ProductId, productId, StringComparison.Ordinal) ? StarterPack : null;
+            if (string.Equals(StarterPack.ProductId, productId, StringComparison.Ordinal))
+                return StarterPack;
+            return string.Equals(WarChest.ProductId, productId, StringComparison.Ordinal) ? WarChest : null;
         }
 
         public static OfferPlan Plan(GemOffer offer, int balance, bool starterOnSale = false)

@@ -55,14 +55,17 @@ namespace TreadShred.Economy
         private readonly GemWallet wallet;
         private readonly IPurchaseGateway gateway;
         private readonly Func<bool> starterPackAvailable;
+        private readonly Func<bool> warChestAvailable;
         private readonly Func<DateTime> utcNow;
         private Pending pending;
 
         /// <param name="starterPackAvailable">Whether the store reports the Starter Pack's product (D-037-AC-02).</param>
         /// <param name="utcNow">The clock the Starter Pack's window runs on.</param>
+        /// <param name="warChestAvailable">Whether the store reports the War Chest's product (D-047-AC-02).</param>
         public PurchaseFlow(GemWallet wallet, IPurchaseGateway gateway, Func<bool> starterPackAvailable = null,
-            Func<DateTime> utcNow = null)
+            Func<DateTime> utcNow = null, Func<bool> warChestAvailable = null)
         {
+            this.warChestAvailable = warChestAvailable ?? (() => false);
             this.wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
             this.gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
             this.starterPackAvailable = starterPackAvailable ?? (() => false);
@@ -73,6 +76,9 @@ namespace TreadShred.Economy
 
         /// <summary>D-037-AC-02: on sale until bought, inside its window, and only while the store offers its product.</summary>
         public bool StarterPackOnSale => StarterPackTimeLeft > TimeSpan.Zero;
+
+        /// <summary>D-047-AC-02: not bought yet, offered by the store, and the Starter Pack's window is over.</summary>
+        public bool WarChestOnSale => !wallet.WarChestBought && warChestAvailable() && !StarterPackOnSale;
 
         /// <summary>D-037-AC-07: the countdown every Starter Pack offer shows; zero when it is not on sale.</summary>
         public TimeSpan StarterPackTimeLeft => starterPackAvailable() ? wallet.StarterPackTimeLeft(utcNow()) : TimeSpan.Zero;

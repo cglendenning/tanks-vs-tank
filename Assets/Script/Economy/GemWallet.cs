@@ -14,6 +14,8 @@ namespace TreadShred.Economy
         // D-037: the Starter Pack was bought (it is never offered again), and when its window opened (UTC ticks; 0 = not yet).
         public bool starterPackBought;
         public long starterPackWindowStartTicks;
+        // D-047: the War Chest was bought; it is never offered again.
+        public bool warChestBought;
     }
 
     public interface IWalletStore
@@ -51,6 +53,7 @@ namespace TreadShred.Economy
         public int Balance => state.balance;
 
         public bool StarterPackBought => state.starterPackBought;
+        public bool WarChestBought => state.warChestBought;
 
         /// <summary>D-037-AC-02: opens the Starter Pack's window at the player's first launch that sells it; never reopens it.</summary>
         public void OpenStarterPackWindow(DateTime utcNow)
@@ -105,6 +108,9 @@ namespace TreadShred.Economy
             // D-037-AC-01: a paid order always credits, even a second Starter Pack; buying it ends the offer.
             if (GemCatalog.IsStarterPack(pack))
                 state.starterPackBought = true;
+            // D-047-AC-02: so is the War Chest, whose gems the progression turns into its supply at once.
+            if (GemCatalog.IsWarChest(pack))
+                state.warChestBought = true;
             state.balance += pack.Gems;
             Commit();
             return CreditResult.Credited;
@@ -146,6 +152,7 @@ namespace TreadShred.Economy
             state.starterGranted = restored.starterGranted;
             state.creditedTransactions = new List<string>(restored.creditedTransactions ?? new List<string>());
             state.starterPackBought = restored.starterPackBought;
+            state.warChestBought = restored.warChestBought;
             // A save from before the Starter Pack has no window: the one this install opened stands, so a reinstall that
             // restores a newer save adopts its original window and never reopens it (D-037-AC-02).
             if (restored.starterPackWindowStartTicks != 0)

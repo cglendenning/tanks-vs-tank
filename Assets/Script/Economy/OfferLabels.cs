@@ -1,4 +1,6 @@
 using System;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace TreadShred.Economy
 {
@@ -130,6 +132,15 @@ namespace TreadShred.Economy
         {
             var label = prefix + CountText.Format(pack.Gems) + " GEMS";
             return string.IsNullOrEmpty(localizedPrice) ? label : label + " FOR " + localizedPrice;
+        }
+
+        /// <summary>A store price written in US dollars, a dollar sign and two decimals, as its amount; false for any other format.</summary>
+        public static bool TryDollars(string price, out decimal amount)
+        {
+            amount = 0m;
+            var match = price == null ? null : Regex.Match(price, @"^\$(\d+\.\d{2})$");
+            return match != null && match.Success &&
+                decimal.TryParse(match.Groups[1].Value, NumberStyles.Number, CultureInfo.InvariantCulture, out amount);
         }
     }
 }
