@@ -28,6 +28,7 @@ public static class TreadShredGameReset
         yield return TreadShredFirstMinute.InstantStartUsedKey;
         yield return TreadShredFirstMinute.PreviewMissionOneClearedKey;
         yield return TreadShredReviewPrompt.StateKey;
+        yield return TreadShredAttribution.AppleAdsCheckedKey;
         foreach (var key in LegacyKeys)
             yield return key;
         for (var mission = 1; mission <= Campaign.MissionTotal; mission++)

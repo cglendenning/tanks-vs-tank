@@ -36,9 +36,10 @@ public sealed class TreadShredAttribution : MonoBehaviour
 #endif
     }
 
-#if UNITY_IOS && !UNITY_EDITOR
-    private const string AppleAdsCheckedKey = "attribution_apple_ads_checked";
+    /// <summary>D-023-AC-01: Apple has answered for this install; a game reset clears it, so Apple is asked again.</summary>
+    public const string AppleAdsCheckedKey = "attribution_apple_ads_checked";
 
+#if UNITY_IOS && !UNITY_EDITOR
     // D-023-AC-01: once per install, ask Apple which Apple Ads campaign brought it and tag the player for Analytics.
     // Apple answers 404 until its attribution is ready and asks for retries 5 seconds apart; any other failure waits for
     // the next launch.
