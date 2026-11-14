@@ -28,6 +28,9 @@ public static class TreadShredAnalytics
                 Debug.LogWarning("[Analytics] Firebase unavailable: " + (task.Exception?.Message ?? task.Result.ToString()));
                 return;
             }
+            // D-021-AC-06: start Analytics now, as Android does at launch. On iOS it otherwise waits for the first event, so
+            // an install whose player never starts a mission records no first open (and Google Ads sees no iPhone install).
+            FirebaseAnalytics.SetAnalyticsCollectionEnabled(true);
             Debug.Log("[Analytics] Firebase ready; sending " + dispatcher.Queued + " queued events");
             dispatcher.MarkReady();
             foreach (var property in pendingProperties)
