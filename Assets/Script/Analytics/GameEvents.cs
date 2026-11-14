@@ -55,6 +55,13 @@ namespace TreadShred.Analytics
                 ("transaction_id", transactionId ?? string.Empty));
         }
 
+        /// <summary>D-021-AC-07: a store test account's purchase, recorded apart from gem_pack_purchased with the same fields.</summary>
+        public static AnalyticsEvent TestPurchase(string productId, double price, string currency, string transactionId)
+        {
+            return Event("test_purchase", ("product_id", productId), ("price", price), ("currency", currency ?? string.Empty),
+                ("transaction_id", transactionId ?? string.Empty));
+        }
+
         private static AnalyticsEvent Event(string name, params (string Key, object Value)[] parameters)
         {
             var values = new Dictionary<string, object>();

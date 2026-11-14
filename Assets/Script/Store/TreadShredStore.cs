@@ -250,13 +250,21 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
             // D-047-AC-03: the War Chest's gems become its supply before the order is confirmed.
             if (product.definition.id == GemCatalog.WarChest.ProductId)
                 TreadShredProgress.Ensure().Progression.EquipWarChest();
-            TreadShredAnalytics.Log(TreadShred.Analytics.GameEvents.GemPackPurchased(product.definition.id,
+            // D-021-AC-07: a store test account's purchase is recorded apart and never reaches attribution.
+            var test = TreadShredTestPurchase.IsTest(order.Info.Receipt);
+            TreadShredAnalytics.Log(PurchaseEvent(test, product.definition.id,
                 (double)product.metadata.localizedPrice, product.metadata.isoCurrencyCode, order.Info.TransactionID));
-            awaitingAttribution[order.Info.TransactionID] =
-                (product.definition.id, (double)product.metadata.localizedPrice, product.metadata.isoCurrencyCode);
+            if (!test)
+                awaitingAttribution[order.Info.TransactionID] =
+                    (product.definition.id, (double)product.metadata.localizedPrice, product.metadata.isoCurrencyCode);
         }
         storeController.ConfirmPurchase(order);
     }
+
+    private static TreadShred.Analytics.AnalyticsEvent PurchaseEvent(bool test, string productId, double price, string currency,
+        string transactionId) => test
+        ? TreadShred.Analytics.GameEvents.TestPurchase(productId, price, currency, transactionId)
+        : TreadShred.Analytics.GameEvents.GemPackPurchased(productId, price, currency, transactionId);
 
     private void OnPurchaseConfirmed(Order order)
     {
