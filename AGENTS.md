@@ -16,6 +16,14 @@
   `python3 spec_tools.py validate --app-root ../games/tread-shred` from the
   spec repository; it fails on any unlabeled test.
 
+## The ONE action for LTGP:CAC (owner rule)
+
+- Every session, and whenever Craig shares a Shred HQ screenshot or asks what to do, read
+  `LTGP_CAC_QUESTIONS.md`, find the current constraint, and give the ONE action he can take today that most raises
+  lifetime gross profit to CAC, in that file's format. State it unprompted at the end of any business-facing answer.
+- Never answer "wait for the data." When data is thin, the action is the one that creates data or volume now.
+- The questions never change; the constraint does. Do not drift from LTGP:CAC into work that names no figure on it.
+
 ## Think first, run once (owner rule)
 
 Waiting on Unity, simulators, emulators and phones is the slowest part of this project. Before any
