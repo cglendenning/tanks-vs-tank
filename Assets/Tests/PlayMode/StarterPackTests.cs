@@ -58,6 +58,8 @@ namespace TreadShred.Screens.Tests
 
         private static bool InterstitialOpen() => GameObject.Find("TreadShredStarterOffer") != null;
 
+        private static Button Callout() => ButtonStarting(OfferLabels.StarterPackTitle + "\n");
+
         // The stack lands item by item; NOT NOW appears once the last has landed.
         private static IEnumerator Revealed()
         {
@@ -186,7 +188,7 @@ namespace TreadShred.Screens.Tests
             }
         }
 
-        [UnityTest(Description = "D-037-AC-04: while on sale the Starter Pack interstitial opens over the victory screen, revealing its stack with the free test drive, and on reaching the start screen with the purchase alone; NOT NOW closes it once revealed, and a delivered purchase closes it")]
+        [UnityTest(Description = "D-037-AC-04: the Starter Pack interstitial opens by itself once (here on reaching the start screen, with the purchase alone); after that the victory screen's STARTER PACK callout opens it, revealing its stack with the free test drive; NOT NOW closes it once revealed, and a delivered purchase closes it and the callout")]
         public IEnumerator InterstitialOpensOverResultsAndStart()
         {
             yield return Restoring(Body());
@@ -194,9 +196,21 @@ namespace TreadShred.Screens.Tests
             IEnumerator Body()
             {
                 Seed(100, 0.1);
+                yield return Load("Start");
+                Assert.IsTrue(InterstitialOpen(), "by itself, the first time");
+                yield return Revealed();
+                Assert.IsNull(ButtonStarting(WarChest.TestDriveButton), "no mission to drive on the start screen");
+                Assert.IsNotNull(ButtonStarting("GET THE STARTER PACK"));
+                ButtonStarting("NOT NOW").onClick.Invoke();
+                yield return null;
+                Assert.IsFalse(InterstitialOpen(), "NOT NOW closes it");
+
                 yield return Load("Lv1");
                 yield return Win();
-                Assert.IsTrue(InterstitialOpen(), "over the victory screen");
+                Assert.IsFalse(InterstitialOpen(), "never by itself again");
+                Callout().onClick.Invoke();
+                yield return null;
+                Assert.IsTrue(InterstitialOpen(), "the callout opens it over the victory screen");
                 yield return Revealed();
                 var texts = Texts();
                 Assert.Contains(OfferLabels.StarterPackTitle, texts);
@@ -208,19 +222,11 @@ namespace TreadShred.Screens.Tests
                 Assert.IsTrue(texts.Any(t => t.StartsWith("YOURS ", StringComparison.Ordinal)));
                 Assert.IsNotNull(ButtonStarting(WarChest.TestDriveButton), "over a mission the free test drive leads");
                 Assert.IsNotNull(ButtonStarting("GET THE STARTER PACK"));
-                ButtonStarting("NOT NOW").onClick.Invoke();
-                yield return null;
-                Assert.IsFalse(InterstitialOpen(), "NOT NOW closes it");
-
-                yield return Load("Start");
-                Assert.IsTrue(InterstitialOpen(), "on reaching the start screen");
-                yield return Revealed();
-                Assert.IsNull(ButtonStarting(WarChest.TestDriveButton), "no mission to drive on the start screen");
-                Assert.IsNotNull(ButtonStarting("GET THE STARTER PACK"));
                 Deliver("playmode-starter-2");
                 yield return null;
                 yield return null;
                 Assert.IsFalse(InterstitialOpen(), "bought: it closes");
+                Assert.IsNull(Callout(), "and the callout leaves");
             }
         }
 
@@ -240,6 +246,7 @@ namespace TreadShred.Screens.Tests
                 yield return Revealed();
                 yield return Audit("Starter Pack interstitial over victory", findings);
 
+                Seed(100, 0.1); // a fresh window, so the start screen opens it by itself
                 yield return Load("Start");
                 Assert.IsTrue(InterstitialOpen());
                 yield return Revealed();
@@ -281,6 +288,9 @@ namespace TreadShred.Screens.Tests
                 var manager = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
                 manager.GetType().GetMethod("Failure", Members).Invoke(manager, null);
                 yield return new WaitForSecondsRealtime(3.5f);
+                Assert.IsFalse(InterstitialOpen(), "once shown, only the callout opens it");
+                Callout().onClick.Invoke();
+                yield return null;
                 yield return Drive("Lv1");
                 ButtonStarting("NOT NOW").onClick.Invoke();
                 yield return new WaitForSecondsRealtime(2f);

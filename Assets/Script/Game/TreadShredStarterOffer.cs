@@ -4,11 +4,12 @@ using TreadShred.Progression;
 using UnityEngine;
 
 /// <summary>
-/// D-037-AC-04: the Starter Pack interstitial, opened over each victory and failure screen and on reaching the start
-/// screen while the pack is on sale: its stack revealed item by item as the War Chest's is, under ONE TIME ONLY and the
-/// live countdown (D-037-AC-07). Closes itself once the pack is bought or its window ends. D-037-AC-08: over a result
-/// screen it leads with the free test drive of the mission just played; when the drive ends it opens again, and closing
-/// it goes on to the next mission after a victory or replays the mission after a loss.
+/// D-037-AC-04: the Starter Pack interstitial: its stack revealed item by item as the War Chest's is, under ONE TIME
+/// ONLY and the live countdown (D-037-AC-07). It opens by itself once, over the first victory or failure screen or start
+/// screen of the pack's window; after that the result screen's callout (TreadShredStarterCallout) opens it. Closes
+/// itself once the pack is bought or its window ends. D-037-AC-08: over a result screen it leads with the free test
+/// drive of the mission just played; when the drive ends it opens again, and closing it goes on to the next mission
+/// after a victory or replays the mission after a loss.
 /// </summary>
 public sealed class TreadShredStarterOffer : TreadShredStackOffer
 {
@@ -16,16 +17,20 @@ public sealed class TreadShredStarterOffer : TreadShredStackOffer
     private string limit;
     private bool won;
 
-    /// <summary>The start screen's interstitial: the purchase alone. Returns whether it opened.</summary>
-    public static bool ShowIfOnSale(Font font) => Show(font, false, false);
+    /// <summary>The start screen's interstitial, the purchase alone, unless it has opened by itself before. Returns whether it opened.</summary>
+    public static bool ShowIfOnSale(Font font) => !TreadShredStore.Ensure().Wallet.StarterPackShown && Show(font, false, false);
 
-    /// <summary>A result screen's interstitial, led by the free test drive of the mission just played.</summary>
-    public static bool ShowOverResult(Font font, bool won) => Show(font, true, won);
+    /// <summary>A result screen's interstitial, led by the free test drive of the mission just played, unless it has opened by itself before.</summary>
+    public static bool ShowOverResult(Font font, bool won) => !TreadShredStore.Ensure().Wallet.StarterPackShown && Show(font, true, won);
+
+    /// <summary>D-037-AC-04: the result screen's callout, tapped: the interstitial with the free test drive, every time.</summary>
+    public static bool OpenFromCallout(Font font, bool won) => Show(font, true, won);
 
     private static bool Show(Font font, bool overMission, bool won)
     {
         if (!TreadShredStore.Ensure().StarterPackOnSale || FindFirstObjectByType<TreadShredStarterOffer>() != null)
             return false;
+        TreadShredStore.Ensure().Wallet.MarkStarterPackShown();
         var root = TreadShredUi.CreateOverlay("TreadShredStarterOffer", 110);
         var offer = root.gameObject.AddComponent<TreadShredStarterOffer>();
         offer.limit = StarterPackPitch.Limit;

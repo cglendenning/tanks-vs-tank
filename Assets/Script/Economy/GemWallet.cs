@@ -14,6 +14,8 @@ namespace TreadShred.Economy
         // D-037: the Starter Pack was bought (it is never offered again), and when its window opened (UTC ticks; 0 = not yet).
         public bool starterPackBought;
         public long starterPackWindowStartTicks;
+        // D-037-AC-04: its interstitial has opened by itself once; after that only its result-screen callout opens it.
+        public bool starterPackShown;
         // D-047: the War Chest was bought; it is never offered again.
         public bool warChestBought;
     }
@@ -53,6 +55,17 @@ namespace TreadShred.Economy
         public int Balance => state.balance;
 
         public bool StarterPackBought => state.starterPackBought;
+
+        /// <summary>D-037-AC-04: the Starter Pack's interstitial has already opened by itself.</summary>
+        public bool StarterPackShown => state.starterPackShown;
+
+        public void MarkStarterPackShown()
+        {
+            if (state.starterPackShown)
+                return;
+            state.starterPackShown = true;
+            store.Save(state);
+        }
         public bool WarChestBought => state.warChestBought;
 
         /// <summary>D-037-AC-02: opens the Starter Pack's window at the player's first launch that sells it; never reopens it.</summary>
@@ -152,6 +165,7 @@ namespace TreadShred.Economy
             state.starterGranted = restored.starterGranted;
             state.creditedTransactions = new List<string>(restored.creditedTransactions ?? new List<string>());
             state.starterPackBought = restored.starterPackBought;
+            state.starterPackShown = restored.starterPackShown;
             state.warChestBought = restored.warChestBought;
             // A save from before the Starter Pack has no window: the one this install opened stands, so a reinstall that
             // restores a newer save adopts its original window and never reopens it (D-037-AC-02).

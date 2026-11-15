@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TreadShred.Economy;
 
@@ -57,6 +58,19 @@ namespace TreadShred.Progression
         }
 
         public static string ReviveButton(string price) => "REVIVE + STARTER PACK" + (string.IsNullOrEmpty(price) ? string.Empty : ": " + price);
+
+        /// <summary>D-037-AC-04: the result screen's callout once the interstitial has opened by itself.</summary>
+        public static string CalloutLabel(TimeSpan left) => OfferLabels.StarterPackTitle + "\n" + OfferLabels.StarterPackCountdown(left);
+
+        /// <summary>D-037-AC-04: how close the window is to ending: 0 with all of it left, 1 as it ends.</summary>
+        public static float Urgency(TimeSpan left) =>
+            1f - Math.Min(1f, Math.Max(0f, (float)(left.TotalSeconds / GemCatalog.StarterPackWindow.TotalSeconds)));
+
+        /// <summary>The callout's pulses per second: one every two seconds with the whole window left, three a second at its end.</summary>
+        public static float PulseRate(TimeSpan left) => 0.5f + 2.5f * Urgency(left);
+
+        /// <summary>How far each pulse swings, from a faint glow with the whole window left to a full flash and swell at its end.</summary>
+        public static float PulseStrength(TimeSpan left) => 0.2f + 0.8f * Urgency(left);
 
         /// <summary>D-037-AC-04: the gem store's button in place of the smallest pack.</summary>
         public static string StoreButton(int armorHits, string price) =>

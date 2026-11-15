@@ -353,13 +353,14 @@ public class ManagerScore : MonoBehaviour
             BuildVictoryRewardActions();
             HighlightNextMission();
         }
-        // D-037-AC-04/08: while the Starter Pack is on sale its interstitial opens over every result screen, led by the
-        // free test drive of the mission just played.
+        // D-037-AC-04/08: while the Starter Pack is on sale its interstitial opens by itself over the first result screen,
+        // led by the free test drive of the mission just played; every result screen carries its pulsing callout.
         var won = FailureObj == null || !FailureObj.activeSelf;
         if (promotion is DifficultyTier tier)
             TreadShredPromotion.Show(tier, TreadShredUi.FindFont(VictoryofFail), () => TreadShredStarterOffer.ShowOverResult(TreadShredUi.FindFont(VictoryofFail), won));
         else
             TreadShredStarterOffer.ShowOverResult(TreadShredUi.FindFont(VictoryofFail), won);
+        TreadShredStarterCallout.ResultScreen((RectTransform)VictoryofFail.transform, TreadShredUi.FindFont(VictoryofFail), won);
         // D-047-AC-07: a free War Chest mission ends here; its reveal takes the place of any other War Chest offer.
         TreadShredFreeWarChest.MissionOver(TreadShredUi.FindFont(VictoryofFail));
         // D-047-AC-04: a lost mission is where the War Chest is offered, once a session, after the Starter Pack's window.
