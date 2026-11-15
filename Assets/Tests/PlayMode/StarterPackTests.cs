@@ -17,6 +17,7 @@ namespace TreadShred.Screens.Tests
     public sealed class StarterPackTests
     {
         private const string WalletKey = "TreadShredGemWallet";
+        private const string ProgressionKey = "TreadShredProgression";
         private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
         private static Type GameType(string name) =>
@@ -27,6 +28,9 @@ namespace TreadShred.Screens.Tests
         private static T Get<T>(object target, string property) => (T)target.GetType().GetProperty(property).GetValue(target);
 
         private static GemWallet Wallet => Get<GemWallet>(Store(), "Wallet");
+
+        private static PlayerProgression Progression =>
+            Get<PlayerProgression>(GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null), "Progression");
 
         // The wallet as a player in the window has it: gems as given, the window opened `minutesAgo` minutes ago.
         private static void Seed(int gems, double minutesAgo) => Wallet.Replace(new WalletState
@@ -54,6 +58,19 @@ namespace TreadShred.Screens.Tests
 
         private static bool InterstitialOpen() => GameObject.Find("TreadShredStarterOffer") != null;
 
+        // The stack lands item by item; NOT NOW appears once the last has landed.
+        private static IEnumerator Revealed()
+        {
+            for (var waited = 0f; waited < 10f; waited += 0.25f)
+            {
+                var offer = UnityEngine.Object.FindFirstObjectByType(GameType("TreadShredStarterOffer"));
+                if (offer != null && Get<bool>(offer, "Revealed"))
+                    yield break;
+                yield return new WaitForSecondsRealtime(0.25f);
+            }
+            Assert.Fail("the Starter Pack's reveal never finished");
+        }
+
         private static IEnumerator Load(string scene)
         {
             Time.timeScale = 1f;
@@ -64,8 +81,12 @@ namespace TreadShred.Screens.Tests
                 yield return new WaitForSecondsRealtime(0.25f);
         }
 
-        private static void Deliver(string orderId) =>
+        // As the store delivers it: credited, then its gems become its supply before the order is confirmed (D-037-AC-01).
+        private static void Deliver(string orderId)
+        {
             Get<PurchaseFlow>(Store(), "Purchases").OrderDelivered(GemCatalog.StarterPack.ProductId, orderId, out _);
+            Progression.EquipStarterPack();
+        }
 
         private static void OfferRevive()
         {
@@ -90,10 +111,11 @@ namespace TreadShred.Screens.Tests
             yield return new WaitForSecondsRealtime(3.5f);
         }
 
-        // Runs a test body, then closes whatever it left open and puts the wallet back as it was.
+        // Runs a test body, then closes whatever it left open and puts the wallet and progress back as they were.
         private static IEnumerator Restoring(IEnumerator body)
         {
             var saved = PlayerPrefs.GetString(WalletKey, JsonUtility.ToJson(new WalletState()));
+            var progress = PlayerPrefs.GetString(ProgressionKey, string.Empty);
             try
             {
                 while (body.MoveNext())
@@ -109,10 +131,11 @@ namespace TreadShred.Screens.Tests
                         UnityEngine.Object.Destroy(open);
                 }
                 Wallet.Replace(JsonUtility.FromJson<WalletState>(saved));
+                Progression.Replace(string.IsNullOrEmpty(progress) ? new ProgressionState() : JsonUtility.FromJson<ProgressionState>(progress));
             }
         }
 
-        [UnityTest(Description = "D-037-AC-03: while on sale every revive panel leads with STARTER PACK, REVIVE FREE + the armor it adds, OR 10 MORE REVIVES, the countdown and REVIVE + STARTER PACK; short of gems the plain revive waits, with gems it sits below, and bought or ended the panel offers the plain revive")]
+        [UnityTest(Description = "D-037-AC-03: while on sale every revive panel leads with STARTER PACK, REVIVE FREE + the armor it adds, PLUS the rest of the pack, the countdown and REVIVE + STARTER PACK; short of gems the plain revive waits, with gems it sits below, and bought or ended the panel offers the plain revive")]
         public IEnumerator RevivePanelLeadsWithTheStarterPack()
         {
             var findings = new List<Finding>();
@@ -141,9 +164,9 @@ namespace TreadShred.Screens.Tests
 
                 Deliver("playmode-starter-1");
                 yield return null;
-                Assert.AreEqual(300, Wallet.Balance, "the store delivered the Starter Pack");
+                Assert.AreEqual((0, 1), (Wallet.Balance, Progression.Supply(SupplyTrack.Seeker)), "delivered: its gems are now its supply");
                 Assert.IsFalse(Texts().Any(t => t.StartsWith("REVIVE FREE + ", StringComparison.Ordinal)), "bought: the Starter Pack leaves the panel");
-                Assert.IsNotNull(ButtonStarting("REVIVE FOR 30 GEMS"), "and the revive offer remains, paid in gems");
+                Assert.IsNotNull(ButtonStarting("REVIVE: "), "and the plain revive offer remains");
                 yield return CloseRevive();
 
                 Seed(100, 1);
@@ -163,7 +186,7 @@ namespace TreadShred.Screens.Tests
             }
         }
 
-        [UnityTest(Description = "D-037-AC-04: while on sale the Starter Pack interstitial opens over the victory screen and on reaching the start screen, NOT NOW closes it, and a delivered purchase closes it")]
+        [UnityTest(Description = "D-037-AC-04: while on sale the Starter Pack interstitial opens over the victory screen, revealing its stack with the free test drive, and on reaching the start screen with the purchase alone; NOT NOW closes it once revealed, and a delivered purchase closes it")]
         public IEnumerator InterstitialOpensOverResultsAndStart()
         {
             yield return Restoring(Body());
@@ -174,20 +197,26 @@ namespace TreadShred.Screens.Tests
                 yield return Load("Lv1");
                 yield return Win();
                 Assert.IsTrue(InterstitialOpen(), "over the victory screen");
+                yield return Revealed();
                 var texts = Texts();
                 Assert.Contains(OfferLabels.StarterPackTitle, texts);
                 Assert.IsTrue(texts.Any(t => t.StartsWith(OfferLabels.StarterPackLimit + "  |  ENDS IN ", StringComparison.Ordinal)), "ONE TIME ONLY and the countdown");
-                Assert.IsTrue(texts.Any(t => t.EndsWith("ARMOR", StringComparison.Ordinal) || t.EndsWith("ARMOR HITS", StringComparison.Ordinal)), "the armor it adds, not gems");
-                Assert.Contains(StarterPackPitch.Alternatives, texts);
-                Assert.IsTrue(texts.Any(t => t.EndsWith("YOU PICK WHAT.", StringComparison.Ordinal)), "what it is worth");
-                Assert.Contains(StarterPackPitch.GemsNote, texts);
-                Assert.IsNotNull(ButtonStarting("GET IT"));
+                foreach (var item in StarterPackPitch.Stack.Items)
+                    Assert.Contains(SupplyStack.Line(item), texts);
+                Assert.Contains(StarterPackPitch.Stack.WeaponsNote, texts);
+                Assert.IsTrue(texts.Any(t => t.StartsWith("TOTAL VALUE ", StringComparison.Ordinal) || t.EndsWith("X THE GEAR FOR THE PRICE", StringComparison.Ordinal)), "what it is worth");
+                Assert.IsTrue(texts.Any(t => t.StartsWith("YOURS ", StringComparison.Ordinal)));
+                Assert.IsNotNull(ButtonStarting(WarChest.TestDriveButton), "over a mission the free test drive leads");
+                Assert.IsNotNull(ButtonStarting("GET THE STARTER PACK"));
                 ButtonStarting("NOT NOW").onClick.Invoke();
                 yield return null;
                 Assert.IsFalse(InterstitialOpen(), "NOT NOW closes it");
 
                 yield return Load("Start");
                 Assert.IsTrue(InterstitialOpen(), "on reaching the start screen");
+                yield return Revealed();
+                Assert.IsNull(ButtonStarting(WarChest.TestDriveButton), "no mission to drive on the start screen");
+                Assert.IsNotNull(ButtonStarting("GET THE STARTER PACK"));
                 Deliver("playmode-starter-2");
                 yield return null;
                 yield return null;
@@ -208,10 +237,12 @@ namespace TreadShred.Screens.Tests
                 yield return Load("Lv1");
                 yield return Win();
                 Assert.IsTrue(InterstitialOpen());
+                yield return Revealed();
                 yield return Audit("Starter Pack interstitial over victory", findings);
 
                 yield return Load("Start");
                 Assert.IsTrue(InterstitialOpen());
+                yield return Revealed();
                 yield return Audit("Starter Pack interstitial over the start screen", findings);
                 ButtonStarting("NOT NOW").onClick.Invoke();
                 yield return null;
@@ -228,6 +259,57 @@ namespace TreadShred.Screens.Tests
                 yield return null;
                 Assert.IsNull(ButtonStarting(OfferLabels.StarterPackTitle), "bought: no longer offered");
                 Assert.IsNotNull(ButtonStarting("BUY 100 GEMS"), "the smallest pack returns");
+            }
+        }
+
+        [UnityTest(Description = "D-037-AC-08: TEST DRIVE IT FREE replays the mission just played with the whole Starter Pack on and nothing kept; when it ends the reveal returns as THAT WAS THE STARTER PACK with the countdown and the purchase alone, and closing it goes on to the next mission after a victory and replays the mission after a loss")]
+        public IEnumerator TestDriveTheStarterPack()
+        {
+            yield return Restoring(Body());
+
+            IEnumerator Body()
+            {
+                Seed(100, 0.1);
+                yield return Load("Lv1");
+                yield return Win();
+                yield return Drive("Lv1");
+                ButtonStarting("NOT NOW").onClick.Invoke();
+                yield return new WaitForSecondsRealtime(2f);
+                Assert.AreEqual("Lv2", SceneManager.GetActiveScene().name, "after a victory, on to the next mission");
+
+                yield return Load("Lv1");
+                var manager = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
+                manager.GetType().GetMethod("Failure", Members).Invoke(manager, null);
+                yield return new WaitForSecondsRealtime(3.5f);
+                yield return Drive("Lv1");
+                ButtonStarting("NOT NOW").onClick.Invoke();
+                yield return new WaitForSecondsRealtime(2f);
+                Assert.AreEqual("Lv1", SceneManager.GetActiveScene().name, "after a loss, the mission again");
+                Assert.IsTrue(Get<bool>(Store(), "StarterPackOnSale"), "a drive buys nothing");
+            }
+
+            // From the result screen's interstitial: the drive, its end, and the reveal that follows.
+            IEnumerator Drive(string mission)
+            {
+                Assert.IsTrue(InterstitialOpen());
+                yield return Revealed();
+                var armor = Progression.Supply(SupplyTrack.Armor);
+                var seeker = Progression.Supply(SupplyTrack.Seeker);
+                ButtonStarting(WarChest.TestDriveButton).onClick.Invoke();
+                yield return new WaitForSecondsRealtime(2f);
+                var drive = GameType("TreadShredTestDrive");
+                Assert.IsTrue((bool)drive.GetProperty("Active").GetValue(null), "driving");
+                Assert.AreEqual(mission, SceneManager.GetActiveScene().name, "the mission just played");
+                Assert.Contains(StarterPackPitch.TestDriveNote, Texts());
+                Assert.AreEqual((armor + 2, seeker + 1), (Progression.Supply(SupplyTrack.Armor), Progression.Supply(SupplyTrack.Seeker)), "the whole pack on");
+                drive.GetMethod("Finish").Invoke(null, null);
+                yield return null;
+                Assert.AreEqual((armor, seeker), (Progression.Supply(SupplyTrack.Armor), Progression.Supply(SupplyTrack.Seeker)), "the gear goes with the drive");
+                Assert.IsTrue(InterstitialOpen(), "the reveal returns");
+                yield return Revealed();
+                Assert.IsTrue(Texts().Any(t => t.StartsWith(StarterPackPitch.AfterDriveSubtitle + "  |  ENDS IN ", StringComparison.Ordinal)));
+                Assert.IsNull(ButtonStarting(WarChest.TestDriveButton), "the purchase alone");
+                Assert.IsNotNull(ButtonStarting("GET THE STARTER PACK"));
             }
         }
 

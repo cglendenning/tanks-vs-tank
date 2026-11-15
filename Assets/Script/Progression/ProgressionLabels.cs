@@ -162,7 +162,7 @@ namespace TreadShred.Progression
         /// price of the gem pack that buys it, or the pack's gems until the store reports a price.
         /// </summary>
         public static string UpgradeButton(UpgradeQuote quote, bool maxed, int gemBalance = int.MaxValue,
-            Func<GemPack, string> priceFor = null, bool starterOnSale = false)
+            Func<GemPack, string> priceFor = null)
         {
             if (maxed)
                 return "MAXED";
@@ -170,8 +170,7 @@ namespace TreadShred.Progression
                 return "UPGRADE FOR " + CountText.Format(quote.CostCoins) + " COINS";
             if (gemBalance >= quote.GemsNeeded)
                 return "UPGRADE FOR " + CountText.Format(quote.GemsNeeded) + " GEMS";
-            // D-037-AC-04: names the price of the pack the tap will buy, the Starter Pack while it is on sale.
-            var pack = GemCatalog.SmallestPackCovering(quote.GemsNeeded - gemBalance, starterOnSale);
+            var pack = GemCatalog.SmallestPackCovering(quote.GemsNeeded - gemBalance);
             var price = priceFor?.Invoke(pack);
             return "UPGRADE: " + (string.IsNullOrEmpty(price) ? "BUY " + CountText.Format(pack.Gems) + " GEMS" : price);
         }

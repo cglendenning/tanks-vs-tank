@@ -55,9 +55,9 @@ namespace TreadShred.Economy
             new GemPack("treadshred.gems1200", 1200, 999)
         };
 
-        // D-037: the one-time Starter Pack (R-STARTER-PACK). Kept out of Packs so only a caller that knows it is on
-        // sale ever chooses it.
-        public static readonly GemPack StarterPack = new GemPack("treadshred.starter300", 300, 99);
+        // D-037: the one-time Starter Pack (R-STARTER-PACK): its gems are the 6 supply units it equips at once
+        // (StarterPackPitch.Stack), so it is never a pack for a shortfall. Kept out of Packs; the ID predates the stack.
+        public static readonly GemPack StarterPack = new GemPack("treadshred.starter300", 600, 99);
 
         // D-047: the one-time War Chest (R-WAR-CHEST): its gems are the 15 supply units it equips at once, so it is never
         // a pack a one-tap purchase chooses.
@@ -102,18 +102,18 @@ namespace TreadShred.Economy
             return string.Equals(WarChest.ProductId, productId, StringComparison.Ordinal) ? WarChest : null;
         }
 
-        public static OfferPlan Plan(GemOffer offer, int balance, bool starterOnSale = false)
+        public static OfferPlan Plan(GemOffer offer, int balance)
         {
-            return PlanFor(Cost(offer), balance, starterOnSale);
+            return PlanFor(Cost(offer), balance);
         }
 
         // Spend directly when the balance covers the gem cost, otherwise buy
         // the smallest pack that covers the shortfall.
-        public static OfferPlan PlanFor(int cost, int balance, bool starterOnSale = false)
+        public static OfferPlan PlanFor(int cost, int balance)
         {
             return balance >= cost
                 ? new OfferPlan(cost, null)
-                : new OfferPlan(cost, SmallestPackCovering(cost - balance, starterOnSale));
+                : new OfferPlan(cost, SmallestPackCovering(cost - balance));
         }
 
         /// <summary>
@@ -123,15 +123,14 @@ namespace TreadShred.Economy
         /// </summary>
         public static GemPack PackAlongside(bool coveredByHeldCurrency, bool starterOnSale)
         {
-            return coveredByHeldCurrency ? SmallestPackCovering(1, starterOnSale) : null;
+            if (!coveredByHeldCurrency)
+                return null;
+            return starterOnSale ? StarterPack : SmallestPackCovering(1);
         }
 
-        // D-037-AC-04: while the Starter Pack is on sale it is the pack for any shortfall it covers, so no button
-        // sells fewer gems for the same price.
-        public static GemPack SmallestPackCovering(int shortfall, bool starterOnSale = false)
+        // D-037-AC-04: a shortfall always buys a regular pack; the Starter Pack holds supply, not gems to spend.
+        public static GemPack SmallestPackCovering(int shortfall)
         {
-            if (starterOnSale && StarterPack.Gems >= shortfall)
-                return StarterPack;
             for (var i = 0; i < Packs.Count; i++)
             {
                 if (Packs[i].Gems >= shortfall)

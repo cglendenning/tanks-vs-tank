@@ -277,17 +277,22 @@ namespace TreadShred.Progression
 
         public bool HasUsed(Weapon weapon) => weapon != Weapon.Cannon && (UsedWeapons & WeaponRental.Bit(weapon)) != 0;
 
-        // D-047-AC-05: the War Chest's units while it is test driven. They count in the mission like units held, but
-        // live only here: never saved, never used up, and gone when the drive ends (or the app closes).
+        // D-047-AC-05, D-037-AC-08: a one-time pack's units while it is test driven. They count in the mission like units
+        // held, but live only here: never saved, never used up, and gone when the drive ends (or the app closes).
         private int[] testDrive;
+        private int testDriveWeapons;
 
         public bool TestDriving => testDrive != null;
 
-        public void StartTestDrive()
+        /// <summary>D-047-AC-05: a test drive of the War Chest, as its free mission (D-047-AC-07) also uses.</summary>
+        public void StartTestDrive() => StartTestDrive(WarChest.Stack);
+
+        public void StartTestDrive(SupplyStack stack)
         {
             testDrive = new int[SupplyRules.TrackCount];
-            foreach (var item in WarChest.Items)
+            foreach (var item in stack.Items)
                 testDrive[(int)item.Track] += item.Units;
+            testDriveWeapons = stack.WeaponBits;
         }
 
         public void EndTestDrive() => testDrive = null;
@@ -306,7 +311,7 @@ namespace TreadShred.Progression
             }
         }
 
-        private int UsedWeapons => testDrive == null ? state.usedWeapons : state.usedWeapons | WarChest.WeaponBits;
+        private int UsedWeapons => testDrive == null ? state.usedWeapons : state.usedWeapons | testDriveWeapons;
 
         /// <summary>D-043-AC-06, D-045: the missions won a weapon's supply lasts; 0 when it holds none.</summary>
         public int RentalLeft(Weapon weapon) => weapon == Weapon.Cannon ? 0 : SupplyMissionsLeft(SupplyRules.ForWeapon(weapon));
@@ -351,9 +356,14 @@ namespace TreadShred.Progression
         /// D-047-AC-03: the War Chest's gems, just credited, become its supply on every track at once, and its special
         /// weapons join the drawer so they can be used on any mission now. A unit the gems no longer cover stays as gems.
         /// </summary>
-        public void EquipWarChest()
+        public void EquipWarChest() => Equip(WarChest.Stack);
+
+        /// <summary>D-037-AC-01: the Starter Pack's gems, just credited, become its supply, as the War Chest's do.</summary>
+        public void EquipStarterPack() => Equip(StarterPackPitch.Stack);
+
+        private void Equip(SupplyStack stack)
         {
-            foreach (var item in WarChest.Items)
+            foreach (var item in stack.Items)
             {
                 for (var unit = 0; unit < item.Units; unit++)
                 {
@@ -364,8 +374,8 @@ namespace TreadShred.Progression
                     }
                     SupplyUnits[(int)item.Track]++;
                 }
-                if (WarChest.IsWeapon(item.Track))
-                    state.usedWeapons |= WeaponRental.Bit(WarChest.WeaponOf(item.Track));
+                if (SupplyStack.IsWeapon(item.Track))
+                    state.usedWeapons |= WeaponRental.Bit(SupplyStack.WeaponOf(item.Track));
             }
             Commit();
         }

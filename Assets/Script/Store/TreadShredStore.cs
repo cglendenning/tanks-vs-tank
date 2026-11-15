@@ -256,9 +256,12 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
         Debug.Log("[Store] " + result + " " + product.definition.id + "; balance " + Wallet.Balance);
         if (result == CreditResult.Credited)
         {
-            // D-047-AC-03: the War Chest's gems become its supply before the order is confirmed.
+            // D-047-AC-03, D-037-AC-01: the War Chest's and the Starter Pack's gems become their supply before the
+            // order is confirmed.
             if (product.definition.id == GemCatalog.WarChest.ProductId)
                 TreadShredProgress.Ensure().Progression.EquipWarChest();
+            else if (product.definition.id == GemCatalog.StarterPack.ProductId)
+                TreadShredProgress.Ensure().Progression.EquipStarterPack();
             // D-021-AC-07: a store test account's purchase is recorded apart and never reaches attribution.
             var test = TreadShredTestPurchase.IsTest(order.Info.Receipt);
             TreadShredAnalytics.Log(PurchaseEvent(test, product.definition.id,

@@ -84,10 +84,10 @@ namespace TreadShred.Economy
         public TimeSpan StarterPackTimeLeft => starterPackAvailable() ? wallet.StarterPackTimeLeft(utcNow()) : TimeSpan.Zero;
 
         /// <summary>What a gem cost spends now, or the pack one tap buys for it (D-010, D-037-AC-04).</summary>
-        public OfferPlan PlanFor(int cost) => GemCatalog.PlanFor(cost, wallet.Balance, StarterPackOnSale);
+        public OfferPlan PlanFor(int cost) => GemCatalog.PlanFor(cost, wallet.Balance);
 
         /// <summary>The pack one tap buys to cover a gem shortfall (D-036, D-037-AC-04).</summary>
-        public GemPack PackCovering(int shortfall) => GemCatalog.SmallestPackCovering(shortfall, StarterPackOnSale);
+        public GemPack PackCovering(int shortfall) => GemCatalog.SmallestPackCovering(shortfall);
 
         /// <summary>Spends a gem cost, or buys the smallest covering pack and then spends.</summary>
         public void SpendOrBuy(int cost, Action onApplied, Action<string> onStatus)

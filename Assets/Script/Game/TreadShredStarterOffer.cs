@@ -2,106 +2,64 @@ using TreadShred.Analytics;
 using TreadShred.Economy;
 using TreadShred.Progression;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
 /// D-037-AC-04: the Starter Pack interstitial, opened over each victory and failure screen and on reaching the start
-/// screen while the pack is on sale, with its live countdown (D-037-AC-07). Closes itself once the pack is bought or
-/// its window ends.
+/// screen while the pack is on sale: its stack revealed item by item as the War Chest's is, under ONE TIME ONLY and the
+/// live countdown (D-037-AC-07). Closes itself once the pack is bought or its window ends. D-037-AC-08: over a result
+/// screen it leads with the free test drive of the mission just played; when the drive ends it opens again, and closing
+/// it goes on to the next mission after a victory or replays the mission after a loss.
 /// </summary>
-public sealed class TreadShredStarterOffer : MonoBehaviour
+public sealed class TreadShredStarterOffer : TreadShredStackOffer
 {
-    private Text countdownText;
-    private Text valueText;
-    private Text statusText;
-    private Button buyButton;
-    private System.Action<string> showStatus;
+    // ONE TIME ONLY, or after a drive what the player just used; the countdown follows it.
+    private string limit;
+    private bool won;
 
-    /// <summary>Opens the interstitial when the Starter Pack is on sale and none is open; returns whether it opened.</summary>
-    public static bool ShowIfOnSale(Font font)
+    /// <summary>The start screen's interstitial: the purchase alone. Returns whether it opened.</summary>
+    public static bool ShowIfOnSale(Font font) => Show(font, false, false);
+
+    /// <summary>A result screen's interstitial, led by the free test drive of the mission just played.</summary>
+    public static bool ShowOverResult(Font font, bool won) => Show(font, true, won);
+
+    private static bool Show(Font font, bool overMission, bool won)
     {
         if (!TreadShredStore.Ensure().StarterPackOnSale || FindFirstObjectByType<TreadShredStarterOffer>() != null)
             return false;
         var root = TreadShredUi.CreateOverlay("TreadShredStarterOffer", 110);
-        root.gameObject.AddComponent<TreadShredStarterOffer>().Build(root, font);
+        var offer = root.gameObject.AddComponent<TreadShredStarterOffer>();
+        offer.limit = StarterPackPitch.Limit;
+        offer.won = won;
+        offer.Build(root, font, offer.limit, overMission);
         return true;
     }
 
-    private void Build(RectTransform root, Font font)
+    /// <summary>D-037-AC-08: the reveal once a drive ends; closing it (or buying) runs <paramref name="closed"/>.</summary>
+    public static void ShowAfterTestDrive(Font font, System.Action closed)
     {
-        var store = TreadShredStore.Ensure();
-        var backdrop = TreadShredUi.CreateBackdrop(root, 0.85f);
-        var panel = TreadShredUi.CreateRect("StarterOfferPanel", backdrop, Vector2.zero, new Vector2(1000f, 700f),
-            typeof(RectTransform), typeof(Image), typeof(Outline));
-        TreadShredUi.StylePanel(panel.gameObject);
-
-        TreadShredUi.CreateText(OfferLabels.StarterPackTitle, panel, new Vector2(0f, 255f), new Vector2(940f, 90f), 72, font)
-            .color = TreadShredUi.TitleColor;
-        countdownText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(0f, 190f), new Vector2(940f, 42f), 32, font);
-        countdownText.color = TreadShredUi.AccentColor;
-        // D-037-AC-04: what the pack does in the game, not how many gems it is.
-        var progress = TreadShredProgress.Ensure();
-        TreadShredUi.CreateText(StarterPackPitch.Headline(progress.ArmorHits), panel, new Vector2(0f, 122f), new Vector2(940f, 64f), 60,
-            font).color = Color.white;
-        TreadShredUi.CreateText(StarterPackPitch.Alternatives, panel, new Vector2(0f, 62f), new Vector2(940f, 32f), 28, font)
-            .color = TreadShredUi.DetailColor;
-        TreadShredUi.CreateText(StarterPackPitch.Firepower(progress.Progression.Level(UpgradeTrack.Firepower)), panel,
-            new Vector2(0f, 26f), new Vector2(940f, 32f), 28, font).color = TreadShredUi.DetailColor;
-        valueText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(0f, -14f), new Vector2(940f, 32f), 28, font);
-        valueText.color = TreadShredUi.TitleColor;
-        buyButton = TreadShredUi.CreateButton(string.Empty, panel, new Vector2(0f, -100f), new Vector2(680f, 110f), 40, font, Buy);
-        TreadShredUi.StylePrimary(buyButton);
-        TreadShredUi.CreateText(StarterPackPitch.GemsNote, panel, new Vector2(0f, -172f), new Vector2(940f, 26f), 20, font)
-            .color = TreadShredUi.DetailColor;
-        statusText = TreadShredUi.CreateText(string.Empty, panel, new Vector2(0f, -207f), new Vector2(940f, 30f), 24, font);
-        statusText.color = TreadShredUi.DetailColor;
-        TreadShredUi.CreateButton("NOT NOW", panel, new Vector2(0f, -262f), new Vector2(360f, 76f), 28, font, Close);
-
-        showStatus = status => statusText.text = status;
-        Refresh();
-        TreadShredAnalytics.Log(GameEvents.OfferShown("starter_pack", store.Wallet.Balance));
-    }
-
-    private void Refresh()
-    {
-        var store = TreadShredStore.Ensure();
-        var price = store.PriceFor(GemCatalog.StarterPack);
-        countdownText.text = OfferLabels.StarterPackLimit + "  |  " + OfferLabels.StarterPackCountdown(store.StarterPackTimeLeft);
-        valueText.text = StarterPackPitch.ValueLine(store.PriceFor(GemCatalog.Packs[0]), price);
-        TreadShredUi.SetLabel(buyButton, StarterPackPitch.BuyButton(price));
-        buyButton.interactable = !store.PurchaseInProgress;
-    }
-
-    private void Update()
-    {
-        // D-037-AC-07: bought, or its window ended while the interstitial was open.
         if (!TreadShredStore.Ensure().StarterPackOnSale)
         {
-            Close();
+            closed();
             return;
         }
-        Refresh();
+        var root = TreadShredUi.CreateOverlay("TreadShredStarterOffer", 110);
+        var offer = root.gameObject.AddComponent<TreadShredStarterOffer>();
+        offer.onClosed = closed;
+        offer.limit = StarterPackPitch.AfterDriveSubtitle;
+        offer.Build(root, font, offer.limit, false);
     }
 
-    private void Buy()
-    {
-        statusText.text = string.Empty;
-        TreadShredStore.Ensure().BuyPack(GemCatalog.StarterPack, Close, showStatus);
-    }
+    protected override SupplyStack Stack => StarterPackPitch.Stack;
 
-    private void Start() => TreadShredBack.Opened(this, Close);
+    protected override bool OnSale => TreadShredStore.Ensure().StarterPackOnSale;
 
-    private void OnDestroy()
-    {
-        TreadShredBack.Closed(this);
-        // Closed while the sheet was opening: a delivery still credits the gems (D-011).
-        if (TreadShredStore.Instance != null)
-            TreadShredStore.Instance.Release(showStatus);
-    }
+    protected override void Shown(TreadShredStore store) =>
+        TreadShredAnalytics.Log(GameEvents.OfferShown("starter_pack", store.Wallet.Balance));
 
-    private void Close()
-    {
-        if (this != null)
-            Destroy(gameObject);
-    }
+    protected override void TestDrive(Font driveFont) =>
+        TreadShredTestDrive.Begin(driveFont, StarterPackPitch.Stack, ShowAfterTestDrive, won ? TreadShredCampaign.Next : (System.Action)null);
+
+    // D-037-AC-07: the countdown runs live beside the line.
+    protected override void Tick() =>
+        SubtitleText.text = limit + "  |  " + OfferLabels.StarterPackCountdown(TreadShredStore.Ensure().StarterPackTimeLeft);
 }

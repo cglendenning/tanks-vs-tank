@@ -28,15 +28,13 @@ namespace TreadShred.Economy
         {
             if (plan.CanSpendNow)
                 return Owned(balance);
-            // D-037-AC-04: the button will buy the Starter Pack, so the line under it says so.
-            return GemCatalog.IsStarterPack(plan.PackToBuy) ? StarterPackLine : Owned(balance) + ". NEED " + CountText.Format(plan.Cost);
+            return Owned(balance) + ". NEED " + CountText.Format(plan.Cost);
         }
 
         // D-037: the one-time Starter Pack's copy.
         public const string StarterPackTitle = "STARTER PACK";
         public const string StarterPackLimit = "ONE TIME ONLY";
-        public static readonly string StarterPackLine =
-            StarterPackTitle + ": " + CountText.Format(GemCatalog.StarterPack.Gems) + " GEMS. " + StarterPackLimit;
+        public const string StarterPackEquipped = StarterPackTitle + " EQUIPPED";
 
         /// <summary>D-037-AC-07: the live countdown, rounded up so it never reads 0:00 while the pack is still on sale.</summary>
         public static string StarterPackCountdown(TimeSpan left)
@@ -126,7 +124,9 @@ namespace TreadShred.Economy
         /// <summary>D-040-AC-05: why to take the pack beside an offer the player can already cover.</summary>
         public const string StockUp = "MORE GEMS FOR OVERDRIVE, REDEPLOYS AND UPGRADES";
 
-        public static string GemsAdded(GemPack pack) => "+" + CountText.Format(pack.Gems) + " GEMS ADDED";
+        // D-037-AC-04: the Starter Pack's gems become its supply on delivery.
+        public static string GemsAdded(GemPack pack) =>
+            GemCatalog.IsStarterPack(pack) ? StarterPackEquipped : "+" + CountText.Format(pack.Gems) + " GEMS ADDED";
 
         public static string Pack(GemPack pack, string localizedPrice, string prefix = "")
         {

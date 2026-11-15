@@ -1,29 +1,31 @@
-using System;
-using System.Globalization;
+using System.Collections.Generic;
 using TreadShred.Economy;
 
 namespace TreadShred.Progression
 {
     /// <summary>
-    /// D-037-AC-03/04: the Starter Pack sold in what it does in the game, not in gems (a new player does not know what a
-    /// gem is): the armor it adds, as a multiple of the tank's own only when that is true, and the revives, Overdrive
-    /// missions or firepower levels it buys instead. Every number comes from the rules.
+    /// D-037 (R-STARTER-PACK): the Starter Pack, sold like the War Chest as a stack of supply on every main track plus a
+    /// special weapon, and in what it does in the game, not in gems (a new player does not know what a gem is): the
+    /// armor it adds, as a multiple of the tank's own only when that is true. Every number comes from the rules.
     /// </summary>
     public static class StarterPackPitch
     {
-        private static int Gems => GemCatalog.StarterPack.Gems;
+        public const string Limit = OfferLabels.StarterPackLimit;
+        public const string TestDriveNote = "ALL STARTER PACK GEAR ON";
+        public const string AfterDriveSubtitle = "THAT WAS THE STARTER PACK. KEEP ALL OF IT";
 
-        /// <summary>The supply units the pack's gems buy (D-045).</summary>
-        public static int Units => Gems / SupplyRules.UnitGems;
+        public static readonly SupplyStack Stack = new SupplyStack(OfferLabels.StarterPackTitle, GemCatalog.StarterPack, "starter_pack",
+            TestDriveNote, AfterDriveSubtitle, new[]
+            {
+                new WarChestItem(SupplyTrack.Armor, 2),
+                new WarChestItem(SupplyTrack.Firepower, 1),
+                new WarChestItem(SupplyTrack.Speed, 1),
+                new WarChestItem(SupplyTrack.Overdrive, 1),
+                new WarChestItem(SupplyTrack.Seeker, 1)
+            });
 
-        public static int ArmorHits => Units * SupplyRules.ArmorHitsPerUnit;
-
-        public static int Revives => Gems / ProgressionRules.ReviveCostsGems[0];
-
-        public static int OverdriveMissions => Gems / GemCatalog.Cost(GemOffer.Overdrive) * SupplyRules.MissionsPerUse;
-
-        /// <summary>How many of the regular smallest pack the Starter Pack is worth.</summary>
-        public static int ValueMultiple => Gems / GemCatalog.Packs[0].Gems;
+        /// <summary>The armor hits the pack's armor supply adds (D-045).</summary>
+        public static int ArmorHits => Stack.UnitsOf(SupplyTrack.Armor) * SupplyRules.ArmorHitsPerUnit;
 
         /// <summary>TRIPLE YOUR ARMOR only when the hits truly triple the tank's own; DOUBLE when they at least double it.</summary>
         public static string Headline(int armorHits)
@@ -36,40 +38,23 @@ namespace TreadShred.Progression
             return "+" + ArmorHits + " ARMOR HITS";
         }
 
-        public static string Alternatives => "OR " + Revives + " REVIVES · OR " + OverdriveMissions + " MISSIONS OF OVERDRIVE";
-
-        /// <summary>The firepower levels the gems buy from the tank's current level (coins first, D-018), or, at the top, its supply.</summary>
-        public static string Firepower(int level)
-        {
-            var coins = Gems * ProgressionRules.CoinsPerGem;
-            var levels = 0;
-            while (level + levels < ProgressionRules.LevelsPerTrack && coins >= (level + levels + 1) * ProgressionRules.CostStepCoins)
-            {
-                coins -= (level + levels + 1) * ProgressionRules.CostStepCoins;
-                levels++;
-            }
-            if (levels > 0)
-                return "OR " + levels + (levels == 1 ? " FIREPOWER UPGRADE" : " FIREPOWER UPGRADES");
-            return "OR +" + Math.Round(Units * SupplyRules.DamagePerUnit * 100f) + "% FIREPOWER";
-        }
-
-        /// <summary>The pack's worth against the regular pack's price; in plain multiples when the store's prices are not in dollars.</summary>
-        public static string ValueLine(string regularPrice, string starterPrice)
-        {
-            if (OfferLabels.TryDollars(regularPrice, out var regular) && !string.IsNullOrEmpty(starterPrice))
-                return "$" + (regular * ValueMultiple).ToString("0.00", CultureInfo.InvariantCulture) + " OF GEAR FOR " + starterPrice +
-                    ". YOU PICK WHAT.";
-            return ValueMultiple + "X THE GEAR OF A REGULAR PACK. YOU PICK WHAT.";
-        }
-
-        public static string GemsNote => Gems + " GEMS: SPEND THEM ON ANY OF THESE";
-
-        public static string BuyButton(string price) => string.IsNullOrEmpty(price) ? "GET IT" : "GET IT FOR " + price;
-
         /// <summary>D-037-AC-03: the revive panel leads with the revive it includes and the armor.</summary>
         public static string ReviveHeadline(int armorHits) => "REVIVE FREE + " + Headline(armorHits);
 
-        public static string ReviveAlternative => "OR " + Revives + " MORE REVIVES";
+        /// <summary>D-037-AC-03: everything else in the pack, under the revive panel's headline.</summary>
+        public static string ReviveAlternative
+        {
+            get
+            {
+                var names = new List<string>();
+                foreach (var item in Stack.Items)
+                {
+                    if (item.Track != SupplyTrack.Armor)
+                        names.Add(SupplyStack.Name(item.Track));
+                }
+                return "PLUS " + SupplyStack.Joined(names);
+            }
+        }
 
         public static string ReviveButton(string price) => "REVIVE + STARTER PACK" + (string.IsNullOrEmpty(price) ? string.Empty : ": " + price);
 

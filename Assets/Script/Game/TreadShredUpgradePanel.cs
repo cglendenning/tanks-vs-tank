@@ -163,14 +163,13 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
         : ProgressionLabels.Preview(track, Progression.Level(track));
 
     /// <summary>
-    /// D-036-AC-01, D-037-AC-04: an upgrade's one price, naming the Starter Pack's price while it is on sale.
+    /// D-036-AC-01: an upgrade's one price.
     /// Shared with the victory card's upgrade offer.
     /// </summary>
     internal static string PricedLabel(UpgradeTrack track, bool maxed)
     {
         var store = TreadShredStore.Ensure();
-        return ProgressionLabels.UpgradeButton(Progression.Quote(track), maxed, store.Wallet.Balance, store.PriceFor,
-            store.StarterPackOnSale);
+        return ProgressionLabels.UpgradeButton(Progression.Quote(track), maxed, store.Wallet.Balance, store.PriceFor);
     }
 
     private void Undo()

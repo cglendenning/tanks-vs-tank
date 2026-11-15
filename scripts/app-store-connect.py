@@ -457,10 +457,12 @@ AWAITING_REVIEW = ("PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "DEVELOPER_REJE
 
 
 # D-037 R-STARTER-PACK: the one-time Starter Pack (GemCatalog.StarterPack). Consumable, so a reinstall never re-grants it.
-STARTER_PACK = {"product_id": "treadshred.starter300", "usd": "0.99", "name": "Starter Pack: 300 Gems",
-                "description": "One time only: 300 gems for boosts",
-                "review_note": "One-time pack of 300 gems for $0.99. It appears on the revive panel the first time the "
-                               "tank is destroyed, and in Settings (in place of the 100-gem pack) until it is bought."}
+STARTER_PACK = {"product_id": "treadshred.starter300", "usd": "0.99", "name": "Starter Pack",
+                "description": "One time: armor, firepower, speed and Seeker",
+                "review_note": "One-time bundle for $0.99: 6 units of supply (armor, firepower, speed, Overdrive and the "
+                               "Seeker shell) equipped at once. It is offered for 15 minutes once a new player has cleared "
+                               "mission 5: over each result screen (with a free 30-second test drive), on the revive panel "
+                               "(with the revive included) and in Settings (in place of the 100-gem pack)."}
 # D-047: the one-time War Chest, $4.99, 15 units of supply (the 1,500 gems they cost) equipped at once.
 WAR_CHEST = {"product_id": "treadshred.warchest", "usd": "4.99", "name": "War Chest",
              "description": "One time: armor, firepower, speed and every weapon",
@@ -481,8 +483,8 @@ def missing(api, path):
 
 def one_time_pack(api, pack, review_screenshot=None):
     """Creates a one-time pack (pack, WAR_CHEST) in App Store Connect where anything is missing: the consumable
-    product, its English name and description and its US price in every territory. A review screenshot, when given,
-    replaces the one there."""
+    product, its English name and description and its US price in every territory; English copy that differs from the
+    pack's is updated, with its review note. A review screenshot, when given, replaces the one there."""
     app = api.call("GET", f"/v1/apps?filter[bundleId]={BUNDLE_ID}")["data"][0]["id"]
     found = api.call("GET", f"/v1/apps/{app}/inAppPurchasesV2?filter[productId]={pack['product_id']}")["data"]
     iap = found[0] if found else api.call("POST", "/v2/inAppPurchases", {"data": {"type": "inAppPurchases",
@@ -492,11 +494,21 @@ def one_time_pack(api, pack, review_screenshot=None):
     iap_id = iap["id"]
     print(f"{pack['product_id']}: {'found' if found else 'created'} ({iap_id})", flush=True)
 
-    if missing(api, f"/v2/inAppPurchases/{iap_id}/inAppPurchaseLocalizations"):
+    localizations = api.call("GET", f"/v2/inAppPurchases/{iap_id}/inAppPurchaseLocalizations")["data"]
+    english = next((loc for loc in localizations if loc["attributes"]["locale"] == "en-US"), None)
+    if english is None:
         api.create("inAppPurchaseLocalizations", {"locale": "en-US", "name": pack["name"],
                                                   "description": pack["description"]},
                    {"inAppPurchaseV2": {"data": {"type": "inAppPurchases", "id": iap_id}}})
         print("  en-US name and description written", flush=True)
+    elif (english["attributes"]["name"], english["attributes"]["description"]) != (pack["name"], pack["description"]):
+        # What the pack holds changed (D-037 Starter Pack stack): the new copy goes to review with the next version.
+        api.call("PATCH", f"/v1/inAppPurchaseLocalizations/{english['id']}", {"data": {
+            "type": "inAppPurchaseLocalizations", "id": english["id"],
+            "attributes": {"name": pack["name"], "description": pack["description"]}}})
+        api.call("PATCH", f"/v2/inAppPurchases/{iap_id}", {"data": {
+            "type": "inAppPurchases", "id": iap_id, "attributes": {"reviewNote": pack["review_note"]}}})
+        print("  en-US name, description and review note updated", flush=True)
 
     if missing(api, f"/v2/inAppPurchases/{iap_id}/iapPriceSchedule"):
         point, path = None, f"/v2/inAppPurchases/{iap_id}/pricePoints?filter[territory]=USA&limit=200"

@@ -39,8 +39,8 @@ LEADERBOARD = {
 }
 # R-GEM-PACKS: the same product IDs and USD prices as App Store Connect (GemCatalog.Packs).
 PACKS = [("treadshred.gems100", 100, "0.99"), ("treadshred.gems550", 550, "4.99"), ("treadshred.gems1200", 1200, "9.99")]
-# D-037 R-STARTER-PACK: the one-time Starter Pack, sold apart from the regular packs (GemCatalog.StarterPack).
-STARTER_PACK = ("treadshred.starter300", 300, "0.99")
+# D-037 R-STARTER-PACK: the one-time Starter Pack, 6 units of supply (600 gems) equipped at once (GemCatalog.StarterPack).
+STARTER_PACK = ("treadshred.starter300", 600, "0.99")
 # D-047 R-WAR-CHEST: the one-time War Chest, 15 units of supply (1,500 gems) equipped at once (GemCatalog.WarChest).
 WAR_CHEST = ("treadshred.warchest", 1500, "4.99")
 PURCHASE_OPTION = "buy"
@@ -75,10 +75,31 @@ def money(usd):
     return {"currencyCode": "USD", "units": units, "nanos": int(cents.ljust(9, "0"))}
 
 
+def product_listing(product_id, gems):
+    """A one-time product's English store title and description: the one-time packs by what they hold, gem packs by gems."""
+    if product_id == WAR_CHEST[0]:
+        return {"languageCode": "en-US", "title": "WAR CHEST",
+                "description": "ONE TIME ONLY. ARMOR, FIREPOWER, SPEED, OVERDRIVE AND EVERY SPECIAL WEAPON."}
+    if product_id == STARTER_PACK[0]:
+        return {"languageCode": "en-US", "title": "STARTER PACK",
+                "description": "ONE TIME ONLY. ARMOR, FIREPOWER, SPEED, OVERDRIVE AND SEEKER, ALL AT ONCE."}
+    return {"languageCode": "en-US", "title": f"{gems:,} GEMS", "description": f"{gems:,} GEMS FOR COMBAT BOOSTS AND TANK UPGRADES."}
+
+
+def product_listings(auth):
+    """Rewrites only the one-time products' titles and descriptions, never their prices: for the release that changes
+    what a pack holds (D-037 Starter Pack stack, 1.9.8)."""
+    for product_id, gems, usd in PACKS + [STARTER_PACK, WAR_CHEST]:
+        version = call("POST", "/pricing:convertRegionPrices", auth, {"price": money(usd)})["regionVersion"]["version"]
+        call("PATCH", "/onetimeproducts/" + product_id, auth,
+             {"packageName": PACKAGE, "productId": product_id, "listings": [product_listing(product_id, gems)]},
+             {"regionsVersion.version": version, "updateMask": "listings"})
+        listing = call("GET", "/oneTimeProducts/" + product_id, auth)["listings"][0]
+        print(f"{product_id}: {listing['title']} / {listing['description']}")
+
+
 def products(auth):
     for product_id, gems, usd in PACKS + [STARTER_PACK, WAR_CHEST]:
-        starter = product_id == STARTER_PACK[0]
-        chest = product_id == WAR_CHEST[0]
         converted = call("POST", "/pricing:convertRegionPrices", auth, {"price": money(usd)})
         regions = [{"regionCode": code, "price": entry["price"], "availability": "AVAILABLE"}
                    for code, entry in sorted(converted.get("convertedRegionPrices", {}).items())]
@@ -86,11 +107,7 @@ def products(auth):
         product = {
             "packageName": PACKAGE,
             "productId": product_id,
-            "listings": [{"languageCode": "en-US", "title": "WAR CHEST" if chest else
-                          f"STARTER PACK: {gems:,} GEMS" if starter else f"{gems:,} GEMS",
-                          "description": "ONE TIME ONLY. ARMOR, FIREPOWER, SPEED, OVERDRIVE AND EVERY SPECIAL WEAPON." if chest else
-                                         ("ONE TIME ONLY. " if starter else "") +
-                                         f"{gems:,} GEMS FOR COMBAT BOOSTS AND TANK UPGRADES."}],
+            "listings": [product_listing(product_id, gems)],
             "purchaseOptions": [{
                 "purchaseOptionId": PURCHASE_OPTION,
                 "buyOption": {"legacyCompatible": True, "multiQuantityEnabled": False},
@@ -282,6 +299,8 @@ if __name__ == "__main__":
         send_draft(token())
     elif len(sys.argv) == 3 and sys.argv[1] == "games-leaderboard":
         games_leaderboard(token(), sys.argv[2])
+    elif len(sys.argv) == 2 and sys.argv[1] == "product-listings":
+        product_listings(token())
     elif len(sys.argv) == 2 and sys.argv[1] == "listing":
         listing(token())
     elif len(sys.argv) == 2 and sys.argv[1] == "status":
