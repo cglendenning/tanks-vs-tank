@@ -495,20 +495,29 @@ def one_time_pack(api, pack, review_screenshot=None):
     print(f"{pack['product_id']}: {'found' if found else 'created'} ({iap_id})", flush=True)
 
     localizations = api.call("GET", f"/v2/inAppPurchases/{iap_id}/inAppPurchaseLocalizations")["data"]
-    english = next((loc for loc in localizations if loc["attributes"]["locale"] == "en-US"), None)
-    if english is None:
+    english = [loc for loc in localizations if loc["attributes"]["locale"] == "en-US"]
+    wanted = (pack["name"], pack["description"])
+    if not english:
         api.create("inAppPurchaseLocalizations", {"locale": "en-US", "name": pack["name"],
                                                   "description": pack["description"]},
                    {"inAppPurchaseV2": {"data": {"type": "inAppPurchases", "id": iap_id}}})
         print("  en-US name and description written", flush=True)
-    elif (english["attributes"]["name"], english["attributes"]["description"]) != (pack["name"], pack["description"]):
-        # What the pack holds changed (D-037 Starter Pack stack): the new copy goes to review with the next version.
-        api.call("PATCH", f"/v1/inAppPurchaseLocalizations/{english['id']}", {"data": {
-            "type": "inAppPurchaseLocalizations", "id": english["id"],
-            "attributes": {"name": pack["name"], "description": pack["description"]}}})
+    elif all((loc["attributes"]["name"], loc["attributes"]["description"]) != wanted for loc in english):
+        # What the pack holds changed (D-037 Starter Pack stack). Apple refuses edits to the approved copy (409
+        # "ACTIVE state"); a second en-US localization is the pending draft, live once the next version's review
+        # approves it. A draft not yet submitted is edited in place.
+        draft = next((loc for loc in english if loc["attributes"].get("state") != "APPROVED"), None)
+        if draft is None:
+            api.create("inAppPurchaseLocalizations", {"locale": "en-US", "name": pack["name"],
+                                                      "description": pack["description"]},
+                       {"inAppPurchaseV2": {"data": {"type": "inAppPurchases", "id": iap_id}}})
+        else:
+            api.call("PATCH", f"/v1/inAppPurchaseLocalizations/{draft['id']}", {"data": {
+                "type": "inAppPurchaseLocalizations", "id": draft["id"],
+                "attributes": {"name": pack["name"], "description": pack["description"]}}})
         api.call("PATCH", f"/v2/inAppPurchases/{iap_id}", {"data": {
             "type": "inAppPurchases", "id": iap_id, "attributes": {"reviewNote": pack["review_note"]}}})
-        print("  en-US name, description and review note updated", flush=True)
+        print("  en-US name and description drafted for review, review note updated", flush=True)
 
     if missing(api, f"/v2/inAppPurchases/{iap_id}/iapPriceSchedule"):
         point, path = None, f"/v2/inAppPurchases/{iap_id}/pricePoints?filter[territory]=USA&limit=200"
