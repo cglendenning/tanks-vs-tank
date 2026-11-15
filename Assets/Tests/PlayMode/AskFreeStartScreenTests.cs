@@ -191,5 +191,26 @@ namespace TreadShred.Screens.Tests
             yield return Play("Start");
             Assert.Greater(Wallet.StarterPackTimeLeft(DateTime.UtcNow), TimeSpan.FromMinutes(14), "its full 15 minutes start on the next screen");
         }
+
+        [UnityTest(Description = "D-050-AC-01: the ask-free result screens draw their score, UPGRADES and RETRY caption in the game's own font, as every other result screen does")]
+        public IEnumerator AskFreeScreensKeepTheGameFont() => AskFree(KeepTheGameFont);
+
+        private static IEnumerator KeepTheGameFont()
+        {
+            FirstInstallThrough(0);
+            yield return Play("Lv1");
+            var results = (GameObject)Manager().GetType().GetField("VictoryofFail", Members).GetValue(Manager());
+            Manager().GetType().GetMethod("Failure", Members).Invoke(Manager(), null);
+            yield return new WaitForSecondsRealtime(3.5f);
+            var gameFont = (Font)GameType("TreadShredUi").GetMethod("FindFont").Invoke(null, new object[] { results });
+            Assert.IsNotNull(gameFont, "the result screen has the game's font");
+            var drawn = results.GetComponentsInChildren<Text>()
+                .Where(t => t.gameObject.activeInHierarchy && (t.text.StartsWith("SCORE", StringComparison.Ordinal)
+                    || t.text == ProgressionLabels.UpgradesButton || t.text.Contains("SCORE BACK TO 0")))
+                .ToList();
+            Assert.GreaterOrEqual(drawn.Count, 2, "the score and UPGRADES are on the screen");
+            foreach (var text in drawn)
+                Assert.AreSame(gameFont, text.font, "\"" + text.text + "\" is in the game's font");
+        }
     }
 }

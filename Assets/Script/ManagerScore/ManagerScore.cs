@@ -603,6 +603,9 @@ public class ManagerScore : MonoBehaviour
     // What every result screen shows around its offer card.
     private void BuildResultExtras()
     {
+        // The offer card loads the screen's font; an ask-free screen has no card (D-050-AC-01), so it is loaded here too.
+        if (rewardFont == null)
+            rewardFont = TreadShredUi.FindFont(VictoryofFail);
         // Coins, milestone gems and tier unlocks earned by this mission (D-018, D-026, D-019).
         var reward = TreadShredProgress.Ensure().LastReward;
         if (reward.HasValue)
