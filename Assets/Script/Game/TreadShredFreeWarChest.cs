@@ -30,6 +30,9 @@ public static class TreadShredFreeWarChest
     /// <summary>A result screen: on the schedule, and when nothing else is selling the chest there, the free War Chest arrives.</summary>
     public static void ResultScreen(RectTransform screen, Font font)
     {
+        // D-050-AC-01: the ask-free start's result screens bring no free War Chest and do not count toward its schedule.
+        if (TreadShredAskFreeStart.MissionAskFree)
+            return;
         var store = TreadShredStore.Ensure();
         if (!ArrivalsEnabled || Armed || Active || !store.WarChestOnSale ||
             UnityEngine.Object.FindFirstObjectByType<TreadShredWarChestOffer>() != null || !arrivals.ScreenShown())

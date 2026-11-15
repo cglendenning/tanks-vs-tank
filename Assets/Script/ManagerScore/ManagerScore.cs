@@ -394,18 +394,36 @@ public class ManagerScore : MonoBehaviour
 
     private void BuildFailureRewardActions()
     {
-        BuildOfferPanel(
-            GemOffer.ArmoredRedeploy,
-            "ARMORED REDEPLOY",
-            TreadShredScores.Run.Resumable > 0
-                ? OfferLabels.RedeployKeeps(TreadShredScores.Run.Resumable)
-                : CombatBoosts.RedeployExtraHits + " EXTRA HIT. " + SalesPitches.RunContinues,
-            "REDEPLOY",
-            () => ConfirmThen(GemOffer.ArmoredRedeploy, RedeemArmoredRedeploy));
+        // D-050-AC-01: no Armored Redeploy during the ask-free start; the free RETRY, the score, UPGRADES and the
+        // leaderboard stay.
+        if (TreadShredAskFreeStart.MissionAskFree)
+            BuildResultExtras();
+        else
+            BuildOfferPanel(
+                GemOffer.ArmoredRedeploy,
+                "ARMORED REDEPLOY",
+                TreadShredScores.Run.Resumable > 0
+                    ? OfferLabels.RedeployKeeps(TreadShredScores.Run.Resumable)
+                    : CombatBoosts.RedeployExtraHits + " EXTRA HIT. " + SalesPitches.RunContinues,
+                "REDEPLOY",
+                () => ConfirmThen(GemOffer.ArmoredRedeploy, RedeemArmoredRedeploy));
         ArrangeRetry(false);
     }
 
     private void BuildVictoryRewardActions()
+    {
+        // D-050-AC-01: no Overdrive, KEEP OVERDRIVE or upgrade card during the ask-free start; NEXT MISSION, the score,
+        // UPGRADES and the leaderboard stay.
+        if (TreadShredAskFreeStart.MissionAskFree)
+            BuildResultExtras();
+        else
+            BuildVictoryOffer();
+        ArrangeRetry(true);
+        // D-033-AC-03: only a victory screen may ask for a store rating, after real play.
+        TreadShredReviewPrompt.VictoryScreenOpened();
+    }
+
+    private void BuildVictoryOffer()
     {
         // D-009-AC-03, P-8: Overdrive still running from an earlier mission leaves nothing to sell here, so the card offers
         // the cheapest next upgrade instead; with every track maxed it only says Overdrive is on.
@@ -421,9 +439,6 @@ public class ManagerScore : MonoBehaviour
                 OfferLabels.OverdriveEffect,
                 "ACTIVATE",
                 () => ConfirmThen(GemOffer.Overdrive, RedeemOverdrive));
-        ArrangeRetry(true);
-        // D-033-AC-03: only a victory screen may ask for a store rating, after real play.
-        TreadShredReviewPrompt.VictoryScreenOpened();
     }
 
     // D-009-AC-04: after a victory the way forward is the most prominent control on the screen.

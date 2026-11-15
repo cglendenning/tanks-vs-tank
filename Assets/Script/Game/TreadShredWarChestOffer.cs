@@ -33,6 +33,9 @@ public sealed class TreadShredWarChestOffer : MonoBehaviour
     /// <summary>Opens the interstitial after a lost mission when the War Chest is on sale and it has not been offered this session.</summary>
     public static bool ShowAfterLoss(Font font)
     {
+        // D-050-AC-01: no War Chest during the ask-free start.
+        if (TreadShredAskFreeStart.MissionAskFree)
+            return false;
         if (ShownThisSession || !TreadShredStore.Ensure().WarChestOnSale || FindFirstObjectByType<TreadShredWarChestOffer>() != null)
             return false;
         ShownThisSession = true;

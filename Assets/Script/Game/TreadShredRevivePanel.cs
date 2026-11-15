@@ -35,6 +35,9 @@ public sealed class TreadShredRevivePanel : MonoBehaviour
         // D-047-AC-05: a test drive ends with the tank, with no revive offer.
         if (TreadShredTestDrive.Active)
             return false;
+        // D-050-AC-01: during the ask-free start a lost tank goes straight to the failure screen and its free RETRY.
+        if (TreadShredAskFreeStart.MissionAskFree)
+            return false;
         var scene = SceneManager.GetActiveScene().handle;
         if (scene != missionScene)
         {

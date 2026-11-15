@@ -36,6 +36,9 @@ public sealed class TreadShredNextMissionOffer : MonoBehaviour
     /// <summary>Opens the offer and returns true, or returns false when there is nothing left to offer.</summary>
     public static bool ShowBeforeNext(Font font, Action proceed)
     {
+        // D-050-AC-01: during the ask-free start NEXT MISSION loads the next mission with no offer.
+        if (TreadShredAskFreeStart.MissionAskFree)
+            return false;
         if (FindFirstObjectByType<TreadShredNextMissionOffer>() != null)
             return true;
         UpgradeTrack? track = null;

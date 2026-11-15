@@ -85,6 +85,8 @@ public class PlayerMoverment : MonoBehaviour {
         missionArmorHits = loadout.ArmorHits;
         // D-035-AC-03: a first-time player's first play of mission 1 has Overdrive free for that mission and a fire hint.
         var firstPlay = TreadShredFirstMinute.BeginMission(TreadShredProgress.CurrentMission());
+        // D-050-AC-02: whether this mission's revive, result screen and NEXT MISSION ask nothing.
+        TreadShredAskFreeStart.BeginMission();
         overdriveActive = loadout.RoundsPerTap > 1 || firstPlay;
         if (overdriveActive)
             TreadShredOverdriveBadge.Show(TreadShredUi.FindFont(GameObject.Find("Canvas")));

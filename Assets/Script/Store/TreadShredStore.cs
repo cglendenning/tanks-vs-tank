@@ -50,7 +50,7 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
         DontDestroyOnLoad(gameObject);
         Wallet = new GemWallet(new PlayerPrefsWalletStore());
         Wallet.GrantStarterIfNeeded();
-        Wallet.OpenStarterPackWindow(DateTime.UtcNow);
+        OpenStarterPackWindowAfterAskFreeStart();
         purchases = new PurchaseFlow(Wallet, this, () => IsAvailable(GemCatalog.StarterPack.ProductId),
             warChestAvailable: () => IsAvailable(GemCatalog.WarChest.ProductId));
         SceneManager.sceneLoaded += OnSceneLoaded;
@@ -150,6 +150,15 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         purchases.Abandon();
+        OpenStarterPackWindowAfterAskFreeStart();
+    }
+
+    // D-037-AC-02, D-050-AC-04: the Starter Pack's window opens at the first launch, or once the ask-free start is
+    // over when it runs then; the wallet never reopens it.
+    private void OpenStarterPackWindowAfterAskFreeStart()
+    {
+        if (!TreadShredAskFreeStart.InProgress)
+            Wallet.OpenStarterPackWindow(DateTime.UtcNow);
     }
 
     private Product FindProduct(string productId)
