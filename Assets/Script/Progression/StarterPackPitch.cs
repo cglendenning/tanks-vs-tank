@@ -15,6 +15,11 @@ namespace TreadShred.Progression
         public const string TestDriveNote = "ALL STARTER PACK GEAR ON";
         public const string AfterDriveSubtitle = "THAT WAS THE STARTER PACK. KEEP ALL OF IT";
 
+        /// <summary>D-037-AC-08: a first free test drive and one more; after that the purchase stands alone.</summary>
+        public const int TestDrives = 2;
+
+        public static bool CanTestDrive(int drivesTaken) => drivesTaken < TestDrives;
+
         public static readonly SupplyStack Stack = new SupplyStack(OfferLabels.StarterPackTitle, GemCatalog.StarterPack, "starter_pack",
             TestDriveNote, AfterDriveSubtitle, new[]
             {

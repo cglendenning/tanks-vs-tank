@@ -16,6 +16,8 @@ namespace TreadShred.Economy
         public long starterPackWindowStartTicks;
         // D-037-AC-04: its interstitial has opened by itself once; after that only its result-screen callout opens it.
         public bool starterPackShown;
+        // D-037-AC-08: the free test drives of it the player has taken.
+        public int starterPackTestDrives;
         // D-047: the War Chest was bought; it is never offered again.
         public bool warChestBought;
     }
@@ -64,6 +66,15 @@ namespace TreadShred.Economy
             if (state.starterPackShown)
                 return;
             state.starterPackShown = true;
+            store.Save(state);
+        }
+
+        /// <summary>D-037-AC-08: the Starter Pack test drives taken so far.</summary>
+        public int StarterPackTestDrives => state.starterPackTestDrives;
+
+        public void CountStarterPackTestDrive()
+        {
+            state.starterPackTestDrives++;
             store.Save(state);
         }
         public bool WarChestBought => state.warChestBought;
@@ -166,6 +177,7 @@ namespace TreadShred.Economy
             state.creditedTransactions = new List<string>(restored.creditedTransactions ?? new List<string>());
             state.starterPackBought = restored.starterPackBought;
             state.starterPackShown = restored.starterPackShown;
+            state.starterPackTestDrives = restored.starterPackTestDrives;
             state.warChestBought = restored.warChestBought;
             // A save from before the Starter Pack has no window: the one this install opened stands, so a reinstall that
             // restores a newer save adopts its original window and never reopens it (D-037-AC-02).

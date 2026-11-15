@@ -9,7 +9,7 @@ using UnityEngine;
 /// screen of the pack's window; after that the result screen's callout (TreadShredStarterCallout) opens it. Closes
 /// itself once the pack is bought or its window ends. D-037-AC-08: over a result screen it leads with the free test
 /// drive of the mission just played; when the drive ends it opens again, and closing it goes on to the next mission
-/// after a victory or replays the mission after a loss.
+/// after a victory or replays the mission after a loss. A player gets two drives in all.
 /// </summary>
 public sealed class TreadShredStarterOffer : TreadShredStackOffer
 {
@@ -35,7 +35,8 @@ public sealed class TreadShredStarterOffer : TreadShredStackOffer
         var offer = root.gameObject.AddComponent<TreadShredStarterOffer>();
         offer.limit = StarterPackPitch.Limit;
         offer.won = won;
-        offer.Build(root, font, offer.limit, overMission);
+        var canDrive = StarterPackPitch.CanTestDrive(TreadShredStore.Ensure().Wallet.StarterPackTestDrives);
+        offer.Build(root, font, offer.limit, overMission && canDrive);
         return true;
     }
 
@@ -61,8 +62,12 @@ public sealed class TreadShredStarterOffer : TreadShredStackOffer
     protected override void Shown(TreadShredStore store) =>
         TreadShredAnalytics.Log(GameEvents.OfferShown("starter_pack", store.Wallet.Balance));
 
-    protected override void TestDrive(Font driveFont) =>
+    protected override void TestDrive(Font driveFont)
+    {
+        // D-037-AC-08: counted as it starts; after the second the purchase stands alone.
+        TreadShredStore.Ensure().Wallet.CountStarterPackTestDrive();
         TreadShredTestDrive.Begin(driveFont, StarterPackPitch.Stack, ShowAfterTestDrive, won ? TreadShredCampaign.Next : (System.Action)null);
+    }
 
     // D-037-AC-07: the countdown runs live beside the line.
     protected override void Tick() =>
