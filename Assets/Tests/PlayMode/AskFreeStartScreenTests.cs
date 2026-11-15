@@ -177,5 +177,19 @@ namespace TreadShred.Screens.Tests
             yield return Win();
             Assert.IsNotNull(OfferCard(), "the victory card is back");
         }
+
+        [UnityTest(Description = "D-050-AC-04: the Starter Pack's window stays closed through the ask-free start, mission 5's own victory included, and its full 15 minutes start with the first screen after it")]
+        public IEnumerator StarterPackWindowOpensWhenTheStartEnds() => AskFree(WindowOpensWhenTheStartEnds);
+
+        private static IEnumerator WindowOpensWhenTheStartEnds()
+        {
+            FirstInstallThrough(4);
+            yield return Play("Lv5");
+            Assert.AreEqual(TimeSpan.Zero, Wallet.StarterPackTimeLeft(DateTime.UtcNow), "closed while the start is ask-free");
+            yield return Win();
+            Assert.AreEqual(TimeSpan.Zero, Wallet.StarterPackTimeLeft(DateTime.UtcNow), "still closed on mission 5's own victory screen");
+            yield return Play("Start");
+            Assert.Greater(Wallet.StarterPackTimeLeft(DateTime.UtcNow), TimeSpan.FromMinutes(14), "its full 15 minutes start on the next screen");
+        }
     }
 }
