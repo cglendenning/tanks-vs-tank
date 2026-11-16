@@ -49,7 +49,7 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual(Weapon.TripleShot, progression.StartingWeapon(Weapon.TripleShot), "a special weapon's mission starts on it");
         }
 
-        [Test(Description = "D-043-AC-04: each weapon has its own rental, a unit of supply (D-045) that lasts 5 missions won on its own; renting again adds a unit, and units take turns in rotation")]
+        [Test(Description = "D-043-AC-04: each weapon has its own rental, a unit of supply (D-045) that lasts 5 missions won on its own; renting again adds a unit, and each weapon's units run down on their own")]
         public void RentalsArePerWeaponAndStack()
         {
             var progression = NewProgression();
@@ -61,11 +61,11 @@ namespace TreadShred.Progression.Tests
             progression.StartRental(Weapon.ArcShot);
             Assert.AreEqual(10, progression.RentalLeft(Weapon.ArcShot), "re-renting adds a unit: 5 more");
             progression.StartRental(Weapon.TripleShot);
-            Assert.AreEqual("Cannon:Available, ArcShot:Rented(15), TripleShot:Rented(10)", Describe(progression, Weapon.Cannon),
-                "arc shot, triple shot, arc shot: one unit every 5 missions won");
+            Assert.AreEqual("Cannon:Available, ArcShot:Rented(10), TripleShot:Rented(5)", Describe(progression, Weapon.Cannon),
+                "two arc shot units and one triple shot unit, each 5 missions won");
         }
 
-        [Test(Description = "D-043-AC-05: weapon rentals are supply (D-045): every 5 missions won one unit goes, the arc shot's before the seeker's; a rental relocks at zero; a cannon-only mission starts on a running rental; a 1.9.5 save's rental comes back as a unit")]
+        [Test(Description = "D-043-AC-05: weapon rentals are supply (D-045): every 5 missions won each rental uses one unit, all at once; a rental relocks at zero; a cannon-only mission starts on a running rental; a 1.9.5 save's rental comes back as a unit")]
         public void RentalsCountMissionsWon()
         {
             var progression = NewProgression();
@@ -74,13 +74,13 @@ namespace TreadShred.Progression.Tests
             progression.StartRental(Weapon.ArcShot);
             progression.StartRental(Weapon.Seeker);
             Assert.AreEqual(Weapon.Seeker, progression.StartingWeapon(Weapon.Cannon), "the latest-introduced running rental");
-            Assert.AreEqual((5, 10), (progression.RentalLeft(Weapon.ArcShot), progression.RentalLeft(Weapon.Seeker)), "one unit each, in rotation");
+            Assert.AreEqual((5, 5), (progression.RentalLeft(Weapon.ArcShot), progression.RentalLeft(Weapon.Seeker)), "one unit each, running down together");
             progression.SupplyMissionWon();
-            Assert.AreEqual((4, 9), (progression.RentalLeft(Weapon.ArcShot), progression.RentalLeft(Weapon.Seeker)), "every mission won counts, on any map");
+            Assert.AreEqual((4, 4), (progression.RentalLeft(Weapon.ArcShot), progression.RentalLeft(Weapon.Seeker)), "every mission won counts, on any map");
             for (var won = 0; won < 4; won++)
                 progression.SupplyMissionWon();
-            Assert.AreEqual((0, 5), (progression.RentalLeft(Weapon.ArcShot), progression.RentalLeft(Weapon.Seeker)));
-            Assert.AreEqual("Cannon:Available, ArcShot:Locked, Seeker:Rented(5)", Describe(progression, Weapon.Cannon), "the arc shot relocked");
+            Assert.AreEqual((0, 0), (progression.RentalLeft(Weapon.ArcShot), progression.RentalLeft(Weapon.Seeker)));
+            Assert.AreEqual("Cannon:Available, ArcShot:Locked, Seeker:Locked", Describe(progression, Weapon.Cannon), "both relocked together");
 
             var restored = NewProgression();
             restored.Replace(new ProgressionState { usedWeapons = WeaponRental.Bit(Weapon.ArcShot), rentals = new[] { 0, 3, 0, 0 } });

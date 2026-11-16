@@ -19,10 +19,9 @@ namespace TreadShred.Progression
         public int usedWeapons;
         public int[] rentals = new int[4];
 
-        // D-045: supply units held per SupplyTrack, the missions won toward the next use, and where the rotation looks next.
+        // D-045: supply units held per SupplyTrack, and each track's missions won toward its next use.
         public int[] supply = new int[SupplyRules.TrackCount];
-        public int supplyWins;
-        public int supplyNext;
+        public int[] supplyTrackWins = new int[SupplyRules.TrackCount];
     }
 
     public interface IProgressionStore
@@ -148,8 +147,8 @@ namespace TreadShred.Progression
             // D-045: and the supply with its clock.
             state.supply = restored.supply != null && restored.supply.Length == SupplyRules.TrackCount
                 ? (int[])restored.supply.Clone() : new int[SupplyRules.TrackCount];
-            state.supplyWins = restored.supplyWins;
-            state.supplyNext = restored.supplyNext;
+            state.supplyTrackWins = restored.supplyTrackWins != null && restored.supplyTrackWins.Length == SupplyRules.TrackCount
+                ? (int[])restored.supplyTrackWins.Clone() : new int[SupplyRules.TrackCount];
             AdoptRentals(state);
             Commit();
         }
@@ -331,19 +330,17 @@ namespace TreadShred.Progression
         private int[] SupplyUnits => state.supply != null && state.supply.Length == SupplyRules.TrackCount
             ? state.supply : (state.supply = new int[SupplyRules.TrackCount]);
 
+        // A save from before per-track clocks (1.9.8 build 29 and earlier) has none: every clock starts at zero.
+        private int[] SupplyWins => state.supplyTrackWins != null && state.supplyTrackWins.Length == SupplyRules.TrackCount
+            ? state.supplyTrackWins : (state.supplyTrackWins = new int[SupplyRules.TrackCount]);
+
         private static SupplyTrack SupplyOf(UpgradeTrack track) => (SupplyTrack)(int)track;
 
         /// <summary>D-045: the units a track holds.</summary>
         public int Supply(SupplyTrack track) => InEffect[(int)track];
 
         /// <summary>D-045: the missions won until a track's last unit is used up, if nothing more is bought.</summary>
-        public int SupplyMissionsLeft(SupplyTrack track) =>
-            SupplyRules.MissionsLeft(InEffect, state.supplyWins, state.supplyNext, track);
-
-        /// <summary>D-045: the track the next use takes from (null when none is held) and the missions won until then.</summary>
-        public SupplyTrack? NextSupplyUse => SupplyRules.NextTrack(InEffect, state.supplyNext);
-
-        public int MissionsToNextSupplyUse => SupplyRules.MissionsToNextUse(InEffect, state.supplyWins, state.supplyNext);
+        public int SupplyMissionsLeft(SupplyTrack track) => SupplyRules.MissionsLeft(InEffect, SupplyWins, track);
 
         /// <summary>D-045: one unit paid for (the caller has taken the gems).</summary>
         public void AddSupply(SupplyTrack track)
@@ -380,19 +377,13 @@ namespace TreadShred.Progression
             Commit();
         }
 
-        /// <summary>D-045: a mission won counts toward the next use; every fifth uses one unit up, in rotation.</summary>
+        /// <summary>D-045: a mission won counts toward each held track's next use; every fifth uses one of its units up.</summary>
         public void SupplyMissionWon()
         {
             // D-047-AC-05: a test drive uses nothing up.
             if (TestDriving)
                 return;
-            var wins = state.supplyWins;
-            var next = state.supplyNext;
-            SupplyRules.MissionWon(SupplyUnits, ref wins, ref next);
-            if (wins == state.supplyWins && next == state.supplyNext)
-                return;
-            state.supplyWins = wins;
-            state.supplyNext = next;
+            SupplyRules.MissionWon(SupplyUnits, SupplyWins);
             Commit();
         }
 

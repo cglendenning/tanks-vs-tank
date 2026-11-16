@@ -2,7 +2,7 @@ using System;
 
 namespace TreadShred.Progression
 {
-    /// <summary>D-045: what a player buys with gems, in the order the rotation uses it up.</summary>
+    /// <summary>D-045: what a player buys with gems.</summary>
     public enum SupplyTrack
     {
         Armor,
@@ -15,10 +15,9 @@ namespace TreadShred.Progression
     }
 
     /// <summary>
-    /// D-045: everything bought with gems is supply, in units of 100 gems ($0.99) with no cap. Every 5 missions won
-    /// while any is held, exactly one unit is used up, from the next track in rotation (armor, firepower, speed,
-    /// Overdrive, then the special weapons) that holds any, so a player never runs out of one while holding plenty
-    /// of another.
+    /// D-045: everything bought with gems is supply, in units of 100 gems ($0.99) with no cap. Each track that holds any
+    /// runs its own clock: every 5 missions won it uses one of its units up, all tracks at once (owner decision
+    /// 2026-11-15), so a unit is always 5 missions won of its track, whatever else is held.
     /// </summary>
     public static class SupplyRules
     {
@@ -44,54 +43,28 @@ namespace TreadShred.Progression
             return total;
         }
 
-        /// <summary>The track the next use takes from, looking from <paramref name="next"/>; null when none is held.</summary>
-        public static SupplyTrack? NextTrack(int[] units, int next)
-        {
-            for (var step = 0; step < TrackCount; step++)
-            {
-                var track = (next + step) % TrackCount;
-                if (units[track] > 0)
-                    return (SupplyTrack)track;
-            }
-            return null;
-        }
-
-        /// <summary>A mission was won: counts toward the next use and, on the fifth, uses one unit up.</summary>
-        public static void MissionWon(int[] units, ref int wins, ref int next)
-        {
-            var track = NextTrack(units, next);
-            if (track == null)
-            {
-                wins = 0;
-                return;
-            }
-            if (++wins < MissionsPerUse)
-                return;
-            wins = 0;
-            units[(int)track.Value]--;
-            next = ((int)track.Value + 1) % TrackCount;
-        }
-
         /// <summary>
-        /// The missions won until <paramref name="track"/>'s last unit is used up if nothing more is bought: the
-        /// rotation played forward. 0 when the track holds none.
+        /// A mission was won: every track that holds any counts it toward its next use and, on its fifth, uses one unit
+        /// up. A track that holds none keeps its clock at zero, so a unit bought later lasts its full 5 missions.
         /// </summary>
-        public static int MissionsLeft(int[] units, int wins, int next, SupplyTrack track)
+        public static void MissionWon(int[] units, int[] wins)
         {
-            if (units[(int)track] <= 0)
-                return 0;
-            var held = (int[])units.Clone();
-            var missions = 0;
-            while (held[(int)track] > 0)
+            for (var track = 0; track < units.Length; track++)
             {
-                missions++;
-                MissionWon(held, ref wins, ref next);
+                if (units[track] <= 0)
+                {
+                    wins[track] = 0;
+                    continue;
+                }
+                if (++wins[track] < MissionsPerUse)
+                    continue;
+                wins[track] = 0;
+                units[track]--;
             }
-            return missions;
         }
 
-        /// <summary>D-045: the missions won until the next unit is used up; 0 when none is held.</summary>
-        public static int MissionsToNextUse(int[] units, int wins, int next) =>
-            NextTrack(units, next) == null ? 0 : MissionsPerUse - wins;
+        /// <summary>The missions won until <paramref name="track"/>'s last unit is used up if nothing more is bought; 0 when it holds none.</summary>
+        public static int MissionsLeft(int[] units, int[] wins, SupplyTrack track) =>
+            units[(int)track] <= 0 ? 0 : units[(int)track] * MissionsPerUse - wins[(int)track];
     }
 }

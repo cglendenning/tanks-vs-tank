@@ -113,7 +113,7 @@ public sealed class TreadShredProgress : MonoBehaviour
         }
 
         LastReward = Progression.CompleteMission(SelectedTier, mission, won);
-        // D-045: every fifth mission won uses one unit of supply, in rotation.
+        // D-045: every fifth mission won uses one unit of each track of supply held.
         if (won)
             Progression.SupplyMissionWon();
         if (LastReward.Value.UnlockedTier is DifficultyTier promoted)

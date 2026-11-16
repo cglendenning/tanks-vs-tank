@@ -31,16 +31,15 @@ namespace TreadShred.Progression.Tests
         private static string Script(string relative) =>
             File.ReadAllText(Path.Combine(Application.dataPath, "Script", relative));
 
-        [Test(Description = "D-045-AC-02: every 5 missions won one unit is used up, from the next track in rotation that holds any, so armor x2, firepower x1 and Overdrive x1 last 20 missions and wind down together")]
-        public void SupplyIsUsedUpInRotation()
+        [Test(Description = "D-045-AC-02: every 5 missions won every track held uses one unit, all at once, so armor x2, firepower x1 and Overdrive x1 last 10, 5 and 5 missions won")]
+        public void SupplyRunsDownTogether()
         {
             var (progression, _) = Player(0, new ProgressionState { supply = new[] { 2, 1, 0, 1, 0, 0, 0 } });
-            Assert.AreEqual((20, 10, 15), (progression.SupplyMissionsLeft(SupplyTrack.Armor),
+            Assert.AreEqual((10, 5, 5), (progression.SupplyMissionsLeft(SupplyTrack.Armor),
                 progression.SupplyMissionsLeft(SupplyTrack.Firepower), progression.SupplyMissionsLeft(SupplyTrack.Overdrive)));
-            Assert.AreEqual((SupplyTrack.Armor, 5), (progression.NextSupplyUse.Value, progression.MissionsToNextSupplyUse));
 
             var used = new System.Collections.Generic.List<string>();
-            for (var mission = 1; mission <= 20; mission++)
+            for (var mission = 1; mission <= 10; mission++)
             {
                 var before = new[] { progression.Supply(SupplyTrack.Armor), progression.Supply(SupplyTrack.Firepower), progression.Supply(SupplyTrack.Overdrive) };
                 progression.SupplyMissionWon();
@@ -49,8 +48,9 @@ namespace TreadShred.Progression.Tests
                     if (after[track] < before[track])
                         used.Add(mission + ":" + track);
             }
-            CollectionAssert.AreEqual(new[] { "5:0", "10:1", "15:2", "20:0" }, used, "armor, firepower, Overdrive, then armor again");
-            Assert.IsNull(progression.NextSupplyUse, "all used up");
+            CollectionAssert.AreEqual(new[] { "5:0", "5:1", "5:2", "10:0" }, used, "armor, firepower and Overdrive together, then armor's second unit");
+            Assert.AreEqual((0, 0, 0), (progression.Supply(SupplyTrack.Armor), progression.Supply(SupplyTrack.Firepower),
+                progression.Supply(SupplyTrack.Overdrive)), "all used up");
         }
 
         [Test(Description = "D-045-AC-02: with no supply held the clock stands still, and only missions won count")]
@@ -116,19 +116,19 @@ namespace TreadShred.Progression.Tests
                 progression.Supply(SupplyTrack.Seeker)));
         }
 
-        [Test(Description = "D-045-AC-06: a restored save carries the supply and its clock, and RESET GAME clears them with the rest")]
+        [Test(Description = "D-045-AC-06: a restored save carries the supply and each track's clock, and RESET GAME clears them with the rest")]
         public void RestoreCarriesTheSupply()
         {
             var (progression, _) = Player(0);
-            progression.Replace(new ProgressionState { supply = new[] { 1, 0, 0, 2, 0, 0, 0 }, supplyWins = 3, supplyNext = 3 });
+            progression.Replace(new ProgressionState { supply = new[] { 1, 0, 0, 2, 0, 0, 0 }, supplyTrackWins = new[] { 3, 0, 0, 3, 0, 0, 0 } });
             Assert.AreEqual((1, 2), (progression.Supply(SupplyTrack.Armor), progression.Supply(SupplyTrack.Overdrive)));
-            Assert.AreEqual((SupplyTrack.Overdrive, 2), (progression.NextSupplyUse.Value, progression.MissionsToNextSupplyUse));
+            Assert.AreEqual((2, 7), (progression.SupplyMissionsLeft(SupplyTrack.Armor), progression.SupplyMissionsLeft(SupplyTrack.Overdrive)), "each clock restored");
 
             // RESET GAME (D-044) replaces the progression with a new one.
             StringAssert.Contains("progress.Progression.Replace(new ProgressionState());", Script("Game/TreadShredGameReset.cs"));
             progression.Replace(new ProgressionState());
             Assert.AreEqual((0, 0), (progression.Supply(SupplyTrack.Armor), progression.Supply(SupplyTrack.Overdrive)));
-            Assert.IsNull(progression.NextSupplyUse);
+            Assert.AreEqual((0, 0), (progression.SupplyMissionsLeft(SupplyTrack.Armor), progression.SupplyMissionsLeft(SupplyTrack.Overdrive)));
         }
     }
 }
