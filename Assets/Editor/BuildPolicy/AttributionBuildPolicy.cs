@@ -18,7 +18,20 @@ namespace TreadShred.BuildPolicy
         // The key stays out of the public repository, like the Firebase configuration files.
         public const string TenjinKeyVariable = "TREAD_SHRED_TENJIN_SDK_KEY";
 
+        // Set by scripts/build-tank-android-release.sh for the bundle that goes to Google Play.
+        public const string AndroidReleaseVariable = "TREAD_SHRED_ANDROID_RELEASE";
+
         private static readonly Regex KeyFormat = new Regex("^[A-Za-z0-9_-]+$");
+
+        /// <summary>
+        /// Why this Android build must stop, or null when it may go on: a release without Tenjin's SDK key would ship a
+        /// game that credits no install to any channel or to organic (1.9.7 and 1.9.8 version code 17 did, 2026-11-18).
+        /// A development build without the key still builds and only reports nothing.
+        /// </summary>
+        public static string MissingKeyStopsBuild(string sdkKey, bool release) =>
+            release && string.IsNullOrWhiteSpace(sdkKey)
+                ? TenjinKeyVariable + " is not set: a release would credit no Android install to its channel or to organic"
+                : null;
 
         /// <summary>The Android manifest with Tenjin's SDK key added to its application element.</summary>
         public static string WithTenjinSdkKey(string manifest, string sdkKey)

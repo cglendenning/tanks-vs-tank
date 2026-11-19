@@ -2,11 +2,12 @@ using System;
 using System.IO;
 using TreadShred.BuildPolicy;
 using UnityEditor.Android;
+using UnityEditor.Build;
 using UnityEngine;
 
 /// <summary>
-/// D-023: writes Tenjin's SDK key into the generated Android manifest from TREAD_SHRED_TENJIN_SDK_KEY. A build
-/// without the key still works but reports no attribution, and says so in the build log.
+/// D-023: writes Tenjin's SDK key into the generated Android manifest from TREAD_SHRED_TENJIN_SDK_KEY. A release
+/// build without the key fails; a development build without it still works but reports no attribution, and says so.
 /// </summary>
 public sealed class TenjinAndroidBuild : IPostGenerateGradleAndroidProject
 {
@@ -15,6 +16,9 @@ public sealed class TenjinAndroidBuild : IPostGenerateGradleAndroidProject
     public void OnPostGenerateGradleAndroidProject(string path)
     {
         var key = Environment.GetEnvironmentVariable(AttributionBuildPolicy.TenjinKeyVariable);
+        var release = Environment.GetEnvironmentVariable(AttributionBuildPolicy.AndroidReleaseVariable) == "1";
+        if (AttributionBuildPolicy.MissingKeyStopsBuild(key, release) is string stop)
+            throw new BuildFailedException("[Tenjin] " + stop);
         if (string.IsNullOrWhiteSpace(key))
         {
             Debug.LogWarning("[Tenjin] " + AttributionBuildPolicy.TenjinKeyVariable +

@@ -26,7 +26,7 @@ public static class TankBuildAutomation
     private const string ReleaseVersion = "1.9.8";
     // 1.9.8 adds the War Chest (D-047); 1.9.7 shipped as iOS build 28 and Android 15.
     private const int ReleaseBuildNumber = 30;
-    private const int AndroidReleaseBuildNumber = 17;
+    private const int AndroidReleaseBuildNumber = 18;
 
     [MenuItem("Tread Shred/Build/iOS device project")]
     public static void BuildIosDeviceProject()

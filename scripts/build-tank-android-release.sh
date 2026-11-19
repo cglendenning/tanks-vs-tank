@@ -10,6 +10,7 @@ UNITY_BIN="${UNITY_BIN:-/Users/craig/Unity/Hub/Editor/6000.3.27f2/Unity.app/Cont
 : "${TREAD_SHRED_ANDROID_KEY_ALIAS:?Set the Android upload key alias}"
 : "${TREAD_SHRED_ANDROID_KEYSTORE_PASSWORD:?Set the Android upload keystore password}"
 : "${TREAD_SHRED_ANDROID_KEY_PASSWORD:?Set the Android upload key password}"
+: "${TREAD_SHRED_TENJIN_SDK_KEY:?Set the Tenjin SDK key, tenjinSdkKey in ~/keys/tread-shred-key.properties: without it no Android install is attributed}"
 
 # D-029-AC-05: refuse to build a store release unless the game meets the specification.
 "$ROOT_DIR/scripts/spec-compliance-gate.sh"
@@ -20,4 +21,11 @@ mkdir -p "$ROOT_DIR/Builds/Android"
   -executeMethod TankBuildAutomation.BuildAndroidBundleFromCommandLine \
   -logFile "$ROOT_DIR/Logs/tank-android-release-unity.log"
 
-echo "AAB=$ROOT_DIR/Builds/Android/TreadShred.aab"
+AAB="$ROOT_DIR/Builds/Android/TreadShred.aab"
+# D-023-AC-01: the bundle Google Play gets must carry Tenjin's key, or no install is credited to anything.
+if ! unzip -p "$AAB" base/manifest/AndroidManifest.xml | strings | grep -qF "$TREAD_SHRED_TENJIN_SDK_KEY"; then
+  echo "Release blocked: $AAB does not carry Tenjin's SDK key in its manifest." >&2
+  exit 1
+fi
+echo "Tenjin SDK key verified in the bundle's manifest"
+echo "AAB=$AAB"
