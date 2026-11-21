@@ -33,7 +33,7 @@ public class BulletVong : MonoBehaviour {
             MusicManager.instance.ExplosionTank();
 
             ManagerScore.instance.CurDieEmnemy += 1;
-            TreadShredImpact.Kill(other.transform.position);
+            TreadShredImpact.Kill(other.transform.position, other.gameObject, PrefabExplosionTank);
             ManagerScore.instance.EnemyKilled();
             ManagerScore.instance.Rung();
             MusicManager.instance.ExplosionTank();
@@ -62,7 +62,7 @@ public class BulletVong : MonoBehaviour {
             MusicManager.instance.ExplosionTank();
 
             ManagerScore.instance.CurDieEmnemy += 1;
-            TreadShredImpact.Kill(other.transform.position);
+            TreadShredImpact.Kill(other.transform.position, other.gameObject, PrefabExplosionTank);
             ManagerScore.instance.EnemyKilled();
             ManagerScore.instance.Rung();
             MusicManager.instance.ExplosionTank();

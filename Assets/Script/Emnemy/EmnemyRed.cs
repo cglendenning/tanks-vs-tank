@@ -10,6 +10,7 @@ public class EmnemyRed : MonoBehaviour {
     {
         var baseHits = gameObject.tag == "emnemyred" ? 5 : 4;
         countdie = Mathf.RoundToInt(baseHits * HitScale * TreadShredProgress.Ensure().TierModifiers.EnemyHealth);
+        TreadShredTankLook.Outline(gameObject, player: false);
     }
     public GameObject ExTank;
     bool completed = true;
@@ -21,7 +22,7 @@ public class EmnemyRed : MonoBehaviour {
             ManagerScore.instance.Rung();
             MusicManager.instance.ExplosionTank();
             completed = false;
-            TreadShredImpact.Kill(transform.position);
+            TreadShredImpact.Kill(transform.position, gameObject, ExTank);
             ManagerScore.instance.CurDieEmnemy += 1;
             ManagerScore.instance.EnemyKilled();
             gameObject.layer = 0;

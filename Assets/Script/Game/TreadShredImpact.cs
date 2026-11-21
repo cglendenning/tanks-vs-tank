@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// D-027: heavy combat feedback. Camera shake on hits and kills, a kill
-/// freeze-frame, a debris burst and a TARGET DESTROYED callout.
+/// freeze-frame, a debris burst (an enemy tank is wrecked, TreadShredWreck) and a TARGET DESTROYED callout.
 /// </summary>
 [DefaultExecutionOrder(1000)]
 public sealed class TreadShredImpact : MonoBehaviour
@@ -41,11 +41,15 @@ public sealed class TreadShredImpact : MonoBehaviour
             ManagerScore.instance.Rung(HapticPulse.Hit);
     }
 
-    public static void Kill(Vector3 position)
+    /// <summary>A kill: the destroyed tank passes itself and its explosion so it is wrecked (D-027-AC-02).</summary>
+    public static void Kill(Vector3 position, GameObject tank = null, GameObject explosion = null)
     {
         var impact = Ensure();
         impact.Shake(ImpactRules.ShakeOnKill);
-        impact.SpawnDebris(position);
+        if (tank != null)
+            TreadShredWreck.Spawn(tank, explosion);
+        else
+            impact.SpawnDebris(position);
         // The kill's points appear with it (D-032-AC-01).
         // A shell still in flight can land after the mission ends; the result screen stays clean (D-013-AC-04).
         if (!missionOver)

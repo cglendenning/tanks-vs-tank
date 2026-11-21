@@ -24,6 +24,7 @@ public class MoveEmnemy : MonoBehaviour {
     GameObject player;
     void Start()
     {
+        TreadShredTankLook.Outline(gameObject, player: false);
         rb = GetComponent<Rigidbody>();       
         indexdir = 9;
         InvokeRepeating("RandomDir", 1f, 3f);
