@@ -124,7 +124,7 @@ public static class TreadShredWreck
     public static void EmberFrom(Vector3 at, float ground, float size)
     {
         var ember = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        Object.Destroy(ember.GetComponent<Collider>());
+        Object.DestroyImmediate(ember.GetComponent<Collider>());
         ember.name = "Tread Shred Spark";
         ember.transform.position = at;
         ember.transform.localScale = new Vector3(0.04f, 0.04f, 0.08f) * Mathf.Max(1f, size / 2f);
@@ -139,7 +139,7 @@ public static class TreadShredWreck
     private static void Spark(Vector3 centre, float ground, float size)
     {
         var spark = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        Object.Destroy(spark.GetComponent<Collider>());
+        Object.DestroyImmediate(spark.GetComponent<Collider>());
         spark.name = "Tread Shred Spark";
         spark.transform.position = centre + Vector3.up * size * 0.2f;
         spark.transform.localScale = new Vector3(0.045f, 0.045f, Random.Range(0.1f, 0.18f)) * Mathf.Max(1f, size / 2f);

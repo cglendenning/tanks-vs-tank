@@ -12,7 +12,7 @@ public static class TreadShredTankLook
 {
     public const string ShadowName = "Tread Shred Contact Shadow";
 
-    public const string KeyLightName = "Tread Shred Tank Key Light";
+    public const string TankLightName = "Tread Shred Tank Key Light";
 
     // A steel sheen on the tanks' own paint, and a key light from above the camera's shoulder that only they receive.
     private const float Sheen = 0.7f;
@@ -93,7 +93,7 @@ public static class TreadShredTankLook
     {
         if (keyLight != null)
             return;
-        keyLight = new GameObject(KeyLightName).AddComponent<Light>();
+        keyLight = new GameObject(TankLightName).AddComponent<Light>();
         keyLight.type = LightType.Directional;
         keyLight.intensity = KeyLightIntensity;
         keyLight.color = KeyLightColor;
@@ -125,7 +125,9 @@ public static class TreadShredDecal
             return null;
         }
         var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        Object.Destroy(quad.GetComponent<Collider>());
+        // Now, not at the end of the frame: a shadow is parented to a tank's dynamic Rigidbody straight away, and a
+        // quad's concave MeshCollider under one logs an error.
+        Object.DestroyImmediate(quad.GetComponent<Collider>());
         quad.name = name;
         var renderer = quad.GetComponent<Renderer>();
         renderer.material = new Material(shader) { mainTexture = texture, color = color };
