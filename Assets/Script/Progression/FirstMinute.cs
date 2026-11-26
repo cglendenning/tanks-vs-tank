@@ -14,17 +14,6 @@ namespace TreadShred.Progression
         public const string GetReady = "GET READY";
         public const string MoveHint = "MOVE WITH YOUR THUMB";
 
-        /// <summary>On a first play the enemies fire one shell between them per interval, with no follow-up shot.</summary>
-        public const float EnemyShotIntervalSeconds = 4f;
-
-        /// <summary>On a first play a hit never takes the tank's last armor, so the first play cannot be lost.</summary>
-        public const int MinimumArmorHits = 1;
-
-        public static bool EnemyMayFire(float now, float lastEnemyShot) => now - lastEnemyShot >= EnemyShotIntervalSeconds;
-
-        public static int ArmorAfterHit(int armor, int damage, bool firstPlay) =>
-            firstPlay ? System.Math.Max(MinimumArmorHits, armor - damage) : armor - damage;
-
         /// <summary>The launch opens in mission 1: mission 1 never cleared, and this install's instant start not yet used.</summary>
         public static bool InstantStart(bool missionOneCleared, bool instantStartUsed) => !missionOneCleared && !instantStartUsed;
 

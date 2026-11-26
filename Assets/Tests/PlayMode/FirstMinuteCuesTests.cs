@@ -11,7 +11,7 @@ using Object = UnityEngine.Object;
 
 namespace TreadShred.Screens.Tests
 {
-    /// <summary>The first play's opening cues and its armor floor, played in the editor through the test switch.</summary>
+    /// <summary>The first play's opening cues, and its armor taken as on any mission, played in the editor through the test switch.</summary>
     public sealed class FirstMinuteCuesTests
     {
         private const string ProgressionKey = "TreadShredProgression";
@@ -22,7 +22,7 @@ namespace TreadShred.Screens.Tests
         private static Text Label(string text) => Object.FindObjectsByType<Text>(FindObjectsSortMode.None)
             .FirstOrDefault(t => t.text == text && t.gameObject.activeInHierarchy);
 
-        [UnityTest(Description = "D-035-AC-03: GET READY shows over the countdown and lifts at ENGAGE, the thumb hint sits by the joystick, and a first play cannot be lost")]
+        [UnityTest(Description = "D-035-AC-03: GET READY shows over the countdown and lifts at ENGAGE, the thumb hint sits by the joystick, and a hit costs armor as on any mission")]
         public IEnumerator OpeningCuesAndArmorFloor()
         {
             var firstMinute = GameType("TreadShredFirstMinute");
@@ -59,7 +59,7 @@ namespace TreadShred.Screens.Tests
 
                 var player = GameObject.FindGameObjectWithTag("player").GetComponent(GameType("PlayerMoverment"));
                 player.GetType().GetMethod("DeadPlayer").Invoke(player, new object[] { 10 });
-                Assert.AreEqual(1, (int)player.GetType().GetField("countdie").GetValue(player), "a hit never takes the last armor on a first play");
+                Assert.Less((int)player.GetType().GetField("countdie").GetValue(player), 1, "a hit can take the last armor: the first play can be lost");
             }
             finally
             {

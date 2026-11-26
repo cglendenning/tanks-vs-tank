@@ -47,9 +47,6 @@ public class BulletEmnemy : MonoBehaviour {
    public void BulletPlayer()
     {
         lastSeen = Time.time;
-        // D-035-AC-03: enemies hold fire during a first-time player's first play of mission 1.
-        if (TreadShredFirstMinute.EnemiesHoldFire)
-            return;
         if (canbullet && gameObject.GetComponent<BoxCollider>().enabled)
         {
             // D-046-AC-04: on Veteran and Elite every attack is a volley that cycles through every weapon.
@@ -57,7 +54,6 @@ public class BulletEmnemy : MonoBehaviour {
             if (combat.VolleyShots > 0)
             {
                 canbullet = false;
-                TreadShredFirstMinute.EnemyFired();
                 StartCoroutine(Volley(combat));
                 StartCoroutine(DelayBulletPlayer(3f / TreadShredProgress.Ensure().TierModifiers.EnemyFireRate));
                 return;
@@ -65,7 +61,6 @@ public class BulletEmnemy : MonoBehaviour {
             if (gameObject.tag != "emnemyred")
             {
                 canbullet = false;
-                TreadShredFirstMinute.EnemyFired();
                 GameObject obj = Instantiate(Bullet, pointbullet.position, pointbullet.rotation) as GameObject;
                 TreadShredEnemyShells.Fired(obj);
                 Vector3 dir = tower.position - pointbullet.position;
@@ -240,9 +235,6 @@ public class BulletEmnemy : MonoBehaviour {
    IEnumerator BulletPlayerLan2(float delay)
    {
        yield return new WaitForSeconds(delay);
-       // D-035-AC-03: no follow-up shell on a first play.
-       if (TreadShredFirstMinute.FirstPlay)
-           yield break;
        GameObject obj = Instantiate(Bullet, pointbullet.position, pointbullet.rotation) as GameObject;
        TreadShredEnemyShells.Fired(obj);
 

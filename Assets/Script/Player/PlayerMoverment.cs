@@ -630,8 +630,7 @@ public class PlayerMoverment : MonoBehaviour {
             ManagerScore.instance.CurHeath++;
         }
 
-        // D-035-AC-03: on a first play a hit never takes the last armor.
-        countdie = TreadShred.Progression.FirstMinute.ArmorAfterHit(countdie, index, TreadShredFirstMinute.FirstPlay);
+        countdie -= index;
         ShowExtraArmor();
         TreadShredImpact.HitTaken();
         if (shieldFade != null)

@@ -47,7 +47,7 @@ namespace TreadShred.Progression.Tests
             StringAssert.Contains("var firstPlay = TreadShredFirstMinute.BeginMission(TreadShredProgress.CurrentMission());", player);
             StringAssert.Contains("overdriveActive = loadout.RoundsPerTap > 1 || firstPlay;", player, "free for this mission: nothing is armed for later ones");
             StringAssert.Contains("TreadShredFireHint.Show(", player);
-            StringAssert.Contains("if (TreadShredFirstMinute.EnemiesHoldFire)\r\n            return;", Read("Script/Emnemy/BulletEmnemy.cs"));
+            StringAssert.DoesNotContain("TreadShredFirstMinute", Read("Script/Emnemy/BulletEmnemy.cs"), "enemies fire as on any mission");
             StringAssert.DoesNotContain("ArmOverdrive", Read("Script/Game/TreadShredFirstMinute.cs"), "the purchased Overdrive is untouched");
         }
     }

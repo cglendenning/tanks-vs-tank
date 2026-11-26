@@ -23,7 +23,7 @@ namespace TreadShred.Screens.Tests
         private static Text Label(string text) => Object.FindObjectsByType<Text>(FindObjectsSortMode.None)
             .FirstOrDefault(t => t.text == text && t.gameObject.activeInHierarchy);
 
-        [UnityTest(Description = "D-035-AC-03: a first-time player's mission 1 shows Overdrive and TAP HERE TO FIRE on screen, enemies hold fire, and the hint goes after the first shot")]
+        [UnityTest(Description = "D-035-AC-03: a first-time player's mission 1 shows Overdrive and TAP HERE TO FIRE on screen, the enemies fire back, and the hint goes after the first shot")]
         public IEnumerator FirstPlayIsAPowerMoment()
         {
             var firstMinute = GameType("TreadShredFirstMinute");
@@ -41,7 +41,7 @@ namespace TreadShred.Screens.Tests
                 for (var i = 0; i < 5; i++)
                     yield return null;
 
-                Assert.IsTrue((bool)firstMinute.GetProperty("EnemiesHoldFire").GetValue(null), "enemies hold fire on the first play");
+                Assert.IsNull(firstMinute.GetProperty("EnemiesHoldFire"), "the enemies fight back from the start of the first play");
                 Assert.IsNotNull(Label(OfferLabels.OverdriveActive), "Overdrive is on, free for this mission");
                 var hint = Label(FirstMinute.FireHint);
                 Assert.IsNotNull(hint, "the fire hint shows above an enemy");
@@ -54,7 +54,7 @@ namespace TreadShred.Screens.Tests
                 foreach (var gun in Object.FindObjectsByType(GameType("BulletEmnemy"), FindObjectsSortMode.None))
                     gun.GetType().GetMethod("BulletPlayer").Invoke(gun, null);
                 yield return null;
-                Assert.AreEqual(bulletsBefore, GameObject.FindGameObjectsWithTag("bulletemnemy").Length, "no enemy fires");
+                Assert.Greater(GameObject.FindGameObjectsWithTag("bulletemnemy").Length, bulletsBefore, "the enemies fire back on the first play");
 
                 var manager = GameType("ManagerScore");
                 manager.GetField("CurCountbullet").SetValue(manager.GetField("instance").GetValue(null), 1);
