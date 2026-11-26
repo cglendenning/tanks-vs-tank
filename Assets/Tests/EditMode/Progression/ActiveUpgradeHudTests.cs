@@ -34,7 +34,7 @@ namespace TreadShred.Progression.Tests
             var player = Script("Player/PlayerMoverment.cs");
             StringAssert.Contains("TreadShredOverdriveBadge.ShowUpgrades(hudFont, TreadShred.Progression.ProgressionLabels.ActiveUpgrades(progress.Progression.Level));", player);
             StringAssert.Contains("extraArmor = TreadShredExtraArmor.Attach(Heart, hudFont);", player);
-            StringAssert.Contains("TreadShredFirstMinute.FirstPlay);\n        ShowExtraArmor();", player, "after every hit");
+            StringAssert.Contains("countdie -= index;\n        ShowExtraArmor();", player, "after every hit");
             StringAssert.Contains("countdie = missionArmorHits;\n        ShowExtraArmor();", player, "after a revive");
             var badge = Script("Game/TreadShredOverdriveBadge.cs");
             StringAssert.Contains("if (upgrades != null)\n            upgrades.SetActive(visible);", badge, "hidden with the Overdrive tag while paused");

@@ -17,7 +17,7 @@ namespace TreadShred.Screens.Tests
         private static Component[] Debris() =>
             UnityEngine.Object.FindObjectsByType(GameType("TreadShredDebris"), FindObjectsSortMode.None).Cast<Component>().ToArray();
 
-        [UnityTest(Description = "D-027-AC-02: a destroyed enemy tank swells a fireball, throws its charred hull and parts into the air, scatters armor plates, track links and red-hot chunks with a fire flash and smoke, and all of it clears within seven seconds")]
+        [UnityTest(Description = "D-027-AC-02: a destroyed enemy tank is blown into fragments of its own armor and parts that fly, smolder and land, with sparks, a blast ring, a fire flash and a scorch mark, no blocks or cartoon puffs, and all of it clears within seven seconds")]
         public IEnumerator DestroyedTankIsWrecked()
         {
             LogAssert.ignoreFailingMessages = true;
@@ -50,13 +50,18 @@ namespace TreadShred.Screens.Tests
             yield return new WaitForSecondsRealtime(0.1f);
             yield return new WaitForSeconds(0.15f);
             BattlefieldCapture.Screenshot(Camera.main, "destruction-0.15s");
-            Assert.IsNotNull(GameObject.Find("Tread Shred Puff"), "a fireball swells");
+            Assert.IsNotNull(GameObject.Find("Tread Shred Blast Ring"), "a dust shockwave rolls out");
+            Assert.IsNull(GameObject.Find("Tread Shred Puff"), "no cartoon puffs");
             yield return new WaitForSeconds(0.15f);
 
             BattlefieldCapture.Screenshot(Camera.main, "destruction-0.3s");
             var pieces = Debris();
-            Assert.GreaterOrEqual(pieces.Length, 22, "the hull, its parts and at least 22 plates, links and chunks");
-            Assert.IsTrue(pieces.Any(p => p.name.EndsWith(" wreck")), "the tank's own hull and parts are among the wreck");
+            var armor = pieces.Where(p => p.name.EndsWith(" fragment") || p.name.EndsWith(" wreck")).ToArray();
+            Assert.GreaterOrEqual(armor.Count(p => p.name.EndsWith(" fragment")), 4, "the hull is blown into fragments of its own armor");
+            Assert.IsTrue(armor.All(p => !new[] { "Cube", "Sphere" }.Contains(p.GetComponent<MeshFilter>().sharedMesh.name)),
+                "every flying piece is the tank's own mesh, never a block");
+            Assert.AreEqual(pieces.Length, armor.Length + pieces.Count(p => p.name == "Tread Shred Spark"), "nothing else flies");
+            Assert.GreaterOrEqual(pieces.Count(p => p.name == "Tread Shred Spark"), 20, "hot sparks spray out");
             Assert.IsTrue(pieces.Any(p => p.transform.position.y > ground + 1f), "parts are thrown into the air");
             var flash = GameObject.Find("Tread Shred Fire Flash");
             Assert.IsNotNull(flash, "a fire flash lights the ground");
@@ -72,7 +77,7 @@ namespace TreadShred.Screens.Tests
             Assert.IsEmpty(Debris(), "every piece clears");
             Assert.IsNull(GameObject.Find("Tread Shred Fire Flash"));
             Assert.IsNull(GameObject.Find("Tread Shred Scorch"));
-            Assert.IsNull(GameObject.Find("Tread Shred Puff"), "the fireballs and smoke clear");
+            Assert.IsNull(GameObject.Find("Tread Shred Blast Ring"));
         }
     }
 }

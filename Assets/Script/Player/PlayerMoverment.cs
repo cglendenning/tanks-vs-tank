@@ -66,7 +66,7 @@ public class PlayerMoverment : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
         instance = this;
-        TreadShredTankLook.Outline(gameObject, player: true);
+        TreadShredTankLook.Apply(gameObject);
         _playerRigidbody = GetComponent<Rigidbody>();
         if (_playerRigidbody != null)
         {

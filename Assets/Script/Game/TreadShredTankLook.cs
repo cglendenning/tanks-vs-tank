@@ -3,32 +3,34 @@ using System.Linq;
 using UnityEngine;
 
 /// <summary>
-/// D-039-AC-03: every tank reads on every ground. Each tank gets a solid outline, lime for the player and warm orange
-/// for enemies, so it stands out from the ground by at least 3:1 whatever the ground's colour, and friend and foe
-/// tell apart at a glance. Measured on the first mission of every ground by BattlefieldContrastTests.
+/// D-039-AC-03 within P-4: every tank reads on every ground as heavy, lit armor, never as a cartoon. Its own paint is
+/// kept and given a steel sheen; a key light that only the tanks receive makes the armor catch the light the ground does
+/// not; and each tank sits in a soft contact shadow that separates it from the ground. No outlines and no repainting
+/// (owner direction 2026-11-26). Measured on the first mission of every ground by BattlefieldContrastTests.
 /// </summary>
 public static class TreadShredTankLook
 {
-    public const string OutlineName = "Tread Shred Outline";
-    public static readonly Color PlayerOutline = new Color(0.66f, 1f, 0.24f);
-    public static readonly Color EnemyOutline = new Color(1f, 0.62f, 0.24f);
+    public const string ShadowName = "Tread Shred Contact Shadow";
 
-    // The outline's width as a share of the tank's footprint: about five pixels on a phone at the arena camera.
-    private const float WidthShare = 0.07f;
-    private const string ShaderName = "TreadShred/Outline";
+    public const string KeyLightName = "Tread Shred Tank Key Light";
 
-    // The tank's body draws after its outline (Geometry+1), so the body covers all but the rim.
-    private const int BodyQueue = 2002;
+    // A steel sheen on the tanks' own paint, and a key light from above the camera's shoulder that only they receive.
+    private const float Sheen = 0.7f;
+    private const float KeyLightIntensity = 0.75f;
+    private static readonly Color KeyLightColor = new Color(0.92f, 0.96f, 1f);
+    private const float ShadowSpread = 2.2f;
+    private const float ShadowStrength = 0.92f;
 
-    private static readonly Dictionary<Mesh, Mesh> SmoothedMeshes = new Dictionary<Mesh, Mesh>();
+    private static int tankLayer = -2;
+    private static Light keyLight;
 
-    // Unity's built-in primitives on a tank are helpers (aim points, colliders' stand-ins), never its model.
+    // Unity's built-in primitives on a tank are helpers (aim points and the like), never its model.
     private static readonly HashSet<string> Helpers = new HashSet<string> { "Cube", "Sphere", "Capsule", "Cylinder", "Plane", "Quad" };
 
-    /// <summary>The meshes that draw the tank's model, without helpers or outlines.</summary>
+    /// <summary>The meshes that draw the tank's model, without helpers or its contact shadow.</summary>
     public static List<MeshRenderer> ModelParts(GameObject tank) =>
         tank.GetComponentsInChildren<MeshRenderer>()
-            .Where(r => r.enabled && r.gameObject.activeInHierarchy && r.name != OutlineName)
+            .Where(r => r.enabled && r.gameObject.activeInHierarchy && r.name != ShadowName)
             .Where(r =>
             {
                 var mesh = r.GetComponent<MeshFilter>() != null ? r.GetComponent<MeshFilter>().sharedMesh : null;
@@ -36,64 +38,117 @@ public static class TreadShredTankLook
             })
             .ToList();
 
-    public static void Outline(GameObject tank, bool player)
+    public static void Apply(GameObject tank)
     {
         var parts = ModelParts(tank);
-        if (parts.Count == 0 || parts.Any(p => p.transform.Find(OutlineName) != null))
+        if (parts.Count == 0 || tank.transform.Find(ShadowName) != null)
             return;
+        var layer = TankLayer();
+        foreach (var part in parts)
+        {
+            foreach (var material in part.materials)
+            {
+                if (material.HasProperty("_Glossiness"))
+                    material.SetFloat("_Glossiness", Sheen);
+            }
+            // Only meshes without colliders move, so aiming, sight and shells (which use layers) are untouched.
+            if (layer >= 0 && part.GetComponent<Collider>() == null)
+                part.gameObject.layer = layer;
+        }
+        if (layer >= 0)
+            EnsureKeyLight(layer);
+
+        var footprint = parts.Aggregate(parts[0].bounds, (b, r) => { b.Encapsulate(r.bounds); return b; });
+        var shadow = TreadShredDecal.Create(ShadowName, TreadShredDecal.Disc, new Color(0f, 0f, 0f, ShadowStrength));
+        if (shadow == null)
+            return;
+        shadow.transform.SetParent(tank.transform, false);
+        shadow.transform.position = new Vector3(footprint.center.x, footprint.min.y + 0.02f, footprint.center.z);
+        shadow.transform.rotation = Quaternion.Euler(90f, tank.transform.eulerAngles.y, 0f);
+        var parentScale = tank.transform.lossyScale;
+        shadow.transform.localScale = new Vector3(footprint.size.x * ShadowSpread / parentScale.x, footprint.size.z * ShadowSpread / parentScale.z, 1f);
+    }
+
+    // The highest user layer the project leaves unnamed, so the key light can reach the tanks alone; -1 if none is free.
+    private static int TankLayer()
+    {
+        if (tankLayer != -2)
+            return tankLayer;
+        tankLayer = -1;
+        for (var layer = 31; layer >= 8; layer--)
+        {
+            if (string.IsNullOrEmpty(LayerMask.LayerToName(layer)))
+            {
+                tankLayer = layer;
+                break;
+            }
+        }
+        if (tankLayer < 0)
+            Debug.LogWarning("[TankLook] no free layer: tanks get no key light.");
+        return tankLayer;
+    }
+
+    // One per mission: the light goes when its scene unloads.
+    private static void EnsureKeyLight(int layer)
+    {
+        if (keyLight != null)
+            return;
+        keyLight = new GameObject(KeyLightName).AddComponent<Light>();
+        keyLight.type = LightType.Directional;
+        keyLight.intensity = KeyLightIntensity;
+        keyLight.color = KeyLightColor;
+        keyLight.shadows = LightShadows.None;
+        keyLight.cullingMask = 1 << layer;
+        keyLight.transform.rotation = Quaternion.Euler(55f, -35f, 0f);
+    }
+}
+
+/// <summary>Soft, flat marks drawn on the ground: contact shadows, scorch marks and blast rings (TreadShred/Decal).</summary>
+public static class TreadShredDecal
+{
+    private const string ShaderName = "TreadShred/Decal";
+    private static Texture2D disc;
+    private static Texture2D ring;
+
+    /// <summary>A soft disc, dark at the centre and fading to nothing at the edge.</summary>
+    public static Texture2D Disc => disc != null ? disc : disc = Make(d => Mathf.Clamp01(1f - d) * Mathf.Clamp01(1f - d));
+
+    /// <summary>A thin soft ring, for a blast's dust shockwave.</summary>
+    public static Texture2D Ring => ring != null ? ring : ring = Make(d => Mathf.Clamp01(1f - Mathf.Abs(d - 0.8f) / 0.2f));
+
+    public static GameObject Create(string name, Texture2D texture, Color color)
+    {
         var shader = Shader.Find(ShaderName);
         if (shader == null)
         {
-            Debug.LogError("[TankLook] " + ShaderName + " is missing from the build; tanks keep no outline.");
-            return;
+            Debug.LogError("[Decal] " + ShaderName + " is missing from the build; no " + name + ".");
+            return null;
         }
-        var footprint = parts.Aggregate(parts[0].bounds, (b, r) => { b.Encapsulate(r.bounds); return b; });
-        var material = new Material(shader) { color = player ? PlayerOutline : EnemyOutline };
-        material.SetFloat("_Width", Mathf.Max(footprint.size.x, footprint.size.z) * WidthShare);
-        foreach (var part in parts)
-        {
-            foreach (var bodyMaterial in part.materials)
-                bodyMaterial.renderQueue = BodyQueue;
-            var mesh = part.GetComponent<MeshFilter>().sharedMesh;
-            var outline = new GameObject(OutlineName);
-            outline.transform.SetParent(part.transform, false);
-            outline.AddComponent<MeshFilter>().sharedMesh = Smoothed(mesh);
-            var renderer = outline.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = Enumerable.Repeat(material, Mathf.Max(1, mesh.subMeshCount)).ToArray();
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-        }
+        var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        Object.Destroy(quad.GetComponent<Collider>());
+        quad.name = name;
+        var renderer = quad.GetComponent<Renderer>();
+        renderer.material = new Material(shader) { mainTexture = texture, color = color };
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+        return quad;
     }
 
-    // A copy of the mesh whose normals are averaged where faces meet, so the pushed-out outline has no gaps at hard
-    // edges. Made once per mesh; a mesh that cannot be read keeps its own normals.
-    private static Mesh Smoothed(Mesh mesh)
+    private static Texture2D Make(System.Func<float, float> alphaAtDistance)
     {
-        if (SmoothedMeshes.TryGetValue(mesh, out var done))
-            return done;
-        if (!mesh.isReadable)
+        const int size = 64;
+        var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+        var pixels = new Color32[size * size];
+        for (var y = 0; y < size; y++)
         {
-            Debug.LogWarning("[TankLook] " + mesh.name + " is not readable; its outline keeps the mesh's own normals.");
-            SmoothedMeshes[mesh] = mesh;
-            return mesh;
+            for (var x = 0; x < size; x++)
+            {
+                var d = new Vector2(x - size / 2f + 0.5f, y - size / 2f + 0.5f).magnitude / (size / 2f);
+                pixels[y * size + x] = new Color32(255, 255, 255, (byte)(255 * alphaAtDistance(d)));
+            }
         }
-        var copy = Object.Instantiate(mesh);
-        copy.name = mesh.name + " outline";
-        var vertices = copy.vertices;
-        var normals = copy.normals;
-        var sums = new Dictionary<Vector3Int, Vector3>();
-        var keys = new Vector3Int[vertices.Length];
-        for (var i = 0; i < vertices.Length; i++)
-        {
-            keys[i] = Vector3Int.RoundToInt(vertices[i] * 10000f);
-            sums.TryGetValue(keys[i], out var sum);
-            sums[keys[i]] = sum + normals[i];
-        }
-        var smooth = new Vector3[vertices.Length];
-        for (var i = 0; i < vertices.Length; i++)
-            smooth[i] = sums[keys[i]].normalized;
-        copy.normals = smooth;
-        SmoothedMeshes[mesh] = copy;
-        return copy;
+        texture.SetPixels32(pixels);
+        texture.Apply();
+        return texture;
     }
 }

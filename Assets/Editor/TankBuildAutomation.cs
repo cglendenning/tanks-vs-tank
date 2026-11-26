@@ -23,10 +23,11 @@ public static class TankBuildAutomation
     // 1.9.5: the one-time Starter Pack (D-037). Every store release needs a new version and build number.
     // Builds 25 / 13 replace 24 / 12 in review, adding the six-wins rating prompt (owner decision 2026-11-05).
     // 1.9.7: the version on the settings screen (D-014-AC-04); held for more changes before release (owner, 2026-11-09).
-    private const string ReleaseVersion = "1.9.8";
-    // 1.9.8 adds the War Chest (D-047); 1.9.7 shipped as iOS build 28 and Android 15.
-    private const int ReleaseBuildNumber = 30;
-    private const int AndroidReleaseBuildNumber = 18;
+    private const string ReleaseVersion = "1.9.9";
+    // 1.9.8 added the War Chest (D-047) and shipped as iOS build 30 and Android 18 (with Tenjin's key).
+    // 1.9.9: tanks read on every ground, destroyed tanks are wrecked, mission 1 is a real fight.
+    private const int ReleaseBuildNumber = 31;
+    private const int AndroidReleaseBuildNumber = 19;
 
     [MenuItem("Tread Shred/Build/iOS device project")]
     public static void BuildIosDeviceProject()

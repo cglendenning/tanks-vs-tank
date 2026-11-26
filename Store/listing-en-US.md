@@ -12,10 +12,10 @@ against the build before every submission. Lines marked (iOS) appear only on the
 - **App Store promotional text (170):** Become unstoppable. Install and you're in battle within seconds, with your first win under a minute away. No ads, no sign-up. Every win upgrades your tank for good.
 - **App Store keywords (100):** offline,games,wifi,tanks,shooter,army,war,military,combat,arcade,action,armor,blast,battles,tactical
 
-## What's new (1.9.8)
+## What's new (1.9.9)
 
-- **App Store What's New:** Tread Shred 1.9.8: meet the War Chest. Armor, firepower, speed, Overdrive and all three special weapons in one bundle, with a 30-second test drive before you buy. The Starter Pack is now a full stack of gear you can test drive too. And your first five missions are just the fight: no offers until you have cleared them.
-- **Google Play release notes:** Meet the War Chest: armor, firepower, speed, Overdrive and all three special weapons in one bundle, with a 30-second test drive before you buy. The Starter Pack is now a full stack of gear you can test drive too. And your first five missions are just the fight: no offers until you have cleared them.
+- **App Store What's New:** Tread Shred 1.9.9: destroyed tanks now blow apart. Their armor bursts into white-hot, smoldering wreckage and the turret is torn off a different way every time. Every tank stands out on every battlefield, and mission 1 is a real fight from the first shot.
+- **Google Play release notes:** Destroyed tanks now blow apart: their armor bursts into white-hot, smoldering wreckage and the turret is torn off a different way every time. Every tank stands out on every battlefield, and mission 1 is a real fight from the first shot.
 
 ## Description
 

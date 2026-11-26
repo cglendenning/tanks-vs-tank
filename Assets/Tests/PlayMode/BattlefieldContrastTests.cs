@@ -12,14 +12,15 @@ namespace TreadShred.Screens.Tests
 {
     // D-039-AC-03 measured, not judged by eye: the first mission of every ground is rendered as played, again with the
     // tanks' bodies painted flat magenta (which casts no shadow), and again with the tanks hidden; the pixels where the
-    // last two differ are exactly the tanks and their outlines, with no holes where a tank happens to match the ground
-    // and no shadow counted as tank. Each
-    // tank's edge (its outermost pixels, the outline the eye finds it by, as WCAG 1.4.11 judges graphical objects)
-    // is compared with the ground around it; the body's own contrast is reported beside it.
+    // last two differ are exactly the tanks, with no holes where a tank happens to match the ground and no shadow
+    // counted as tank. Each tank's colour is compared with the ground around it by CIEDE2000 colour difference, which
+    // counts hue as the eye does (a magenta or green tank on brown ground stands out even at a similar brightness);
+    // the WCAG brightness ratios of its edge and body are reported beside it. The pass mark is the owner-approved look
+    // of 2026-11-26 (13.9 at its weakest, 27 typical).
     public sealed class BattlefieldContrastTests
     {
-        // WCAG 2.1's minimum for graphical objects a player must pick out (non-text contrast, 3:1).
-        private const float MinimumContrast = 3f;
+        // CIEDE2000: about 2 is just noticeable side by side; past 10 two colours read as different at a glance.
+        private const float MinimumDifference = 12f;
         private const int Width = BattlefieldCapture.Width;
         private const int Height = BattlefieldCapture.Height;
         private const float ChangedPixel = 0.06f;
@@ -28,7 +29,7 @@ namespace TreadShred.Screens.Tests
         private static Type GameType(string name) =>
             AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
 
-        [UnityTest(Description = "D-039-AC-03: on the first mission of every ground, every tank's edge stands out from the ground around it by at least 3:1 in brightness")]
+        [UnityTest(Description = "D-039-AC-03: on the first mission of every ground, every tank's colour differs from the ground around it by at least 12 (CIEDE2000), a clearly different colour at a glance")]
         public IEnumerator EveryTankStandsOutOnEveryGround()
         {
             if (!BattlefieldCapture.Available)
@@ -51,17 +52,27 @@ namespace TreadShred.Screens.Tests
                 var measured = Measure(mission);
                 if (measured.Count == 0)
                     failures.Add("mission " + mission + ": no tank was measured");
-                foreach (var (tank, ratio, tankRgb, groundRgb) in measured)
+                foreach (var (tank, difference, tankRgb, groundRgb) in measured)
                 {
-                    var line = "ground " + ground + " (mission " + mission + ") " + tank + ": edge " + ratio.ToString("0.00") +
-                               ":1, " + tankRgb + " on ground " + groundRgb;
+                    var line = "ground " + ground + " (mission " + mission + ") " + tank + ": difference " + difference.ToString("0.0") +
+                               ", " + tankRgb + " on ground " + groundRgb;
                     report.Add(line);
-                    if (ratio < MinimumContrast)
+                    if (difference < MinimumDifference)
                         failures.Add(line);
                 }
             }
             Debug.Log("[Contrast]\n" + string.Join("\n", report));
-            Assert.IsEmpty(failures, "tanks below " + MinimumContrast + ":1 against their ground:\n" + string.Join("\n", failures));
+            Assert.IsEmpty(failures, "tanks less than " + MinimumDifference + " (CIEDE2000) from their ground:\n" + string.Join("\n", failures));
+        }
+
+        [Test(Description = "D-039-AC-03: the battlefield check's colour difference matches the published CIEDE2000 reference values")]
+        public void ColourDifferenceMatchesTheReference()
+        {
+            // Sharma, Wu and Dalal (2005), test data pairs 1, 4, 22 and 25.
+            Assert.AreEqual(2.0425f, ColorDifference(new Vector3(50f, 2.6772f, -79.7751f), new Vector3(50f, 0f, -82.7485f)), 0.0005f);
+            Assert.AreEqual(1.0000f, ColorDifference(new Vector3(50f, -1.3802f, -84.2814f), new Vector3(50f, 0f, -82.7485f)), 0.0005f);
+            Assert.AreEqual(27.1492f, ColorDifference(new Vector3(50f, 2.5f, 0f), new Vector3(73f, 25f, -18f)), 0.0005f);
+            Assert.AreEqual(1.2644f, ColorDifference(new Vector3(60.2574f, -34.0099f, 36.2677f), new Vector3(60.4626f, -34.1751f, 39.4387f)), 0.0005f);
         }
 
         private static List<(string, float, string, string)> Measure(int mission)
@@ -80,10 +91,11 @@ namespace TreadShred.Screens.Tests
                 }
             }
             var played = BattlefieldCapture.Render(camera, "contrast-mission-" + mission);
-            var renderers = tanks.SelectMany(t => t.Body.GetComponentsInChildren<Renderer>()).ToList();
-            var bodies = renderers.Where(r => r.name != "Tread Shred Outline").ToList();
-            var paint = new Material(Shader.Find("TreadShred/Outline")) { color = Color.magenta };
-            paint.SetFloat("_Width", 0f);
+            // A tank's contact shadow is part of the ground it stands out from, so it stays in every render.
+            var renderers = tanks.SelectMany(t => t.Body.GetComponentsInChildren<Renderer>())
+                .Where(r => r.name != "Tread Shred Contact Shadow").ToList();
+            var bodies = renderers;
+            var paint = new Material(Shader.Find("TreadShred/Decal")) { color = Color.magenta };
             var looks = bodies.Select(r => r.sharedMaterials).ToList();
             foreach (var body in bodies)
                 body.sharedMaterials = Enumerable.Repeat(paint, body.sharedMaterials.Length).ToArray();
@@ -140,11 +152,12 @@ namespace TreadShred.Screens.Tests
                 }
                 var groundLuminance = Luminance(Average(around));
                 // The typical edge pixel: antialiasing blends the outermost pixels with the ground, which an average
-                // would count against the outline.
+                // would count against the silhouette.
                 var edgeLuminance = edge.Select(Luminance).OrderBy(l => l).ElementAt(edge.Count / 2);
-                results.Add((name, Contrast(edgeLuminance, groundLuminance),
-                    "edge " + Describe(Average(edge)) + ", body " + Describe(Average(tank)) + " (" +
-                    Contrast(Luminance(Average(tank)), groundLuminance).ToString("0.00") + ":1)", Describe(Average(around))));
+                results.Add((name, ColorDifference(Lab(Average(tank)), Lab(Average(around))),
+                    "edge " + Contrast(edgeLuminance, groundLuminance).ToString("0.00") + ":1, edge " + Describe(Average(edge)) +
+                    ", body " + Describe(Average(tank)) + " (" + Contrast(Luminance(Average(tank)), groundLuminance).ToString("0.00") + ":1)",
+                    Describe(Average(around))));
             }
             camera.ResetAspect();
             return results;
@@ -211,6 +224,47 @@ namespace TreadShred.Screens.Tests
         private static float Luminance(Color c) => 0.2126f * Linear(c.r) + 0.7152f * Linear(c.g) + 0.0722f * Linear(c.b);
 
         private static float Linear(float v) => v <= 0.04045f ? v / 12.92f : Mathf.Pow((v + 0.055f) / 1.055f, 2.4f);
+
+        // CIE L*a*b* of an sRGB colour (D65 white).
+        private static Vector3 Lab(Color c)
+        {
+            float r = Linear(c.r), g = Linear(c.g), b = Linear(c.b);
+            var x = (0.4124f * r + 0.3576f * g + 0.1805f * b) / 0.95047f;
+            var y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            var z = (0.0193f * r + 0.1192f * g + 0.9505f * b) / 1.08883f;
+            float F(float v) => v > 0.008856f ? Mathf.Pow(v, 1f / 3f) : 7.787f * v + 16f / 116f;
+            return new Vector3(116f * F(y) - 16f, 500f * (F(x) - F(y)), 200f * (F(y) - F(z)));
+        }
+
+        // CIEDE2000 colour difference of two L*a*b* colours (Sharma, Wu and Dalal 2005).
+        private static float ColorDifference(Vector3 first, Vector3 second)
+        {
+            double l1 = first.x, a1 = first.y, b1 = first.z, l2 = second.x, a2 = second.y, b2 = second.z;
+            double Pow7(double v) => Math.Pow(v, 7);
+            double Rad(double degrees) => degrees * Math.PI / 180.0;
+            double Deg(double radians) => radians * 180.0 / Math.PI;
+            var meanChroma = (Math.Sqrt(a1 * a1 + b1 * b1) + Math.Sqrt(a2 * a2 + b2 * b2)) / 2;
+            var g = 0.5 * (1 - Math.Sqrt(Pow7(meanChroma) / (Pow7(meanChroma) + Pow7(25))));
+            double a1p = (1 + g) * a1, a2p = (1 + g) * a2;
+            double c1 = Math.Sqrt(a1p * a1p + b1 * b1), c2 = Math.Sqrt(a2p * a2p + b2 * b2);
+            double h1 = (Deg(Math.Atan2(b1, a1p)) + 360) % 360, h2 = (Deg(Math.Atan2(b2, a2p)) + 360) % 360;
+            var dh = c1 * c2 == 0 ? 0 : h2 - h1 > 180 ? h2 - h1 - 360 : h2 - h1 < -180 ? h2 - h1 + 360 : h2 - h1;
+            var dL = l2 - l1;
+            var dC = c2 - c1;
+            var dH = 2 * Math.Sqrt(c1 * c2) * Math.Sin(Rad(dh / 2));
+            var meanL = (l1 + l2) / 2;
+            var meanC = (c1 + c2) / 2;
+            var meanH = c1 * c2 == 0 ? h1 + h2 : Math.Abs(h1 - h2) <= 180 ? (h1 + h2) / 2 : h1 + h2 < 360 ? (h1 + h2 + 360) / 2 : (h1 + h2 - 360) / 2;
+            var t = 1 - 0.17 * Math.Cos(Rad(meanH - 30)) + 0.24 * Math.Cos(Rad(2 * meanH)) + 0.32 * Math.Cos(Rad(3 * meanH + 6)) -
+                    0.20 * Math.Cos(Rad(4 * meanH - 63));
+            var rotation = 30 * Math.Exp(-Math.Pow((meanH - 275) / 25, 2));
+            var rc = 2 * Math.Sqrt(Pow7(meanC) / (Pow7(meanC) + Pow7(25)));
+            var sl = 1 + 0.015 * Math.Pow(meanL - 50, 2) / Math.Sqrt(20 + Math.Pow(meanL - 50, 2));
+            var sc = 1 + 0.045 * meanC;
+            var sh = 1 + 0.015 * meanC * t;
+            var rt = -Math.Sin(Rad(2 * rotation)) * rc;
+            return (float)Math.Sqrt(Math.Pow(dL / sl, 2) + Math.Pow(dC / sc, 2) + Math.Pow(dH / sh, 2) + rt * (dC / sc) * (dH / sh));
+        }
 
         private static string Describe(Color c) =>
             "rgb(" + Mathf.RoundToInt(c.r * 255) + "," + Mathf.RoundToInt(c.g * 255) + "," + Mathf.RoundToInt(c.b * 255) + ")";
