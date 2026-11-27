@@ -4,8 +4,8 @@ using TreadShred.Progression;
 
 public class BulletEmnemy : MonoBehaviour {
 
-    Transform tower;
-    Transform pointbullet;
+    internal Transform tower;
+    internal Transform pointbullet;
     GameObject player;
 
 	// Use this for initialization
@@ -26,7 +26,7 @@ public class BulletEmnemy : MonoBehaviour {
         }
     }
 
-    void LookPlayer()
+    internal void LookPlayer()
     {
         if (player != null)
         {
@@ -85,7 +85,7 @@ public class BulletEmnemy : MonoBehaviour {
        
     }
    // D-046-AC-04: the shot this enemy fires next, so its volleys keep cycling through the weapons.
-   int volleyShot;
+   internal int volleyShot;
    static GameObject cannonShell, arcShell, seekerShell;
 
    IEnumerator Volley(TierCombat combat)
@@ -100,7 +100,7 @@ public class BulletEmnemy : MonoBehaviour {
        }
    }
 
-   void Fire(EnemyWeapon weapon, TierCombat combat)
+   internal void Fire(EnemyWeapon weapon, TierCombat combat)
    {
        // D-046-AC-02: shells fly faster on Veteran and Elite.
        var speed = 15f * combat.ShellSpeed;

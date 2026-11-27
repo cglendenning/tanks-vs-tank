@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
 using TreadShred.Progression;
@@ -15,13 +14,6 @@ namespace TreadShred.Screens.Tests
     // D-009-AC-03 on the real victory screen: Overdrive carried over turns the offer card into an upgrade offer.
     public sealed class VictoryUpgradeCardTests
     {
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Singleton(string type) => GameType(type).GetMethod("Ensure").Invoke(null, null);
-
         private static IEnumerator Audit(string screen, List<Finding> findings)
         {
             foreach (var shape in ScreenAudit.Shapes)
@@ -40,10 +32,10 @@ namespace TreadShred.Screens.Tests
             yield return new WaitForSecondsRealtime(2f);
             for (var waited = 0f; Time.timeScale == 0f && waited < 10f; waited += 0.25f)
                 yield return new WaitForSecondsRealtime(0.25f);
-            var manager = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
+            var manager = UnityEngine.Object.FindFirstObjectByType<ManagerScore>();
             Assert.IsNotNull(manager, "the mission has its score manager");
-            manager.GetType().GetField("CountEmnemy", Members).SetValue(manager, 1);
-            manager.GetType().GetMethod("Victory", Members).Invoke(manager, null);
+            manager.CountEmnemy = 1;
+            manager.Victory();
             yield return new WaitForSecondsRealtime(3.5f);
         }
 
@@ -57,7 +49,7 @@ namespace TreadShred.Screens.Tests
         [UnityTest(Description = "D-009-AC-03: with Overdrive carried over the victory card offers the cheapest upgrade beside Overdrive's status, a coins upgrade applies with UNDO beside it, with every track at level 10 it offers a unit of supply (D-045) beside the status, and each state fits every screen shape")]
         public IEnumerator CarriedOverdriveOffersAnUpgrade()
         {
-            var progression = (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
+            var progression = (PlayerProgression)TreadShredProgress.Ensure().Progression;
             var findings = new List<Finding>();
             try
             {

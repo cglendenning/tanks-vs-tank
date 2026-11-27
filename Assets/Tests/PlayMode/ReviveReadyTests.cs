@@ -17,15 +17,10 @@ namespace TreadShred.Screens.Tests
     {
         private const string WalletKey = "TreadShredGemWallet";
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Singleton(string type) => GameType(type).GetMethod("Ensure").Invoke(null, null);
-
         private static PlayerProgression Progression =>
-            (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
+            (PlayerProgression)TreadShredProgress.Ensure().Progression;
 
-        private static GemWallet Wallet => (GemWallet)Singleton("TreadShredStore").GetType().GetProperty("Wallet").GetValue(Singleton("TreadShredStore"));
+        private static GemWallet Wallet => (GemWallet)TreadShredStore.Ensure().Wallet;
 
         private static List<string> Texts() => UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None)
             .Where(t => t.gameObject.activeInHierarchy).Select(t => t.text).ToList();
@@ -37,9 +32,9 @@ namespace TreadShred.Screens.Tests
         private static Button ButtonLabeled(string label) => UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
             .FirstOrDefault(b => b.gameObject.activeInHierarchy && b.GetComponentInChildren<Text>()?.text == label);
 
-        private static bool CountingDown => UnityEngine.Object.FindFirstObjectByType(GameType("Count")) != null;
+        private static bool CountingDown => UnityEngine.Object.FindFirstObjectByType<Count>() != null;
 
-        private static Component Player => GameObject.FindGameObjectWithTag("player").GetComponent(GameType("PlayerMoverment"));
+        private static PlayerMoverment Player => GameObject.FindGameObjectWithTag("player").GetComponent<PlayerMoverment>();
 
         private static IEnumerator Audit(string screen, List<Finding> findings)
         {
@@ -66,10 +61,9 @@ namespace TreadShred.Screens.Tests
             yield return null;
             yield return new WaitForSecondsRealtime(2f);
             yield return WaitForPlay();
-            var hit = Player.GetType().GetMethod("DeadPlayer");
             for (var shell = 0; shell < 3; shell++)
             {
-                hit.Invoke(Player, new object[] { 1 });
+                Player.DeadPlayer(1);
                 yield return new WaitForSecondsRealtime(0.8f);
             }
             ButtonStarting("REVIVE").onClick.Invoke();
@@ -102,7 +96,7 @@ namespace TreadShred.Screens.Tests
                 Assert.IsNotNull(GameObject.Find("TreadShredReady"), "READY? waits for the player");
                 CollectionAssert.IsSupersetOf(Texts(), new[] { OfferLabels.Ready, OfferLabels.Go, OfferLabels.NotYet });
                 Assert.AreEqual(0f, Time.timeScale, "the game stays paused");
-                var shields = ((List<GameObject>)Player.GetType().GetField("Heart").GetValue(Player)).Where(h => h != null).ToList();
+                var shields = ((List<GameObject>)Player.Heart).Where(h => h != null).ToList();
                 Assert.IsTrue(shields.All(h => h.GetComponent<Image>().color.a > 0.9f), "full armor again");
                 yield return Audit("READY AFTER A REVIVE", findings);
 
@@ -135,13 +129,13 @@ namespace TreadShred.Screens.Tests
                 yield return ReviveOnTheArcShotMission();
                 ButtonLabeled(OfferLabels.NotYet).onClick.Invoke();
                 yield return null;
-                var buttons = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerButton"));
-                var menu = (GameObject)buttons.GetType().GetField("PauseGameObj").GetValue(buttons);
+                var buttons = UnityEngine.Object.FindFirstObjectByType<ManagerButton>();
+                var menu = (GameObject)buttons.PauseGameObj;
                 Assert.IsTrue(menu.activeInHierarchy, "the pause menu is open");
                 Assert.IsNull(GameObject.Find("TreadShredReady"));
                 Assert.AreEqual(0f, Time.timeScale);
 
-                buttons.GetType().GetMethod("PauseGame").Invoke(buttons, null);
+                buttons.PauseGame();
                 yield return new WaitForSecondsRealtime(0.5f);
                 Assert.IsFalse(menu.activeInHierarchy, "the pause menu closes");
                 Assert.IsTrue(CountingDown, "resuming plays the 3-2-1");

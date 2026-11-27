@@ -15,7 +15,7 @@ public static class TreadShredFreeWarChest
 {
     private const string HudName = "TreadShredFreeWarChestHud";
 
-    private static readonly WarChestArrivals arrivals = new WarChestArrivals((min, max) => UnityEngine.Random.Range(min, max + 1));
+    internal static readonly WarChestArrivals arrivals = new WarChestArrivals((min, max) => UnityEngine.Random.Range(min, max + 1));
     private static Font hudFont;
 
     /// <summary>Off only for screen tests that must not meet a random arrival.</summary>
@@ -94,7 +94,7 @@ public static class TreadShredFreeWarChest
             TreadShredUi.AccentColor;
     }
 
-    private static void End()
+    internal static void End()
     {
         Armed = false;
         Active = false;

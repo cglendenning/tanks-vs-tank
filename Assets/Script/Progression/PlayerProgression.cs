@@ -95,7 +95,7 @@ namespace TreadShred.Progression
     {
         private readonly IProgressionStore store;
         private readonly GemWallet wallet;
-        private readonly ProgressionState state;
+        internal readonly ProgressionState state;
 
         public PlayerProgression(IProgressionStore store, GemWallet wallet)
         {

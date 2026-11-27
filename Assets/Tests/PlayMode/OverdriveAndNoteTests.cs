@@ -13,9 +13,6 @@ namespace TreadShred.Screens.Tests
 {
     public sealed class OverdriveAndNoteTests
     {
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
         private static IEnumerator Audit(string screen, List<Finding> findings)
         {
             foreach (var shape in ScreenAudit.Shapes)
@@ -32,8 +29,8 @@ namespace TreadShred.Screens.Tests
         public IEnumerator HudShowsActiveOverdrive()
         {
             // D-045: Overdrive is supply.
-            var progress = GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null);
-            var progression = (PlayerProgression)progress.GetType().GetProperty("Progression").GetValue(progress);
+            var progress = TreadShredProgress.Ensure();
+            var progression = (PlayerProgression)progress.Progression;
             progression.Replace(new ProgressionState { supply = new[] { 0, 0, 0, 1, 0, 0, 0 } });
             try
             {
@@ -50,7 +47,7 @@ namespace TreadShred.Screens.Tests
             finally
             {
                 progression.Replace(new ProgressionState());
-                GameType("TreadShredOverdriveBadge").GetMethod("Hide").Invoke(null, null);
+                TreadShredOverdriveBadge.Hide();
             }
         }
 
@@ -61,8 +58,8 @@ namespace TreadShred.Screens.Tests
             SceneManager.LoadScene("Start");
             yield return null;
             yield return new WaitForSecondsRealtime(2f);
-            var font = (Font)GameType("TreadShredUi").GetMethod("FindFont").Invoke(null, new object[] { GameObject.Find("Canvas") });
-            var panel = (Component)GameType("TreadShredUpgradePanel").GetMethod("Show").Invoke(null, new object[] { font });
+            var font = (Font)TreadShredUi.FindFont(GameObject.Find("Canvas"));
+            var panel = (Component)TreadShredUpgradePanel.Show(font);
             yield return null;
             UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
                 .First(b => b.GetComponentInChildren<Text>()?.text == ProgressionLabels.CurrencyNoteTitle).onClick.Invoke();
@@ -71,7 +68,7 @@ namespace TreadShred.Screens.Tests
             var findings = new List<Finding>();
             yield return Audit("coins and gems note", findings);
 
-            GameType("TreadShredBack").GetMethod("Press").Invoke(null, null);
+            TreadShredBack.Press();
             yield return null;
             Assert.IsFalse(Showing(ProgressionLabels.CurrencyNote()[0]), "Back closes the note");
             Assert.IsTrue(panel != null, "and leaves the upgrade screen open");

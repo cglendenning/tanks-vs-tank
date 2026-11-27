@@ -5,7 +5,8 @@
         "TreadShred.BuildPolicy",
         "TreadShred.Economy",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "TreadShred.Game"
     ],
     "includePlatforms": [
         "Editor"

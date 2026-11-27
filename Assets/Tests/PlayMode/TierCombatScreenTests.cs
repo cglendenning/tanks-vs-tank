@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Progression;
 using UnityEngine;
@@ -14,33 +13,28 @@ namespace TreadShred.Screens.Tests
     // D-046 in real missions: waves, sight and volleys on Veteran and Elite.
     public sealed class TierCombatScreenTests
     {
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
         private const long All = (1L << 40) - 1;
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
+        private static TreadShredProgress Progress => TreadShredProgress.Ensure();
 
-        private static object Progress => GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null);
-
-        private static PlayerProgression Progression => (PlayerProgression)Progress.GetType().GetProperty("Progression").GetValue(Progress);
+        private static PlayerProgression Progression => (PlayerProgression)Progress.Progression;
 
         // Every turret on the map: tanks with health (EmnemyRed) and one-hit targets.
-        private static Component[] Enemies() => UnityEngine.Object.FindObjectsByType(GameType("BulletEmnemy"), FindObjectsSortMode.None)
-            .Cast<Component>().Where(e => ((Behaviour)e).enabled).ToArray();
+        private static Component[] Enemies() => UnityEngine.Object.FindObjectsByType<BulletEmnemy>(FindObjectsSortMode.None).Where(e => ((Behaviour)e).enabled).ToArray();
 
         private static int Remaining()
         {
-            var score = GameType("ManagerScore").GetField("instance").GetValue(null);
-            return (int)score.GetType().GetField("CountEmnemy").GetValue(score);
+            var score = ManagerScore.instance;
+            return (int)score.CountEmnemy;
         }
 
         private static float SightRadius() =>
-            (float)GameType("FieldOfView").GetField("viewRadius").GetValue(UnityEngine.Object.FindFirstObjectByType(GameType("FieldOfView")));
+            (float)((FieldOfView)UnityEngine.Object.FindFirstObjectByType<FieldOfView>()).viewRadius;
 
         private static IEnumerator Play(DifficultyTier tier, string map = "Lv1")
         {
             Progression.Replace(new ProgressionState { clearedMissions = new[] { All, All, 0L }, highestUnlockedTier = 2 });
-            Progress.GetType().GetMethod("SelectTier").Invoke(Progress, new object[] { tier });
+            Progress.SelectTier(tier);
             Time.timeScale = 1f;
             SceneManager.LoadScene(map);
             yield return null;
@@ -58,14 +52,14 @@ namespace TreadShred.Screens.Tests
                 var turret = Enemies().FirstOrDefault();
                 if (turret == null)
                     yield break;
-                var tank = turret.GetComponent(GameType("EmnemyRed"));
+                var tank = turret.GetComponent<EmnemyRed>();
                 if (tank != null)
-                    tank.GetType().GetMethod("DeadPlayer").Invoke(tank, new object[] { 10000 });
+                    tank.DeadPlayer(10000);
                 else
                 {
-                    var score = GameType("ManagerScore").GetField("instance").GetValue(null);
-                    score.GetType().GetMethod("ClaimKill").Invoke(score, new object[] { turret.gameObject });
-                    score.GetType().GetMethod("EnemyKilled").Invoke(score, null);
+                    var score = ManagerScore.instance;
+                    score.ClaimKill(turret.gameObject);
+                    score.EnemyKilled();
                     UnityEngine.Object.Destroy(turret.gameObject);
                 }
                 yield return null;
@@ -116,7 +110,7 @@ namespace TreadShred.Screens.Tests
             {
                 Time.timeScale = 1f;
                 Progression.Replace(new ProgressionState());
-                Progress.GetType().GetMethod("SelectTier").Invoke(Progress, new object[] { DifficultyTier.Recruit });
+                Progress.SelectTier(DifficultyTier.Recruit);
             }
             Assert.IsEmpty(findings, ScreenAudit.Report(findings));
         }
@@ -161,7 +155,7 @@ namespace TreadShred.Screens.Tests
             {
                 Time.timeScale = 1f;
                 Progression.Replace(new ProgressionState());
-                Progress.GetType().GetMethod("SelectTier").Invoke(Progress, new object[] { DifficultyTier.Recruit });
+                Progress.SelectTier(DifficultyTier.Recruit);
             }
         }
 
@@ -174,18 +168,17 @@ namespace TreadShred.Screens.Tests
                 foreach (var (tier, hits) in tiers)
                 {
                     yield return Play(tier);
-                    var target = Enemies().First(e => e.GetComponent(GameType("EmnemyRed")) == null).gameObject;
-                    var survives = GameType("TreadShredTargetHealth").GetMethod("Survives");
+                    var target = Enemies().First(e => e.GetComponent<EmnemyRed>() == null).gameObject;
                     for (var shell = 1; shell < hits; shell++)
-                        Assert.IsTrue((bool)survives.Invoke(null, new object[] { target }), tier + ": shell " + shell + " leaves it standing");
-                    Assert.IsFalse((bool)survives.Invoke(null, new object[] { target }), tier + ": shell " + hits + " destroys it");
+                        Assert.IsTrue((bool)TreadShredTargetHealth.Survives(target), tier + ": shell " + shell + " leaves it standing");
+                    Assert.IsFalse((bool)TreadShredTargetHealth.Survives(target), tier + ": shell " + hits + " destroys it");
                 }
             }
             finally
             {
                 Time.timeScale = 1f;
                 Progression.Replace(new ProgressionState());
-                Progress.GetType().GetMethod("SelectTier").Invoke(Progress, new object[] { DifficultyTier.Recruit });
+                Progress.SelectTier(DifficultyTier.Recruit);
             }
         }
 
@@ -196,23 +189,23 @@ namespace TreadShred.Screens.Tests
             {
                 yield return Play(DifficultyTier.Veteran);
                 // Hold the tank's view, so only this test sets the enemy off, and let every enemy reload.
-                ((MonoBehaviour)UnityEngine.Object.FindFirstObjectByType(GameType("FieldOfView"))).StopAllCoroutines();
+                ((MonoBehaviour)UnityEngine.Object.FindFirstObjectByType<FieldOfView>()).StopAllCoroutines();
                 yield return new WaitForSecondsRealtime(2.5f);
-                var turret = (MonoBehaviour)UnityEngine.Object.FindFirstObjectByType(GameType("BulletEmnemy"));
-                var shots = (int)turret.GetType().GetField("volleyShot", Members).GetValue(turret);
-                var before = UnityEngine.Object.FindObjectsByType(GameType("BulletRed"), FindObjectsSortMode.None).Length;
+                var turret = UnityEngine.Object.FindFirstObjectByType<BulletEmnemy>();
+                var shots = (int)turret.volleyShot;
+                var before = UnityEngine.Object.FindObjectsByType<BulletRed>(FindObjectsSortMode.None).Length;
 
-                turret.GetType().GetMethod("BulletPlayer").Invoke(turret, null);
+                turret.BulletPlayer();
                 yield return new WaitForSecondsRealtime(0.6f);
-                Assert.AreEqual(shots + 3, (int)turret.GetType().GetField("volleyShot", Members).GetValue(turret), "three shots in the volley");
-                Assert.Greater(UnityEngine.Object.FindObjectsByType(GameType("BulletRed"), FindObjectsSortMode.None).Length, before,
+                Assert.AreEqual(shots + 3, (int)turret.volleyShot, "three shots in the volley");
+                Assert.Greater(UnityEngine.Object.FindObjectsByType<BulletRed>(FindObjectsSortMode.None).Length, before,
                     "the third is an arc shot");
             }
             finally
             {
                 Time.timeScale = 1f;
                 Progression.Replace(new ProgressionState());
-                Progress.GetType().GetMethod("SelectTier").Invoke(Progress, new object[] { DifficultyTier.Recruit });
+                Progress.SelectTier(DifficultyTier.Recruit);
             }
         }
     }

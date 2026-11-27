@@ -72,10 +72,9 @@ namespace TreadShred.Progression.Tests
         [Test(Description = "D-050-AC-05: the editor's tests never get the ask-free start unless a PlayMode test turns it on")]
         public void TheEditorSkipsTheAskFreeStart()
         {
-            var askFree = GameType("TreadShredAskFreeStart");
-            Assert.IsFalse((bool)askFree.GetProperty("InProgress").GetValue(null), "the screen tests expect today's offers");
-            Assert.IsFalse((bool)askFree.GetProperty("MissionAskFree").GetValue(null));
-            Assert.IsNotNull(askFree.GetField("editorPreview", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static),
+            Assert.IsFalse((bool)TreadShredAskFreeStart.InProgress, "the screen tests expect today's offers");
+            Assert.IsFalse((bool)TreadShredAskFreeStart.MissionAskFree);
+            Assert.IsNotNull(GameType("TreadShredAskFreeStart").GetField("editorPreview", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static),
                 "a PlayMode test can turn it on");
         }
     }

@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
 using TreadShred.Progression;
@@ -26,22 +25,20 @@ namespace TreadShred.Screens.Tests
         [UnityTest(Description = "D-035-AC-03: a first-time player's mission 1 shows Overdrive and TAP HERE TO FIRE on screen, the enemies fire back, and the hint goes after the first shot")]
         public IEnumerator FirstPlayIsAPowerMoment()
         {
-            var firstMinute = GameType("TreadShredFirstMinute");
-            var editorPreview = firstMinute.GetField("editorPreview", BindingFlags.NonPublic | BindingFlags.Static);
             var saved = PlayerPrefs.GetString(ProgressionKey, string.Empty);
-            var progress = GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null);
-            var progression = (PlayerProgression)progress.GetType().GetProperty("Progression").GetValue(progress);
+            var progress = TreadShredProgress.Ensure();
+            var progression = (PlayerProgression)progress.Progression;
             try
             {
-                editorPreview.SetValue(null, true);
+                TreadShredFirstMinute.editorPreview = true;
                 progression.Replace(new ProgressionState());
-                progress.GetType().GetMethod("SelectTier").Invoke(progress, new object[] { DifficultyTier.Recruit });
+                progress.SelectTier(DifficultyTier.Recruit);
                 Time.timeScale = 1f;
                 SceneManager.LoadScene("Lv1");
                 for (var i = 0; i < 5; i++)
                     yield return null;
 
-                Assert.IsNull(firstMinute.GetProperty("EnemiesHoldFire"), "the enemies fight back from the start of the first play");
+                Assert.IsNull(GameType("TreadShredFirstMinute").GetProperty("EnemiesHoldFire"), "the enemies fight back from the start of the first play");
                 Assert.IsNotNull(Label(OfferLabels.OverdriveActive), "Overdrive is on, free for this mission");
                 var hint = Label(FirstMinute.FireHint);
                 Assert.IsNotNull(hint, "the fire hint shows above an enemy");
@@ -51,23 +48,21 @@ namespace TreadShred.Screens.Tests
                     "the hint is fully on screen");
 
                 var bulletsBefore = GameObject.FindGameObjectsWithTag("bulletemnemy").Length;
-                foreach (var gun in Object.FindObjectsByType(GameType("BulletEmnemy"), FindObjectsSortMode.None))
-                    gun.GetType().GetMethod("BulletPlayer").Invoke(gun, null);
+                foreach (var gun in Object.FindObjectsByType<BulletEmnemy>(FindObjectsSortMode.None))
+                    gun.BulletPlayer();
                 yield return null;
                 Assert.Greater(GameObject.FindGameObjectsWithTag("bulletemnemy").Length, bulletsBefore, "the enemies fire back on the first play");
-
-                var manager = GameType("ManagerScore");
-                manager.GetField("CurCountbullet").SetValue(manager.GetField("instance").GetValue(null), 1);
+                ((ManagerScore)ManagerScore.instance).CurCountbullet = 1;
                 yield return null;
                 yield return null;
                 Assert.IsNull(Label(FirstMinute.FireHint), "the hint goes after the first shot");
             }
             finally
             {
-                editorPreview.SetValue(null, false);
+                TreadShredFirstMinute.editorPreview = false;
                 if (!string.IsNullOrEmpty(saved))
                     progression.Replace(JsonUtility.FromJson<ProgressionState>(saved));
-                GameType("TreadShredOverdriveBadge").GetMethod("Hide").Invoke(null, null);
+                TreadShredOverdriveBadge.Hide();
             }
         }
     }

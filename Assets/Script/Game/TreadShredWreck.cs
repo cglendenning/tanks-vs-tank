@@ -95,7 +95,7 @@ public static class TreadShredWreck
 
     // A turret goes a different way every time: popped straight up spinning flat, thrown sideways tumbling end over
     // end, or lobbed in a wobbling arc; in any direction, and sometimes a split second after the blast.
-    private static (Vector3 Velocity, Vector3 Spin, float Delay) BlownOff()
+    internal static (Vector3 Velocity, Vector3 Spin, float Delay) BlownOff()
     {
         var direction = Flat(Random.onUnitSphere).normalized;
         var delay = Random.value < 0.4f ? Random.Range(0.05f, 0.18f) : 0f;

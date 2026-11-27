@@ -10,8 +10,8 @@ namespace TreadShred.Progression
     public sealed class WarChestArrivals
     {
         private readonly Func<int, int, int> draw;
-        private int seen;
-        private int target;
+        internal int seen;
+        internal int target;
 
         /// <param name="draw">A random whole number from the first argument to the second, both included.</param>
         public WarChestArrivals(Func<int, int, int> draw)

@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
 using TreadShred.Progression;
@@ -15,21 +14,14 @@ namespace TreadShred.Screens.Tests
     // D-040 and D-017-AC-08 on the real screens: the offer after NEXT MISSION, and Overdrive in the upgrade list.
     public sealed class NextMissionOfferScreenTests
     {
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+        private static GemWallet Wallet => (GemWallet)TreadShredStore.Ensure().Wallet;
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Singleton(string type) => GameType(type).GetMethod("Ensure").Invoke(null, null);
-
-        private static GemWallet Wallet => (GemWallet)Singleton("TreadShredStore").GetType().GetProperty("Wallet").GetValue(Singleton("TreadShredStore"));
-
-        private static CombatBoosts Boosts => (CombatBoosts)GameType("TreadShredBoosts").GetProperty("Current").GetValue(null);
+        private static CombatBoosts Boosts => (CombatBoosts)TreadShredBoosts.Current;
 
         // D-045: Overdrive is supply; this uses up the Overdrive the save holds (the tests hold no other supply).
         private static void ClearOverdrive()
         {
-            var progression = (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
+            var progression = (PlayerProgression)TreadShredProgress.Ensure().Progression;
             while (progression.Supply(SupplyTrack.Overdrive) > 0)
                 progression.SupplyMissionWon();
         }
@@ -58,12 +50,12 @@ namespace TreadShred.Screens.Tests
             yield return new WaitForSecondsRealtime(2f);
             for (var waited = 0f; Time.timeScale == 0f && waited < 10f; waited += 0.25f)
                 yield return new WaitForSecondsRealtime(0.25f);
-            var manager = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
-            manager.GetType().GetField("CountEmnemy", Members).SetValue(manager, 1);
-            manager.GetType().GetMethod("Victory", Members).Invoke(manager, null);
+            var manager = UnityEngine.Object.FindFirstObjectByType<ManagerScore>();
+            manager.CountEmnemy = 1;
+            manager.Victory();
             yield return new WaitForSecondsRealtime(3.5f);
-            var buttons = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerButton"));
-            buttons.GetType().GetMethod("NextLv").Invoke(buttons, null);
+            var buttons = UnityEngine.Object.FindFirstObjectByType<ManagerButton>();
+            buttons.NextLv();
             yield return null;
         }
 
@@ -71,7 +63,7 @@ namespace TreadShred.Screens.Tests
         public IEnumerator NextMissionOpensAnOffer()
         {
             var findings = new List<Finding>();
-            var progression = (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
+            var progression = (PlayerProgression)TreadShredProgress.Ensure().Progression;
             try
             {
                 // Armor at level 1 (bought with gems, D-017-AC-03), so the cheapest upgrade is one coins can buy.
@@ -119,8 +111,8 @@ namespace TreadShred.Screens.Tests
                 SceneManager.LoadScene("Start");
                 yield return null;
                 yield return new WaitForSecondsRealtime(2f);
-                var font = (Font)GameType("TreadShredUi").GetMethod("FindFont").Invoke(null, new object[] { GameObject.Find("Canvas") });
-                panel = (Component)GameType("TreadShredUpgradePanel").GetMethod("Show").Invoke(null, new object[] { font });
+                var font = (Font)TreadShredUi.FindFont(GameObject.Find("Canvas"));
+                panel = (Component)TreadShredUpgradePanel.Show(font);
                 yield return null;
                 var texts = Texts();
                 Assert.Contains("OVERDRIVE", texts);

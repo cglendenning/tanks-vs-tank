@@ -12,8 +12,7 @@ namespace TreadShred.Screens.Tests
     public sealed class WarChestArrivalSetup
     {
         public static void Arrivals(bool enabled) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("TreadShredFreeWarChest")).First(t => t != null)
-                .GetProperty("ArrivalsEnabled").SetValue(null, enabled);
+            TreadShredFreeWarChest.ArrivalsEnabled = enabled;
 
         [OneTimeSetUp]
         public void ArrivalsOff() => Arrivals(false);

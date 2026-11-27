@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using TreadShred.Economy;
@@ -17,21 +16,17 @@ namespace TreadShred.Screens.Tests
     public sealed class ReviveLossScreenTests
     {
         private const string WalletKey = "TreadShredGemWallet";
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
 
         private static GemWallet Wallet()
         {
-            var store = GameType("TreadShredStore").GetMethod("Ensure").Invoke(null, null);
-            return (GemWallet)store.GetType().GetProperty("Wallet").GetValue(store);
+            var store = TreadShredStore.Ensure();
+            return (GemWallet)store.Wallet;
         }
 
-        private static object Manager() => UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
+        private static ManagerScore Manager() => UnityEngine.Object.FindFirstObjectByType<ManagerScore>();
 
         // The run as it stands in the game: the score so far, and what a won mission banks.
-        private static object Run() => GameType("TreadShredScores").GetProperty("Run").GetValue(null);
+        private static TreadShred.Progression.ScoreRun Run() => TreadShredScores.Run;
 
         private static List<string> Texts() =>
             UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Where(t => t.gameObject.activeInHierarchy).Select(t => t.text).ToList();
@@ -49,17 +44,17 @@ namespace TreadShred.Screens.Tests
         // A run that has already won a mission: 3 kills and the clear banked, then `kills` more in this one.
         private static void RunAtStake(int kills)
         {
-            var tier = Enum.ToObject(GameType("TreadShred.Progression.DifficultyTier"), 0);
+            var tier = (TreadShred.Progression.DifficultyTier)0;
             var run = Run();
-            run.GetType().GetMethod("Start").Invoke(run, null);
-            run.GetType().GetMethod("Complete").Invoke(run, new[] { (object)true, 3, tier });
-            Manager().GetType().GetField("CurDieEmnemy", Members).SetValue(Manager(), kills);
+            run.Start();
+            run.Complete(true, 3, tier);
+            Manager().CurDieEmnemy = kills;
         }
 
         private static void OfferRevive()
         {
-            var player = UnityEngine.Object.FindFirstObjectByType(GameType("PlayerMoverment"));
-            Assert.IsTrue((bool)GameType("TreadShredRevivePanel").GetMethod("TryOffer").Invoke(null, new object[] { player }));
+            var player = UnityEngine.Object.FindFirstObjectByType<PlayerMoverment>();
+            Assert.IsTrue((bool)TreadShredRevivePanel.TryOffer(player));
         }
 
         private static IEnumerator Audit(string screen, List<Finding> findings)
@@ -86,7 +81,7 @@ namespace TreadShred.Screens.Tests
                 var open = GameObject.Find("TreadShredRevive");
                 if (open != null)
                     UnityEngine.Object.Destroy(open);
-                Run().GetType().GetMethod("Start").Invoke(Run(), null);
+                Run().Start();
                 Wallet().Replace(JsonUtility.FromJson<WalletState>(saved));
             }
         }
@@ -153,7 +148,7 @@ namespace TreadShred.Screens.Tests
             {
                 yield return Load("Lv1");
                 RunAtStake(1);
-                Manager().GetType().GetMethod("Failure", Members).Invoke(Manager(), null);
+                Manager().Failure();
                 yield return new WaitForSecondsRealtime(3.5f);
                 var texts = Texts();
                 Assert.IsTrue(texts.Any(t => Regex.IsMatch(t, @"^1 EXTRA HIT\. KEEP YOUR [\d,]+ SCORE$")), string.Join(" | ", texts));

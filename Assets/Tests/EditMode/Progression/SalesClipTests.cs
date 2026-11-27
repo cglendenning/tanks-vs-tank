@@ -47,9 +47,7 @@ namespace TreadShred.Progression.Tests
             try
             {
                 var player = host.AddComponent<VideoPlayer>();
-                var configure = System.AppDomain.CurrentDomain.GetAssemblies()
-                    .Select(a => a.GetType("TreadShredSalesClip")).First(t => t != null).GetMethod("Configure");
-                configure.Invoke(null, new object[] { player, null, null });
+                TreadShredSalesClip.Configure(player, null, null);
                 Assert.IsTrue(player.isLooping);
                 Assert.IsFalse(player.playOnAwake);
                 Assert.AreEqual(VideoAudioOutputMode.None, player.audioOutputMode);

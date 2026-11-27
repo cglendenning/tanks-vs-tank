@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Progression;
 using UnityEngine;
@@ -18,8 +17,6 @@ namespace TreadShred.Screens.Tests
     /// </summary>
     public sealed class PrivateProfileHelpTests
     {
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
 
         [UnityTest(Description = "D-032-AC-02: the private-profile note, GO PUBLIC AND COMPETE beside BACK, and the written-steps fallback fit every screen shape without overlap")]
         public IEnumerator PrivateProfileHelpFitsEveryScreen()
@@ -35,10 +32,9 @@ namespace TreadShred.Screens.Tests
             var page = new LeaderboardPage(rows, new LeaderboardEntry(0, name, 1234567, true));
             Assert.IsTrue(page.PlayerHidden, "a 20-name board leaves room for the player, so the profile is hiding them");
 
-            var panelType = GameType("TreadShredLeaderboardPanel");
-            panelType.GetMethod("OpenWithPage", BindingFlags.Public | BindingFlags.Static).Invoke(null, new object[] { font, page });
-            var panel = Object.FindFirstObjectByType(panelType);
-            panelType.GetMethod("ShowPrivateProfileHelp", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(panel, null);
+            TreadShredLeaderboardPanel.OpenWithPage(font, page);
+            var panel = Object.FindFirstObjectByType<TreadShredLeaderboardPanel>();
+            ((TreadShredLeaderboardPanel)panel).ShowPrivateProfileHelp();
 
             var findings = new List<Finding>();
             foreach (var shape in ScreenAudit.Shapes)

@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
 using TreadShred.Progression;
@@ -16,34 +15,26 @@ namespace TreadShred.Screens.Tests
     // D-050 on the real screens: a first install's first five missions ask for nothing; from mission 6 on, as today.
     public sealed class AskFreeStartScreenTests
     {
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
         private const string ProgressionKey = "TreadShredProgression";
         private const string WalletKey = "TreadShredGemWallet";
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Singleton(string type) => GameType(type).GetMethod("Ensure").Invoke(null, null);
-
         private static PlayerProgression Progression =>
-            (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
+            (PlayerProgression)TreadShredProgress.Ensure().Progression;
 
         private static GemWallet Wallet =>
-            (GemWallet)Singleton("TreadShredStore").GetType().GetProperty("Wallet").GetValue(Singleton("TreadShredStore"));
+            (GemWallet)TreadShredStore.Ensure().Wallet;
 
         private static bool StarterPackOnSale =>
-            (bool)Singleton("TreadShredStore").GetType().GetProperty("StarterPackOnSale").GetValue(Singleton("TreadShredStore"));
+            (bool)TreadShredStore.Ensure().StarterPackOnSale;
 
-        private static bool MissionAskFree => (bool)GameType("TreadShredAskFreeStart").GetProperty("MissionAskFree").GetValue(null);
+        private static bool MissionAskFree => (bool)TreadShredAskFreeStart.MissionAskFree;
 
-        private static FieldInfo Preview => GameType("TreadShredAskFreeStart").GetField("editorPreview", BindingFlags.NonPublic | BindingFlags.Static);
-
-        private static object Manager() => UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
+        private static ManagerScore Manager() => UnityEngine.Object.FindFirstObjectByType<ManagerScore>();
 
         // The result screen's offer card: its buy button, or null when the screen has no card.
         private static Button OfferCard()
         {
-            var button = (Button)Manager().GetType().GetField("rewardButton", Members).GetValue(Manager());
+            var button = (Button)Manager().rewardButton;
             return button != null && button.gameObject.activeInHierarchy ? button : null;
         }
 
@@ -60,11 +51,11 @@ namespace TreadShred.Screens.Tests
             var state = new ProgressionState();
             state.clearedMissions[(int)DifficultyTier.Recruit] = (1L << last) - 1;
             Progression.Replace(state);
-            var progress = Singleton("TreadShredProgress");
-            progress.GetType().GetMethod("SelectTier").Invoke(progress, new object[] { DifficultyTier.Recruit });
+            var progress = TreadShredProgress.Ensure();
+            progress.SelectTier(DifficultyTier.Recruit);
             Wallet.Replace(new WalletState { balance = 100, starterGranted = true });
             // A restore never closes a window this install opened (D-037-AC-02), so a first install's unopened one is set here.
-            var saved = (WalletState)typeof(GemWallet).GetField("state", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(Wallet);
+            var saved = Wallet.state;
             saved.starterPackWindowStartTicks = 0;
         }
 
@@ -81,15 +72,15 @@ namespace TreadShred.Screens.Tests
         private static IEnumerator Win()
         {
             var manager = Manager();
-            manager.GetType().GetField("CountEmnemy", Members).SetValue(manager, 1);
-            manager.GetType().GetMethod("Victory", Members).Invoke(manager, null);
+            manager.CountEmnemy = 1;
+            manager.Victory();
             yield return new WaitForSecondsRealtime(3.5f);
         }
 
         private static IEnumerator TapNext()
         {
-            var buttons = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerButton"));
-            buttons.GetType().GetMethod("NextLv").Invoke(buttons, null);
+            var buttons = UnityEngine.Object.FindFirstObjectByType<ManagerButton>();
+            buttons.NextLv();
             yield return null;
             Assert.IsNull(GameObject.Find("TreadShredNextMissionOffer"), "NEXT MISSION opens no offer");
             yield return new WaitForSecondsRealtime(2f);
@@ -103,14 +94,14 @@ namespace TreadShred.Screens.Tests
         {
             var progress = PlayerPrefs.GetString(ProgressionKey, string.Empty);
             var wallet = PlayerPrefs.GetString(WalletKey, JsonUtility.ToJson(new WalletState()));
-            Preview.SetValue(null, true);
+            TreadShredAskFreeStart.editorPreview = true;
             try
             {
                 yield return body();
             }
             finally
             {
-                Preview.SetValue(null, false);
+                TreadShredAskFreeStart.editorPreview = false;
                 Progression.Replace(string.IsNullOrEmpty(progress) ? new ProgressionState() : JsonUtility.FromJson<ProgressionState>(progress));
                 Wallet.Replace(JsonUtility.FromJson<WalletState>(wallet));
                 Time.timeScale = 1f;
@@ -147,9 +138,9 @@ namespace TreadShred.Screens.Tests
         {
             FirstInstallThrough(0);
             yield return Play("Lv1");
-            var player = UnityEngine.Object.FindFirstObjectByType(GameType("PlayerMoverment"));
-            Assert.IsFalse((bool)GameType("TreadShredRevivePanel").GetMethod("TryOffer").Invoke(null, new object[] { player }), "no revive offer");
-            Manager().GetType().GetMethod("Failure", Members).Invoke(Manager(), null);
+            var player = UnityEngine.Object.FindFirstObjectByType<PlayerMoverment>();
+            Assert.IsFalse((bool)TreadShredRevivePanel.TryOffer(player), "no revive offer");
+            Manager().Failure();
             yield return new WaitForSecondsRealtime(3.5f);
             Assert.IsNull(OfferCard(), "no Armored Redeploy");
             Assert.IsNull(GameObject.Find("TreadShredWarChestOffer"), "no War Chest");
@@ -199,10 +190,10 @@ namespace TreadShred.Screens.Tests
         {
             FirstInstallThrough(0);
             yield return Play("Lv1");
-            var results = (GameObject)Manager().GetType().GetField("VictoryofFail", Members).GetValue(Manager());
-            Manager().GetType().GetMethod("Failure", Members).Invoke(Manager(), null);
+            var results = (GameObject)Manager().VictoryofFail;
+            Manager().Failure();
             yield return new WaitForSecondsRealtime(3.5f);
-            var gameFont = (Font)GameType("TreadShredUi").GetMethod("FindFont").Invoke(null, new object[] { results });
+            var gameFont = (Font)TreadShredUi.FindFont(results);
             Assert.IsNotNull(gameFont, "the result screen has the game's font");
             var drawn = results.GetComponentsInChildren<Text>()
                 .Where(t => t.gameObject.activeInHierarchy && (t.text.StartsWith("SCORE", StringComparison.Ordinal)

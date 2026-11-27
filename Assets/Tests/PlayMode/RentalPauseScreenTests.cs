@@ -16,15 +16,10 @@ namespace TreadShred.Screens.Tests
     {
         private const string WalletKey = "TreadShredGemWallet";
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Singleton(string type) => GameType(type).GetMethod("Ensure").Invoke(null, null);
-
         private static PlayerProgression Progression =>
-            (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
+            (PlayerProgression)TreadShredProgress.Ensure().Progression;
 
-        private static GemWallet Wallet => (GemWallet)Singleton("TreadShredStore").GetType().GetProperty("Wallet").GetValue(Singleton("TreadShredStore"));
+        private static GemWallet Wallet => (GemWallet)TreadShredStore.Ensure().Wallet;
 
         private static Button Under(string root, string label)
         {
@@ -36,12 +31,12 @@ namespace TreadShred.Screens.Tests
         private static Button ButtonLabeled(string label) => UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
             .FirstOrDefault(b => b.gameObject.activeInHierarchy && b.GetComponentInChildren<Text>()?.text == label);
 
-        private static bool CountingDown => UnityEngine.Object.FindFirstObjectByType(GameType("Count")) != null;
+        private static bool CountingDown => UnityEngine.Object.FindFirstObjectByType<Count>() != null;
 
         private static Weapon InHand()
         {
-            var player = UnityEngine.Object.FindFirstObjectByType(GameType("PlayerMoverment"));
-            return (Weapon)player.GetType().GetProperty("WeaponInHand").GetValue(player);
+            var player = UnityEngine.Object.FindFirstObjectByType<PlayerMoverment>();
+            return (Weapon)player.WeaponInHand;
         }
 
         [UnityTest(Description = "D-043-AC-03: the arc shot's offer from the drawer keeps the game paused, and NOT NOW plays the 3-2-1 with the weapon button hidden, then returns to the mission unchanged")]

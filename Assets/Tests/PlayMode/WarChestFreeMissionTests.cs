@@ -18,26 +18,22 @@ namespace TreadShred.Screens.Tests
     public sealed class WarChestFreeMissionTests
     {
         private const string WalletKey = "TreadShredGemWallet";
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
         private const BindingFlags Statics = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
+        private static TreadShredStore Store() => TreadShredStore.Ensure();
 
-        private static object Store() => GameType("TreadShredStore").GetMethod("Ensure").Invoke(null, null);
-
-        private static GemWallet Wallet => (GemWallet)Store().GetType().GetProperty("Wallet").GetValue(Store());
+        private static GemWallet Wallet => (GemWallet)Store().Wallet;
 
         private static PlayerProgression Progression
         {
             get
             {
-                var progress = GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null);
-                return (PlayerProgression)progress.GetType().GetProperty("Progression").GetValue(progress);
+                var progress = TreadShredProgress.Ensure();
+                return (PlayerProgression)progress.Progression;
             }
         }
 
-        private static bool FreeMission() => (bool)GameType("TreadShredFreeWarChest").GetProperty("Active").GetValue(null);
+        private static bool FreeMission() => (bool)TreadShredFreeWarChest.Active;
 
         private static List<string> Texts() =>
             UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Where(t => t.gameObject.activeInHierarchy).Select(t => t.text).ToList();
@@ -67,9 +63,9 @@ namespace TreadShred.Screens.Tests
 
         private static IEnumerator Win()
         {
-            var manager = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
-            manager.GetType().GetField("CountEmnemy", Members).SetValue(manager, 1);
-            manager.GetType().GetMethod("Victory", Members).Invoke(manager, null);
+            var manager = UnityEngine.Object.FindFirstObjectByType<ManagerScore>();
+            manager.CountEmnemy = 1;
+            manager.Victory();
             yield return new WaitForSecondsRealtime(3.5f);
         }
 
@@ -102,8 +98,8 @@ namespace TreadShred.Screens.Tests
             {
                 OnSale();
                 yield return Load("Start");
-                var font = (Font)GameType("TreadShredUi").GetMethod("FindFont").Invoke(null, new object[] { GameObject.Find("Canvas") });
-                var panel = (Component)GameType("TreadShredUpgradePanel").GetMethod("Show").Invoke(null, new object[] { font });
+                var font = (Font)TreadShredUi.FindFont(GameObject.Find("Canvas"));
+                var panel = (Component)TreadShredUpgradePanel.Show(font);
                 yield return null;
                 Assert.IsNotNull(ButtonStarting("WAR CHEST: "), "the War Chest beside DONE");
                 yield return Audit("upgrades with the War Chest", findings);
@@ -133,15 +129,14 @@ namespace TreadShred.Screens.Tests
         {
             var findings = new List<Finding>();
             var saved = PlayerPrefs.GetString(WalletKey, JsonUtility.ToJson(new WalletState()));
-            var free = GameType("TreadShredFreeWarChest");
             try
             {
                 OnSale();
                 WarChestArrivalSetup.Arrivals(true);
                 // Due on the next result screen.
-                var schedule = free.GetField("arrivals", Statics).GetValue(null);
-                schedule.GetType().GetField("target", Members).SetValue(schedule, 1);
-                schedule.GetType().GetField("seen", Members).SetValue(schedule, 0);
+                var schedule = TreadShredFreeWarChest.arrivals;
+                schedule.target = 1;
+                schedule.seen = 0;
 
                 yield return Load("Lv1");
                 yield return Win();
@@ -177,8 +172,8 @@ namespace TreadShred.Screens.Tests
             finally
             {
                 CloseOverlays();
-                if (FreeMission() || (bool)free.GetProperty("Armed").GetValue(null))
-                    free.GetMethod("End", Statics).Invoke(null, null);
+                if (FreeMission() || (bool)TreadShredFreeWarChest.Armed)
+                    TreadShredFreeWarChest.End();
                 WarChestArrivalSetup.Arrivals(false);
                 Time.timeScale = 1f;
                 Wallet.Replace(JsonUtility.FromJson<WalletState>(saved));

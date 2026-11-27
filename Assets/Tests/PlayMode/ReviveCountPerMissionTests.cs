@@ -16,12 +16,7 @@ namespace TreadShred.Screens.Tests
     {
         private const string WalletKey = "TreadShredGemWallet";
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Singleton(string type) => GameType(type).GetMethod("Ensure").Invoke(null, null);
-
-        private static GemWallet Wallet => (GemWallet)Singleton("TreadShredStore").GetType().GetProperty("Wallet").GetValue(Singleton("TreadShredStore"));
+        private static GemWallet Wallet => (GemWallet)TreadShredStore.Ensure().Wallet;
 
         private static IEnumerator WaitForPlay()
         {
@@ -34,11 +29,10 @@ namespace TreadShred.Screens.Tests
         // Three one-hit shells destroy a tank with base armor.
         private static IEnumerator DestroyTank()
         {
-            var player = UnityEngine.Object.FindFirstObjectByType(GameType("PlayerMoverment"));
-            var hit = player.GetType().GetMethod("DeadPlayer");
+            var player = UnityEngine.Object.FindFirstObjectByType<PlayerMoverment>();
             for (var shell = 0; shell < 3; shell++)
             {
-                hit.Invoke(player, new object[] { 1 });
+                player.DeadPlayer(1);
                 yield return new WaitForSecondsRealtime(0.8f);
             }
         }
@@ -50,7 +44,7 @@ namespace TreadShred.Screens.Tests
         public IEnumerator RetryStartsAFreshReviveCount()
         {
             var saved = PlayerPrefs.GetString(WalletKey, JsonUtility.ToJson(new WalletState()));
-            var progression = (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
+            var progression = (PlayerProgression)TreadShredProgress.Ensure().Progression;
             try
             {
                 Wallet.Replace(new WalletState { balance = 200, starterGranted = true });

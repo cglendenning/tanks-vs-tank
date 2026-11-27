@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
 using TreadShred.Progression;
@@ -15,11 +14,6 @@ namespace TreadShred.Screens.Tests
     // The real upgrade screen: confirm, upgrade, undo, with every state audited on every screen shape.
     public sealed class UpgradeScreenTests
     {
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Singleton(string type) => GameType(type).GetMethod("Ensure").Invoke(null, null);
-
         private static IEnumerator Audit(string screen, List<Finding> findings)
         {
             foreach (var shape in ScreenAudit.Shapes)
@@ -36,24 +30,24 @@ namespace TreadShred.Screens.Tests
             SceneManager.LoadScene("Start");
             yield return null;
             yield return new WaitForSecondsRealtime(2f);
-            var font = (Font)GameType("TreadShredUi").GetMethod("FindFont").Invoke(null, new object[] { GameObject.Find("Canvas") });
-            var progression = (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
-            var wallet = (GemWallet)Singleton("TreadShredStore").GetType().GetProperty("Wallet").GetValue(Singleton("TreadShredStore"));
+            var font = (Font)TreadShredUi.FindFont(GameObject.Find("Canvas"));
+            var progression = (PlayerProgression)TreadShredProgress.Ensure().Progression;
+            var wallet = (GemWallet)TreadShredStore.Ensure().Wallet;
             progression.Replace(new ProgressionState { coins = 33 });
             wallet.CreditReward(20);
             var gems = wallet.Balance;
             var findings = new List<Finding>();
 
-            var panel = (Component)GameType("TreadShredUpgradePanel").GetMethod("Show").Invoke(null, new object[] { font });
+            var panel = TreadShredUpgradePanel.Show(font);
             yield return null;
-            panel.GetType().GetMethod("Upgrade", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(panel, new object[] { UpgradeTrack.Firepower });
+            panel.Upgrade(UpgradeTrack.Firepower);
             yield return null;
-            var dialog = (Component)UnityEngine.Object.FindFirstObjectByType(GameType("TreadShredConfirmDialog"));
+            var dialog = UnityEngine.Object.FindFirstObjectByType<TreadShredConfirmDialog>();
             Assert.IsNotNull(dialog, "D-017-AC-05: the upgrade asks first");
             Assert.AreEqual((0, 33), (progression.Level(UpgradeTrack.Firepower), progression.Coins), "D-017-AC-05: nothing spent before confirming");
             yield return Audit("upgrade confirmation", findings);
 
-            dialog.GetType().GetMethod("Confirm").Invoke(dialog, null);
+            dialog.Confirm();
             yield return null;
             Assert.AreEqual((1, 13, gems - 9), (progression.Level(UpgradeTrack.Firepower), progression.Coins, wallet.Balance));
             var undo = UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)

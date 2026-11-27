@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
 using TreadShred.Progression;
@@ -18,25 +17,20 @@ namespace TreadShred.Screens.Tests
     public sealed class WarChestTestDriveTests
     {
         private const string WalletKey = "TreadShredGemWallet";
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+        private static TreadShredStore Store() => TreadShredStore.Ensure();
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Store() => GameType("TreadShredStore").GetMethod("Ensure").Invoke(null, null);
-
-        private static GemWallet Wallet => (GemWallet)Store().GetType().GetProperty("Wallet").GetValue(Store());
+        private static GemWallet Wallet => (GemWallet)Store().Wallet;
 
         private static PlayerProgression Progression
         {
             get
             {
-                var progress = GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null);
-                return (PlayerProgression)progress.GetType().GetProperty("Progression").GetValue(progress);
+                var progress = TreadShredProgress.Ensure();
+                return (PlayerProgression)progress.Progression;
             }
         }
 
-        private static bool Driving() => (bool)GameType("TreadShredTestDrive").GetProperty("Active").GetValue(null);
+        private static bool Driving() => (bool)TreadShredTestDrive.Active;
 
         private static List<string> Texts() =>
             UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Where(t => t.gameObject.activeInHierarchy).Select(t => t.text).ToList();
@@ -83,8 +77,8 @@ namespace TreadShred.Screens.Tests
                 SceneManager.LoadScene("Lv1");
                 yield return null;
                 yield return Playing();
-                var manager = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
-                manager.GetType().GetMethod("Failure", Members).Invoke(manager, null);
+                var manager = UnityEngine.Object.FindFirstObjectByType<ManagerScore>();
+                manager.Failure();
                 yield return new WaitForSecondsRealtime(2.6f + Reveal);
                 var armorHeld = Progression.Supply(SupplyTrack.Armor);
                 var coins = Progression.Coins;
@@ -105,8 +99,8 @@ namespace TreadShred.Screens.Tests
                 yield return Audit("War Chest test drive", findings);
 
                 // Run the clock out.
-                var drive = UnityEngine.Object.FindFirstObjectByType(GameType("TreadShredTestDrive"));
-                drive.GetType().GetField("left", Members).SetValue(drive, 0.05f);
+                var drive = UnityEngine.Object.FindFirstObjectByType<TreadShredTestDrive>();
+                drive.left = 0.05f;
                 yield return new WaitForSecondsRealtime(0.5f);
                 Assert.IsFalse(Driving(), "the countdown ended the drive");
                 Assert.IsFalse(Progression.TestDriving, "and took the gear away");
@@ -131,7 +125,7 @@ namespace TreadShred.Screens.Tests
             finally
             {
                 if (Driving())
-                    GameType("TreadShredTestDrive").GetMethod("Finish").Invoke(null, null);
+                    TreadShredTestDrive.Finish();
                 foreach (var name in new[] { "TreadShredWarChestOffer", "TreadShredTestDriveHud" })
                 {
                     var open = GameObject.Find(name);

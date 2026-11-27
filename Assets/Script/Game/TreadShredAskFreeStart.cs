@@ -10,7 +10,7 @@ using UnityEngine;
 public static class TreadShredAskFreeStart
 {
     // Set by a PlayMode test to play the ask-free start in the editor.
-    private static bool editorPreview;
+    internal static bool editorPreview;
     private static bool missionAskFree;
 
     private static bool Applies => !TreadShredStoreCaptureMode.IsInstalled && (!Application.isEditor || editorPreview);

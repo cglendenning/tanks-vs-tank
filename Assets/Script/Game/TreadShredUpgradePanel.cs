@@ -120,7 +120,7 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
 
     // D-036 (P-8): the tap is the player saying "I want this". Coins apply at once (UNDO UPGRADE reverses it), gems
     // the player already holds are confirmed once, and a purchase goes straight to the store's own sheet.
-    private void Upgrade(UpgradeTrack track) => Checkout(shop, track, font, () => statusText.text = string.Empty);
+    internal void Upgrade(UpgradeTrack track) => Checkout(shop, track, font, () => statusText.text = string.Empty);
 
     /// <summary>An upgrade tap's checkout (D-036), shared with the next-mission interstitial (D-040).</summary>
     internal static void Checkout(UpgradePurchase shop, UpgradeTrack track, Font font, System.Action beforeBuy)

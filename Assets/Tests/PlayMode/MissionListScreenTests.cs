@@ -16,12 +16,9 @@ namespace TreadShred.Screens.Tests
         private const int Missions = 40;
         private const int Cleared = 25;
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
+        private static TreadShredProgress Progress => TreadShredProgress.Ensure();
 
-        private static object Progress => GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null);
-
-        private static PlayerProgression Progression => (PlayerProgression)Progress.GetType().GetProperty("Progression").GetValue(Progress);
+        private static PlayerProgression Progression => (PlayerProgression)Progress.Progression;
 
         private static Button ButtonStarting(string label) =>
             UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
@@ -34,7 +31,7 @@ namespace TreadShred.Screens.Tests
             for (var mission = 1; mission <= Missions; mission++)
                 PlayerPrefs.SetFloat("Lv" + mission, mission <= Cleared ? 1f : 0f);
             Progression.Replace(new ProgressionState { clearedMissions = new[] { (1L << Cleared) - 1, 0L, 0L } });
-            Progress.GetType().GetMethod("SelectTier").Invoke(Progress, new object[] { DifficultyTier.Recruit });
+            Progress.SelectTier(DifficultyTier.Recruit);
             return saved;
         }
 

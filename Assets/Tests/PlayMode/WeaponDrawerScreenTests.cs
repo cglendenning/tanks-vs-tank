@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
 using TreadShred.Progression;
@@ -16,18 +15,12 @@ namespace TreadShred.Screens.Tests
     // D-038 and D-043 in real missions: the weapon button, the drawer it slides out, renting from it, and the countdown.
     public sealed class WeaponDrawerScreenTests
     {
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
         private const string WalletKey = "TreadShredGemWallet";
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Singleton(string type) => GameType(type).GetMethod("Ensure").Invoke(null, null);
-
         private static PlayerProgression Progression =>
-            (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
+            (PlayerProgression)TreadShredProgress.Ensure().Progression;
 
-        private static GemWallet Wallet => (GemWallet)Singleton("TreadShredStore").GetType().GetProperty("Wallet").GetValue(Singleton("TreadShredStore"));
+        private static GemWallet Wallet => (GemWallet)TreadShredStore.Ensure().Wallet;
 
         private static List<string> Texts() => UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None)
             .Where(t => t.gameObject.activeInHierarchy).Select(t => t.text).ToList();
@@ -45,8 +38,8 @@ namespace TreadShred.Screens.Tests
 
         private static Weapon InHand()
         {
-            var player = UnityEngine.Object.FindFirstObjectByType(GameType("PlayerMoverment"));
-            return (Weapon)player.GetType().GetProperty("WeaponInHand").GetValue(player);
+            var player = UnityEngine.Object.FindFirstObjectByType<PlayerMoverment>();
+            return (Weapon)player.WeaponInHand;
         }
 
         private static IEnumerator Audit(string screen, List<Finding> findings)
@@ -60,7 +53,7 @@ namespace TreadShred.Screens.Tests
 
         private static IEnumerator Load(int map)
         {
-            Singleton("TreadShredProgress").GetType().GetMethod("SelectTier").Invoke(Singleton("TreadShredProgress"), new object[] { DifficultyTier.Recruit });
+            TreadShredProgress.Ensure().SelectTier(DifficultyTier.Recruit);
             Time.timeScale = 1f;
             SceneManager.LoadScene("Lv" + map);
             yield return null;
@@ -71,9 +64,9 @@ namespace TreadShred.Screens.Tests
 
         private static IEnumerator Win()
         {
-            var manager = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
-            manager.GetType().GetField("CountEmnemy", Members).SetValue(manager, 1);
-            manager.GetType().GetMethod("Victory", Members).Invoke(manager, null);
+            var manager = UnityEngine.Object.FindFirstObjectByType<ManagerScore>();
+            manager.CountEmnemy = 1;
+            manager.Victory();
             yield return new WaitForSecondsRealtime(3.5f);
         }
 

@@ -124,8 +124,7 @@ namespace TreadShred.Save.Tests
         [Test(Description = "D-044-AC-03: the reset erases every value the game saves, medals for all 120 missions included, and keeps only the best score, attribution bookkeeping, the capture switch and the save's sync stamps")]
         public void TheResetCoversEverySavedKey()
         {
-            var reset = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("TreadShredGameReset")).First(t => t != null);
-            var erased = new HashSet<string>((IEnumerable<string>)reset.GetMethod("ErasedKeys").Invoke(null, null));
+            var erased = new HashSet<string>(TreadShredGameReset.ErasedKeys());
             CollectionAssert.IsSupersetOf(erased, new[] { "Lv1", "Lvs1", "Lv120", "Lvs120", "Sound", "Music", "Vibrate", "Camera" });
             CollectionAssert.IsEmpty(erased.Intersect(Kept), "the best score, attribution and sync stamps stay");
 

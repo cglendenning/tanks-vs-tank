@@ -11,24 +11,20 @@ namespace TreadShred.BuildPolicy.Tests
     /// <summary>D-032-AC-01: a mission clears on its final kill, so every mission's enemy total must match its enemies.</summary>
     public sealed class MissionEnemyTests
     {
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
 
         [Test(Description = "D-032-AC-01: every mission's enemy total equals the enemies placed in it, so it cannot clear with an enemy left")]
         public void EveryMissionCountsItsEnemies()
         {
-            var manager = GameType("ManagerScore");
-            var tank = GameType("EmnemyRed");
             var rows = new List<string>();
             var problems = new List<string>();
             for (var mission = 1; mission <= 40; mission++)
             {
                 EditorSceneManager.OpenScene($"Assets/Scence/Lv{mission}.unity", OpenSceneMode.Single);
-                var managers = Object.FindObjectsByType(manager, FindObjectsInactive.Include, FindObjectsSortMode.None);
-                var declared = managers.Length == 1 ? (int)manager.GetField("CountEmnemy").GetValue(managers[0]) : -1;
+                var managers = Object.FindObjectsByType<ManagerScore>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                var declared = managers.Length == 1 ? (int)((ManagerScore)managers[0]).CountEmnemy : -1;
                 var killable = new HashSet<GameObject>();
                 var inactive = 0;
-                foreach (var component in Object.FindObjectsByType(tank, FindObjectsInactive.Include, FindObjectsSortMode.None))
+                foreach (var component in Object.FindObjectsByType<EmnemyRed>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                     killable.Add(((Component)component).gameObject);
                 foreach (var transform in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 {
@@ -41,7 +37,7 @@ namespace TreadShred.BuildPolicy.Tests
                     if (!enemy.activeInHierarchy)
                         inactive++;
                 }
-                var tanks = killable.Count(e => e.GetComponent(tank) != null);
+                var tanks = killable.Count(e => e.GetComponent<EmnemyRed>() != null);
                 var row = $"Lv{mission}: declares {declared}, has {killable.Count} ({tanks} tanks, {killable.Count - tanks} one-hit targets, {inactive} inactive)";
                 rows.Add(row);
                 if (declared != killable.Count)

@@ -18,17 +18,10 @@ namespace TreadShred.Screens.Tests
         private const string WalletKey = "TreadShredGemWallet";
         private const string AttributionKey = "attribution_skan_registered";
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Singleton(string type) => GameType(type).GetMethod("Ensure").Invoke(null, null);
-
         private static PlayerProgression Progression =>
-            (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
+            (PlayerProgression)TreadShredProgress.Ensure().Progression;
 
-        private static GemWallet Wallet => (GemWallet)Singleton("TreadShredStore").GetType().GetProperty("Wallet").GetValue(Singleton("TreadShredStore"));
-
-        private static string Words(string name) => (string)GameType("TreadShred.Save.GameReset").GetField(name).GetValue(null);
+        private static GemWallet Wallet => (GemWallet)TreadShredStore.Ensure().Wallet;
 
         private static List<string> Texts() => UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None)
             .Where(t => t.gameObject.activeInHierarchy).Select(t => t.text).ToList();
@@ -57,9 +50,9 @@ namespace TreadShred.Screens.Tests
 
         private static IEnumerator OpenSettings()
         {
-            var font = (Font)GameType("TreadShredUi").GetMethod("FindFont").Invoke(null, new object[] { GameObject.Find("Canvas") });
-            var menu = UnityEngine.Object.FindFirstObjectByType(GameType("LoadLv"));
-            GameType("TreadShredSettingsPanel").GetMethod("Show").Invoke(null, new object[] { menu, font });
+            var font = (Font)TreadShredUi.FindFont(GameObject.Find("Canvas"));
+            var menu = UnityEngine.Object.FindFirstObjectByType<LoadLv>();
+            TreadShredSettingsPanel.Show(menu, font);
             yield return null;
         }
 
@@ -85,16 +78,16 @@ namespace TreadShred.Screens.Tests
                 PlayerPrefs.SetInt(AttributionKey, 7);
                 yield return Load("Start");
                 yield return OpenSettings();
-                Assert.IsNotNull(ButtonLabeled(Words("Title")), "Settings offers RESET GAME");
+                Assert.IsNotNull(ButtonLabeled(TreadShred.Save.GameReset.Title), "Settings offers RESET GAME");
                 yield return Audit("settings with reset game", findings);
 
-                ButtonLabeled(Words("Title")).onClick.Invoke();
+                ButtonLabeled(TreadShred.Save.GameReset.Title).onClick.Invoke();
                 yield return null;
                 CollectionAssert.IsSupersetOf(Texts(), new[]
                 {
-                    Words("Title"), Words("Erases"), Words("Prompt"), Words("ScoreStays"), "IT ALSO ERASES YOUR GAME'S BACKUP IN ICLOUD. IT CANNOT BE UNDONE."
+                    TreadShred.Save.GameReset.Title, TreadShred.Save.GameReset.Erases, TreadShred.Save.GameReset.Prompt, TreadShred.Save.GameReset.ScoreStays, "IT ALSO ERASES YOUR GAME'S BACKUP IN ICLOUD. IT CANNOT BE UNDONE."
                 });
-                var erase = ButtonLabeled(Words("Erase"));
+                var erase = ButtonLabeled(TreadShred.Save.GameReset.Erase);
                 Assert.IsFalse(erase.interactable, "off until RESET is typed");
                 yield return Audit("reset game", findings);
 
@@ -105,16 +98,16 @@ namespace TreadShred.Screens.Tests
                 erase.onClick.Invoke();
                 yield return null;
                 Assert.AreEqual((750, 400), (Wallet.Balance, Progression.Coins), "a near miss erases nothing");
-                ButtonLabeled(Words("Keep")).onClick.Invoke();
+                ButtonLabeled(TreadShred.Save.GameReset.Keep).onClick.Invoke();
                 yield return null;
                 Assert.IsNull(GameObject.Find("TreadShredReset"), "KEEP MY GAME closes it");
                 Assert.AreEqual((750, 400), (Wallet.Balance, Progression.Coins), "with nothing changed");
 
-                ButtonLabeled(Words("Title")).onClick.Invoke();
+                ButtonLabeled(TreadShred.Save.GameReset.Title).onClick.Invoke();
                 yield return null;
                 Typed.text = "reset";
                 yield return null;
-                erase = ButtonLabeled(Words("Erase"));
+                erase = ButtonLabeled(TreadShred.Save.GameReset.Erase);
                 Assert.IsTrue(erase.interactable, "typing RESET unlocks it");
                 yield return Audit("reset game, confirmed", findings);
                 erase.onClick.Invoke();
@@ -127,7 +120,7 @@ namespace TreadShred.Screens.Tests
                 foreach (UpgradeTrack track in Enum.GetValues(typeof(UpgradeTrack)))
                     Assert.AreEqual(0, Progression.Level(track), track + " upgrades");
                 Assert.IsFalse(Progression.IsUnlocked(DifficultyTier.Veteran), "Veteran is locked again");
-                Assert.AreEqual(DifficultyTier.Recruit, (DifficultyTier)Singleton("TreadShredProgress").GetType().GetProperty("SelectedTier").GetValue(Singleton("TreadShredProgress")));
+                Assert.AreEqual(DifficultyTier.Recruit, (DifficultyTier)TreadShredProgress.Ensure().SelectedTier);
                 Assert.AreEqual(GemCatalog.StarterGrant, Wallet.Balance, "only the starter gems, as on a first launch");
                 Assert.IsFalse(Wallet.StarterPackBought, "the Starter Pack is on offer again");
                 Assert.AreEqual(0f, PlayerPrefs.GetFloat("Lv1", 0f), "medals erased");

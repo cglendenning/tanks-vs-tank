@@ -20,7 +20,7 @@ public static class TreadShredFirstMinute
 #endif
 
     // Set by a PlayMode test to play the first minute in the editor.
-    private static bool editorPreview;
+    internal static bool editorPreview;
     private static bool launchChecked;
     private static bool firstPlay;
 

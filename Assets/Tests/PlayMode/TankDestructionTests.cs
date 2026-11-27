@@ -15,7 +15,7 @@ namespace TreadShred.Screens.Tests
             AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
 
         private static Component[] Debris() =>
-            UnityEngine.Object.FindObjectsByType(GameType("TreadShredDebris"), FindObjectsSortMode.None).Cast<Component>().ToArray();
+            UnityEngine.Object.FindObjectsByType<TreadShredDebris>(FindObjectsSortMode.None).ToArray();
 
         [UnityTest(Description = "D-027-AC-02: a destroyed enemy tank is blown into fragments of its own armor and parts that fly, smolder and land, with sparks, a blast ring, a fire flash and a scorch mark, no blocks or cartoon puffs, and all of it clears within seven seconds")]
         public IEnumerator DestroyedTankIsWrecked()
@@ -45,7 +45,7 @@ namespace TreadShred.Screens.Tests
             Assert.IsNotNull(explosion, "the tank explosion prefab loads");
             var onScreen = Camera.main.WorldToViewportPoint(enemy.transform.position);
             Debug.Log("[Destruction] wrecked " + enemy.name + " at viewport " + onScreen);
-            GameType("TreadShredImpact").GetMethod("Kill").Invoke(null, new object[] { enemy.transform.position, enemy, explosion });
+            TreadShredImpact.Kill(enemy.transform.position, enemy, explosion);
             UnityEngine.Object.Destroy(enemy);
             yield return new WaitForSecondsRealtime(0.1f);
             yield return new WaitForSeconds(0.15f);

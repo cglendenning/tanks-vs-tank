@@ -16,17 +16,12 @@ namespace TreadShred.Screens.Tests
     {
         private const string WalletKey = "TreadShredGemWallet";
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Singleton(string type) => GameType(type).GetMethod("Ensure").Invoke(null, null);
-
         private static PlayerProgression Progression =>
-            (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
+            (PlayerProgression)TreadShredProgress.Ensure().Progression;
 
-        private static GemWallet Wallet => (GemWallet)Singleton("TreadShredStore").GetType().GetProperty("Wallet").GetValue(Singleton("TreadShredStore"));
+        private static GemWallet Wallet => (GemWallet)TreadShredStore.Ensure().Wallet;
 
-        private static int InFlight => (int)GameType("TreadShredEnemyShells").GetProperty("InFlight").GetValue(null);
+        private static int InFlight => (int)TreadShredEnemyShells.InFlight;
 
         [UnityTest(Description = "D-020-AC-07: shells the enemies fired at the destroyed tank are all gone the moment it is revived, and the revived tank keeps its full armor")]
         public IEnumerator ReviveClearsEnemyShells()
@@ -43,18 +38,17 @@ namespace TreadShred.Screens.Tests
                 for (var waited = 0f; Time.timeScale == 0f && waited < 10f; waited += 0.25f)
                     yield return new WaitForSecondsRealtime(0.25f);
 
-                var player = GameObject.FindGameObjectWithTag("player").GetComponent(GameType("PlayerMoverment"));
-                var hit = player.GetType().GetMethod("DeadPlayer");
+                var player = GameObject.FindGameObjectWithTag("player").GetComponent<PlayerMoverment>();
                 for (var shell = 0; shell < 3; shell++)
                 {
-                    hit.Invoke(player, new object[] { 1 });
+                    player.DeadPlayer(1);
                     yield return new WaitForSecondsRealtime(0.8f);
                 }
                 Assert.IsNotNull(GameObject.Find("TreadShredRevive"), "the revive offer holds the game");
 
                 // Every turret that has reloaded fires at the destroyed tank while the offer is up.
-                foreach (var turret in UnityEngine.Object.FindObjectsByType(GameType("BulletEmnemy"), FindObjectsSortMode.None))
-                    turret.GetType().GetMethod("BulletPlayer").Invoke(turret, null);
+                foreach (var turret in UnityEngine.Object.FindObjectsByType<BulletEmnemy>(FindObjectsSortMode.None))
+                    turret.BulletPlayer();
                 Assert.Greater(InFlight, 0, "enemy shells are in flight");
 
                 UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
@@ -62,7 +56,7 @@ namespace TreadShred.Screens.Tests
                     .onClick.Invoke();
                 yield return null;
                 Assert.AreEqual(0, InFlight, "every enemy shell in flight is cleared by the revive");
-                var shields = ((System.Collections.Generic.List<GameObject>)player.GetType().GetField("Heart").GetValue(player)).Where(h => h != null);
+                var shields = ((System.Collections.Generic.List<GameObject>)player.Heart).Where(h => h != null);
                 Assert.IsTrue(shields.All(h => h.GetComponent<Image>().color.a > 0.9f), "full armor again");
             }
             finally

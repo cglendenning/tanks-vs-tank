@@ -14,15 +14,12 @@ namespace TreadShred.Screens.Tests
     // D-017-AC-09 in a mission: shells landing faster than a shield's pulse still take the shields in line.
     public sealed class ShieldOrderTests
     {
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
         private static PlayerProgression Progression
         {
             get
             {
-                var progress = GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null);
-                return (PlayerProgression)progress.GetType().GetProperty("Progression").GetValue(progress);
+                var progress = TreadShredProgress.Ensure();
+                return (PlayerProgression)progress.Progression;
             }
         }
 
@@ -41,16 +38,14 @@ namespace TreadShred.Screens.Tests
                 for (var waited = 0f; Time.timeScale == 0f && waited < 10f; waited += 0.25f)
                     yield return new WaitForSecondsRealtime(0.25f);
 
-                var player = UnityEngine.Object.FindFirstObjectByType(GameType("PlayerMoverment"));
-                var line = ((List<GameObject>)player.GetType().GetField("Heart").GetValue(player))
+                var player = UnityEngine.Object.FindFirstObjectByType<PlayerMoverment>();
+                var line = ((List<GameObject>)player.Heart)
                     .Where(h => h != null).OrderBy(h => h.transform.position.x).ToList();
                 Assert.AreEqual(3, line.Count, "three shields on the HUD");
                 Assert.IsTrue(line.All(h => Alpha(h) > 0.9f), "all lit at the start");
-
-                var hit = player.GetType().GetMethod("DeadPlayer");
-                hit.Invoke(player, new object[] { 1 });
+                player.DeadPlayer(1);
                 yield return new WaitForSecondsRealtime(0.1f);
-                hit.Invoke(player, new object[] { 1 });
+                player.DeadPlayer(1);
                 yield return new WaitForSecondsRealtime(1f);
 
                 var alphas = string.Join(", ", line.Select(Alpha));

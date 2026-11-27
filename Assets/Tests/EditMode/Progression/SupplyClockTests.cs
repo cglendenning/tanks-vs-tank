@@ -109,7 +109,6 @@ namespace TreadShred.Progression.Tests
         }
 
         private static ProgressionState GetState(PlayerProgression progression) =>
-            (ProgressionState)typeof(PlayerProgression).GetField("state", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                .GetValue(progression);
+            progression.state;
     }
 }

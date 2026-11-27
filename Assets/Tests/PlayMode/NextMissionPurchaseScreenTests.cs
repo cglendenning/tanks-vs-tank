@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
 using TreadShred.Progression;
@@ -15,18 +14,11 @@ namespace TreadShred.Screens.Tests
     // D-040-AC-05 on the real screen: every NEXT MISSION offer has something to buy with money.
     public sealed class NextMissionPurchaseScreenTests
     {
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+        private static GemWallet Wallet => (GemWallet)TreadShredStore.Ensure().Wallet;
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
+        private static PlayerProgression Progression => (PlayerProgression)TreadShredProgress.Ensure().Progression;
 
-        private static object Singleton(string type) => GameType(type).GetMethod("Ensure").Invoke(null, null);
-
-        private static GemWallet Wallet => (GemWallet)Singleton("TreadShredStore").GetType().GetProperty("Wallet").GetValue(Singleton("TreadShredStore"));
-
-        private static PlayerProgression Progression => (PlayerProgression)Singleton("TreadShredProgress").GetType().GetProperty("Progression").GetValue(Singleton("TreadShredProgress"));
-
-        private static CombatBoosts Boosts => (CombatBoosts)GameType("TreadShredBoosts").GetProperty("Current").GetValue(null);
+        private static CombatBoosts Boosts => (CombatBoosts)TreadShredBoosts.Current;
 
         private static List<string> Texts() =>
             UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Where(t => t.gameObject.activeInHierarchy).Select(t => t.text).ToList();
@@ -51,12 +43,12 @@ namespace TreadShred.Screens.Tests
             yield return new WaitForSecondsRealtime(2f);
             for (var waited = 0f; Time.timeScale == 0f && waited < 10f; waited += 0.25f)
                 yield return new WaitForSecondsRealtime(0.25f);
-            var manager = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
-            manager.GetType().GetField("CountEmnemy", Members).SetValue(manager, 1);
-            manager.GetType().GetMethod("Victory", Members).Invoke(manager, null);
+            var manager = UnityEngine.Object.FindFirstObjectByType<ManagerScore>();
+            manager.CountEmnemy = 1;
+            manager.Victory();
             yield return new WaitForSecondsRealtime(3.5f);
-            var buttons = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerButton"));
-            buttons.GetType().GetMethod("NextLv").Invoke(buttons, null);
+            var buttons = UnityEngine.Object.FindFirstObjectByType<ManagerButton>();
+            buttons.NextLv();
             yield return null;
             Assert.IsNotNull(GameObject.Find("TreadShredNextMissionOffer"), "an offer before the next mission");
         }

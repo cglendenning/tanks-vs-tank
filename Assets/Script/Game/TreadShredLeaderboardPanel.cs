@@ -126,7 +126,7 @@ public sealed class TreadShredLeaderboardPanel : MonoBehaviour
 
     // D-032-AC-02: Play Games makes new profiles private, which keeps the player off everyone else's board. The screen
     // says so and offers the Play Games settings that change it, beside BACK, framed as the way to compete.
-    private void ShowPrivateProfileHelp()
+    internal void ShowPrivateProfileHelp()
     {
         var note = Track(TreadShredUi.CreateText(LeaderboardRules.PrivateProfile, root,
             new Vector2(0f, FirstRowY - RowsPerColumn * RowHeight - 72f), new Vector2(1400f, 34f), 22, font));

@@ -20,7 +20,7 @@ public sealed class TreadShredTestDrive : MonoBehaviour
     private SupplyStack stack;
     private System.Action<Font, System.Action> openReveal;
     private System.Action next;
-    private float left;
+    internal float left;
     private RectTransform hud;
     private Text clock;
 

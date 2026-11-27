@@ -11,8 +11,6 @@ namespace TreadShred.BuildPolicy.Tests
 {
     public sealed class FirstMinuteBuildTests
     {
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
 
         private static string Read(string relative) => File.ReadAllText(Path.Combine(Application.dataPath, relative));
 
@@ -24,10 +22,10 @@ namespace TreadShred.BuildPolicy.Tests
                 .Where(t => t.CompareTag("targetMask") && t.GetComponent<Collider>() != null).ToList();
             var wall = GameObject.Find("Obstance").GetComponent<Collider>().bounds;
             var player = GameObject.FindGameObjectWithTag("player").transform.position;
-            var manager = Object.FindFirstObjectByType(GameType("ManagerScore"));
+            var manager = Object.FindFirstObjectByType<ManagerScore>();
 
             Assert.AreEqual(5, enemies.Count);
-            Assert.AreEqual(5, (int)GameType("ManagerScore").GetField("CountEmnemy").GetValue(manager));
+            Assert.AreEqual(5, (int)((ManagerScore)manager).CountEmnemy);
             Assert.Less(player.z, wall.min.z, "the player starts below the inner wall");
             foreach (var enemy in enemies)
                 Assert.Greater(enemy.position.z, wall.max.z, enemy.name + " starts beyond the inner wall");

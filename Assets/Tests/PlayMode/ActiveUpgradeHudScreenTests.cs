@@ -14,19 +14,16 @@ namespace TreadShred.Screens.Tests
     // D-017-AC-10 in a real mission: the HUD shows the upgrades at work beside OVERDRIVE ACTIVE and the shields.
     public sealed class ActiveUpgradeHudScreenTests
     {
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
         private static PlayerProgression Progression
         {
             get
             {
-                var progress = GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null);
-                return (PlayerProgression)progress.GetType().GetProperty("Progression").GetValue(progress);
+                var progress = TreadShredProgress.Ensure();
+                return (PlayerProgression)progress.Progression;
             }
         }
 
-        private static CombatBoosts Boosts => (CombatBoosts)GameType("TreadShredBoosts").GetProperty("Current").GetValue(null);
+        private static CombatBoosts Boosts => (CombatBoosts)TreadShredBoosts.Current;
 
         private static List<string> Texts() =>
             UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Where(t => t.gameObject.activeInHierarchy).Select(t => t.text).ToList();
@@ -70,11 +67,10 @@ namespace TreadShred.Screens.Tests
                     findings.AddRange(ScreenAudit.Inspect(shape, "MISSION WITH OVERDRIVE AND UPGRADES"));
                 }
 
-                var player = UnityEngine.Object.FindFirstObjectByType(GameType("PlayerMoverment"));
-                var hit = player.GetType().GetMethod("DeadPlayer");
-                hit.Invoke(player, new object[] { 1 });
+                var player = UnityEngine.Object.FindFirstObjectByType<PlayerMoverment>();
+                player.DeadPlayer(1);
                 Assert.AreEqual("+1", ExtraArmor(), "a hit uses the extra armor first");
-                hit.Invoke(player, new object[] { 1 });
+                player.DeadPlayer(1);
                 Assert.AreEqual(string.Empty, ExtraArmor(), "then only the three shields are left");
 
                 yield return StartMission(0, 0, 3);

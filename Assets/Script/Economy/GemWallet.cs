@@ -44,7 +44,7 @@ namespace TreadShred.Economy
         public const int RememberedTransactionLimit = 64;
 
         private readonly IWalletStore store;
-        private readonly WalletState state;
+        internal readonly WalletState state;
 
         public GemWallet(IWalletStore store)
         {

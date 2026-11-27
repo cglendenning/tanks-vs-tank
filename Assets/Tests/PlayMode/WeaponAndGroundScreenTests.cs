@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -13,8 +12,6 @@ namespace TreadShred.Screens.Tests
     // D-038 and D-039 in real missions: the weapon toggle on a special-weapon mission, and the ground of every block.
     public sealed class WeaponAndGroundScreenTests
     {
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
 
         private static IEnumerator Audit(string screen, List<Finding> findings)
         {
@@ -37,13 +34,13 @@ namespace TreadShred.Screens.Tests
             UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
                 .FirstOrDefault(b => b.gameObject.activeInHierarchy && b.GetComponentInChildren<Text>()?.text == label);
 
-        private static Color PrimaryFill => (Color)GameType("TreadShredUi").GetField("PrimaryFill").GetValue(null);
+        private static Color PrimaryFill => (Color)TreadShredUi.PrimaryFill;
 
         private static bool IsPrimary(Button button) => button.targetGraphic.color == PrimaryFill;
 
-        private static object Player() => UnityEngine.Object.FindFirstObjectByType(GameType("PlayerMoverment"));
+        private static PlayerMoverment Player() => UnityEngine.Object.FindFirstObjectByType<PlayerMoverment>();
 
-        private static string WeaponInHand() => Player().GetType().GetProperty("WeaponInHand").GetValue(Player()).ToString();
+        private static string WeaponInHand() => Player().WeaponInHand.ToString();
 
         [UnityTest(Description = "D-038-AC-05: on the arc-shot mission the weapon button names ARC SHOT and starts on it, its one-row drawer switches to the cannon and back, (TAP TO CHANGE) stays inside the button, the button hides while paused, it passes the screen audit on every shape, and a cannon mission has no weapon control until a special weapon has been played, then offers it LOCKED (D-043-AC-02)")]
         public IEnumerator WeaponToggleOnASpecialWeaponMission()
@@ -77,12 +74,11 @@ namespace TreadShred.Screens.Tests
                 yield return new WaitForSecondsRealtime(0.25f);
             Assert.IsTrue(UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Any(t => t.gameObject.activeInHierarchy && t.text == "(TAP TO CHANGE)"), "the instruction stays on the button");
 
-            var pause = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerButton"));
-            var pauseGame = pause.GetType().GetMethod("PauseGame", BindingFlags.Public | BindingFlags.Instance);
-            pauseGame.Invoke(pause, null);
+            var pause = UnityEngine.Object.FindFirstObjectByType<ManagerButton>();
+            pause.PauseGame();
             yield return null;
             Assert.IsNull(GameObject.Find("TreadShredWeaponToggle"), "hidden while paused");
-            pauseGame.Invoke(pause, null);
+            pause.PauseGame();
             yield return null;
             // D-020-AC-06: resuming plays the 3-2-1 first; the weapon button returns with play.
             for (var waited = 0f; Time.timeScale == 0f && waited < 10f; waited += 0.25f)
@@ -102,9 +98,9 @@ namespace TreadShred.Screens.Tests
             yield return new WaitForSecondsRealtime(0.4f);
             Time.timeScale = 1f;
             // ...and before any special weapon has been played, a cannon mission shows no weapon control.
-            var progress = GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null);
-            var progression = progress.GetType().GetProperty("Progression").GetValue(progress);
-            progression.GetType().GetMethod("Replace").Invoke(progression, new[] { Activator.CreateInstance(GameType("TreadShred.Progression.ProgressionState")) });
+            var progress = TreadShredProgress.Ensure();
+            var progression = progress.Progression;
+            progression.Replace(new TreadShred.Progression.ProgressionState());
             yield return Load("Lv2");
             Assert.IsNull(GameObject.Find("TreadShredWeaponToggle"), "a cannon mission shows no weapon control");
             Assert.IsNull(ButtonLabeled("CANNON"));

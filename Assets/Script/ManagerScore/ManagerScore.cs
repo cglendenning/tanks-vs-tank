@@ -128,7 +128,7 @@ public class ManagerScore : MonoBehaviour
     private GemOffer activeOffer;
     private string activeOfferAction;
     private Text rewardBalanceText;
-    private Button rewardButton;
+    internal Button rewardButton;
     private Font rewardFont;
     // The victory card's upgrade offer while Overdrive carries over (D-009-AC-03, D-036).
     private UpgradeTrack? upgradeCardTrack;

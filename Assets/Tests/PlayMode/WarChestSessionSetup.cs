@@ -12,8 +12,7 @@ namespace TreadShred.Screens.Tests
     public sealed class WarChestSessionSetup
     {
         public static void Offered(bool offered) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("TreadShredWarChestOffer")).First(t => t != null)
-                .GetProperty("ShownThisSession").SetValue(null, offered);
+            TreadShredWarChestOffer.ShownThisSession = offered;
 
         [OneTimeSetUp]
         public void AlreadyOffered() => Offered(true);

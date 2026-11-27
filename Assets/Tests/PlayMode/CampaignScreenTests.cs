@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
 using TreadShred.Progression;
@@ -17,30 +16,26 @@ namespace TreadShred.Screens.Tests
     // Veteran and past Mission 120, and tiers that play harder.
     public sealed class CampaignScreenTests
     {
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
         private const string WalletKey = "TreadShredGemWallet";
         private static readonly string[] Keys =
         {
             "TreadShredTier", "TreadShredPromotionPending", "TreadShredCampaignClearedPending", "Sound", "Lv40", "Lv120"
         };
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
+        private static TreadShredProgress Progress => TreadShredProgress.Ensure();
 
-        private static object Progress => GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null);
-
-        private static PlayerProgression Progression => (PlayerProgression)Progress.GetType().GetProperty("Progression").GetValue(Progress);
+        private static PlayerProgression Progression => (PlayerProgression)Progress.Progression;
 
         private static GemWallet Wallet
         {
             get
             {
-                var store = GameType("TreadShredStore").GetMethod("Ensure").Invoke(null, null);
-                return (GemWallet)store.GetType().GetProperty("Wallet").GetValue(store);
+                var store = TreadShredStore.Ensure();
+                return (GemWallet)store.Wallet;
             }
         }
 
-        private static void SelectTier(DifficultyTier tier) => Progress.GetType().GetMethod("SelectTier").Invoke(Progress, new object[] { tier });
+        private static void SelectTier(DifficultyTier tier) => Progress.SelectTier(tier);
 
         private static List<Text> Texts() => UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None)
             .Where(t => t.gameObject.activeInHierarchy).ToList();
@@ -74,17 +69,17 @@ namespace TreadShred.Screens.Tests
 
         private static IEnumerator Win()
         {
-            var manager = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
-            manager.GetType().GetField("CountEmnemy", Members).SetValue(manager, 1);
-            manager.GetType().GetMethod("Victory", Members).Invoke(manager, null);
+            var manager = UnityEngine.Object.FindFirstObjectByType<ManagerScore>();
+            manager.CountEmnemy = 1;
+            manager.Victory();
             yield return new WaitForSecondsRealtime(3.5f);
         }
 
         // NEXT MISSION, then NO THANKS, PLAY on the offer it opens first (D-040).
         private static IEnumerator NextMission()
         {
-            var buttons = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerButton"));
-            buttons.GetType().GetMethod("NextLv").Invoke(buttons, null);
+            var buttons = UnityEngine.Object.FindFirstObjectByType<ManagerButton>();
+            buttons.NextLv();
             yield return new WaitForSecondsRealtime(0.5f);
             ButtonStarting("NO THANKS, PLAY")?.onClick.Invoke();
             yield return new WaitForSecondsRealtime(0.5f);
@@ -117,7 +112,6 @@ namespace TreadShred.Screens.Tests
         }
 
         private static long All => (1L << Campaign.MissionsPerTier) - 1;
-
 
         [UnityTest(Description = "D-019-AC-03: the mission list shows all 120 missions under RECRUIT, VETERAN and ELITE headers with no tier picker, unlocked in order from saved per-tier progress (D-019-AC-01, D-019-AC-06), on every screen shape")]
         public IEnumerator MissionListShowsTheCampaign()
@@ -245,45 +239,43 @@ namespace TreadShred.Screens.Tests
                 foreach (var number in new[] { 17, 57, 97 })
                 {
                     yield return LoadMission(number);
-                    var player = UnityEngine.Object.FindFirstObjectByType(GameType("PlayerMoverment"));
-                    var sight = UnityEngine.Object.FindFirstObjectByType(GameType("FieldOfView")) as Component;
+                    var player = UnityEngine.Object.FindFirstObjectByType<PlayerMoverment>();
+                    var sight = UnityEngine.Object.FindFirstObjectByType<FieldOfView>() as Component;
                     Assert.IsNotNull(sight, "the tank's field of view");
                     // Thirteen hits of armor, so the time covers about six reloads and no single reload's timing decides it.
-                    var health = player.GetType().GetField("countdie");
                     const int startHits = 13;
-                    health.SetValue(player, startHits);
+                    player.countdie = startHits;
 
                     // One enemy that fires, frozen in clear sight; every other enemy stands down.
-                    var enemies = UnityEngine.Object.FindObjectsByType(GameType("BulletEmnemy"), FindObjectsSortMode.None)
-                        .Cast<Component>().Where(e => e.CompareTag("emnemyred") == false).ToList();
+                    var enemies = UnityEngine.Object.FindObjectsByType<BulletEmnemy>(FindObjectsSortMode.None).Where(e => e.CompareTag("emnemyred") == false).ToList();
                     Assert.IsNotEmpty(enemies, $"mission {number} has an enemy that fires");
                     var shooter = enemies[0];
-                    foreach (var gun in UnityEngine.Object.FindObjectsByType(GameType("BulletEmnemy"), FindObjectsSortMode.None).Cast<Component>())
+                    foreach (var gun in UnityEngine.Object.FindObjectsByType<BulletEmnemy>(FindObjectsSortMode.None))
                     {
                         if (gun.gameObject != shooter.gameObject)
                             gun.gameObject.SetActive(false);
                     }
-                    foreach (var mover in UnityEngine.Object.FindObjectsByType(GameType("MoveEmnemy"), FindObjectsSortMode.None).Cast<Component>())
+                    foreach (var mover in UnityEngine.Object.FindObjectsByType<MoveEmnemy>(FindObjectsSortMode.None))
                     {
                         if (mover.gameObject != shooter.gameObject)
                             mover.gameObject.SetActive(false);
                         else
                             ((Behaviour)mover).enabled = false;
                     }
-                    Assert.AreEqual(1, UnityEngine.Object.FindObjectsByType(GameType("BulletEmnemy"), FindObjectsSortMode.None).Length, "one enemy can fire");
+                    Assert.AreEqual(1, UnityEngine.Object.FindObjectsByType<BulletEmnemy>(FindObjectsSortMode.None).Length, "one enemy can fire");
                     var body = shooter.GetComponent<Rigidbody>();
                     if (body != null)
                         body.isKinematic = true;
                     var origin = sight.transform.position;
                     shooter.transform.position = new Vector3(origin.x, shooter.transform.position.y, origin.z) + sight.transform.forward * 5f;
                     // Aimed before the clock starts, so the first shell always lands and every tier is timed from the same shell.
-                    shooter.GetType().GetMethod("LookPlayer", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(shooter, null);
+                    shooter.LookPlayer();
 
                     Time.captureDeltaTime = 1f / 120f;
                     float firstHit = -1f, start = Time.time;
                     while (GameObject.Find("TreadShredRevive") == null && Time.time - start < 60f)
                     {
-                        if (firstHit < 0f && (int)health.GetValue(player) < startHits)
+                        if (firstHit < 0f && (int)player.countdie < startHits)
                             firstHit = Time.time;
                         yield return null;
                     }

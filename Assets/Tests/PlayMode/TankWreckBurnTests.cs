@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -16,9 +15,6 @@ namespace TreadShred.Screens.Tests
     {
         private static readonly Color Paint = new Color(0.8f, 0.2f, 0.7f);
         private static readonly int EmissionColor = Shader.PropertyToID("_EmissionColor");
-
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
 
         // A two-part tank in one paint: a hull and a turret on it, with meshes that are not Unity primitives.
         private static GameObject Tank()
@@ -50,7 +46,7 @@ namespace TreadShred.Screens.Tests
         public IEnumerator BlownOffArmorSmolders()
         {
             var tank = Tank();
-            GameType("TreadShredWreck").GetMethod("Spawn").Invoke(null, new object[] { tank, null });
+            TreadShredWreck.Spawn(tank, null);
             Object.Destroy(tank);
 
             yield return new WaitForSeconds(0.1f);
@@ -79,14 +75,7 @@ namespace TreadShred.Screens.Tests
         public void TurretBlowsOffDifferentlyEachTime()
         {
             Random.InitState(20261126);
-            var blownOff = GameType("TreadShredWreck").GetMethod("BlownOff", BindingFlags.NonPublic | BindingFlags.Static);
-            var launches = Enumerable.Range(0, 60).Select(_ =>
-            {
-                var launch = blownOff.Invoke(null, null);
-                var fields = launch.GetType();
-                return (Velocity: (Vector3)fields.GetField("Item1").GetValue(launch), Spin: (Vector3)fields.GetField("Item2").GetValue(launch),
-                    Delay: (float)fields.GetField("Item3").GetValue(launch));
-            }).ToArray();
+            var launches = Enumerable.Range(0, 60).Select(_ => TreadShredWreck.BlownOff()).ToArray();
 
             var quadrants = launches.Select(l => Mathf.FloorToInt((Mathf.Atan2(l.Velocity.z, l.Velocity.x) + Mathf.PI) / (Mathf.PI / 2f)) % 4).Distinct().Count();
             Assert.AreEqual(4, quadrants, "thrown in every direction");
