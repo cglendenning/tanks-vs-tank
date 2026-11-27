@@ -1,0 +1,22 @@
+{
+    "name": "TreadShred.Game",
+    "rootNamespace": "",
+    "references": [
+        "TreadShred.Progression",
+        "TreadShred.Economy",
+        "TreadShred.Save",
+        "TreadShred.Analytics",
+        "UnityEngine.UI",
+        "Unity.Purchasing",
+        "Unity.Purchasing.Stores"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

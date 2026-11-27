@@ -17,8 +17,8 @@ namespace TreadShred.Screens.Tests
     /// Plays through the game the way a player does (start screen, stats, settings, upgrades,
     /// leaderboard, mission select, a mission, victory, defeat, a gem purchase prompt and the
     /// revive offer) on a fresh install and on a veteran's maxed-out save, auditing every screen
-    /// on every supported screen shape. Game code is reached by name because it compiles into
-    /// Assembly-CSharp, which test assemblies cannot reference.
+    /// on every supported screen shape. Game code is reached by name in the TreadShred.Game
+    /// assembly, which this test assembly does not reference yet.
     /// </summary>
     public sealed class ScreenSweep
     {
@@ -238,7 +238,7 @@ namespace TreadShred.Screens.Tests
 
         private static string Clean(string text) => Regex.Replace(text ?? string.Empty, "\\s+", " ").Trim();
 
-        private static Type GameType(string name) => Type.GetType(name + ", Assembly-CSharp");
+        private static Type GameType(string name) => Type.GetType(name + ", TreadShred.Game");
 
         private static UnityEngine.Object Find(string type)
         {
