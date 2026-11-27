@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
 using TreadShred.Progression;
@@ -17,23 +16,14 @@ namespace TreadShred.Screens.Tests
     public sealed class WarChestResultButtonTests
     {
         private const string WalletKey = "TreadShredGemWallet";
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Store() => GameType("TreadShredStore").GetMethod("Ensure").Invoke(null, null);
-
-        private static GemWallet Wallet => (GemWallet)Store().GetType().GetProperty("Wallet").GetValue(Store());
-
-        private static object Manager() => UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
+        private static GemWallet Wallet => TreadShredStore.Ensure().Wallet;
 
         private static GameObject Interstitial() => GameObject.Find("TreadShredWarChestOffer");
 
-        private static string ResultButtonName => (string)GameType("TreadShredWarChestOffer").GetField("ResultButtonName").GetValue(null);
-
         private static Button ResultButton() =>
-            UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None).FirstOrDefault(b => b.gameObject.activeInHierarchy && b.name == ResultButtonName);
+            UnityEngine.Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
+                .FirstOrDefault(b => b.gameObject.activeInHierarchy && b.name == TreadShredWarChestOffer.ResultButtonName);
 
         private static List<string> Texts() =>
             UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Where(t => t.gameObject.activeInHierarchy).Select(t => t.text).ToList();
@@ -59,16 +49,16 @@ namespace TreadShred.Screens.Tests
             yield return new WaitForSecondsRealtime(2f);
             for (var waited = 0f; Time.timeScale == 0f && waited < 10f; waited += 0.25f)
                 yield return new WaitForSecondsRealtime(0.25f);
-            var manager = Manager();
+            var manager = UnityEngine.Object.FindFirstObjectByType<ManagerScore>();
             if (won)
             {
-                manager.GetType().GetField("CountEmnemy", Members).SetValue(manager, 1);
-                manager.GetType().GetMethod("Victory", Members).Invoke(manager, null);
+                manager.CountEmnemy = 1;
+                manager.Victory();
                 yield return new WaitForSecondsRealtime(3.5f);
             }
             else
             {
-                manager.GetType().GetMethod("Failure", Members).Invoke(manager, null);
+                manager.Failure();
                 yield return new WaitForSecondsRealtime(2.6f);
             }
         }
@@ -89,13 +79,18 @@ namespace TreadShred.Screens.Tests
                     starterPackWindowStartTicks = DateTime.UtcNow.AddHours(-1).Ticks,
                     warChestBought = true
                 });
-                Assert.IsTrue((bool)Store().GetType().GetProperty("WarChestOnSale").GetValue(Store()), "on sale though bought (D-047-AC-02)");
+                Assert.IsTrue(TreadShredStore.Ensure().WarChestOnSale, "on sale though bought (D-047-AC-02)");
 
                 yield return EndMission(false);
                 Assert.IsNull(Interstitial(), "the session's War Chest offer has been made (WarChestSessionSetup)");
                 Assert.IsNull(ResultButton(), "not before the player has seen it");
 
-                Wallet.MarkWarChestSeen();
+                // The player sees the War Chest: its reveal opened (here from the upgrades screen's button) and closed.
+                TreadShredWarChestOffer.ShowToBuy(TreadShredUi.FindFont(GameObject.Find("Canvas")));
+                yield return new WaitForSecondsRealtime(WarChest.RevealSeconds * (WarChest.Items.Count + 6));
+                ButtonLabelled("NOT NOW").onClick.Invoke();
+                yield return null;
+                Assert.IsTrue(Wallet.WarChestSeen, "every reveal marks it seen");
                 foreach (var won in new[] { false, true })
                 {
                     yield return EndMission(won);

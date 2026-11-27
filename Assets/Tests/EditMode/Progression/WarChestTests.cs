@@ -136,16 +136,16 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual("2X THE GEAR FOR THE PRICE", WarChest.TotalValue("1,09 €"), "never rounds its worth up");
         }
 
-        [Test(Description = "D-047-AC-04: the War Chest opens only over a lost mission's screen, once a session, and NOT NOW and Back wait until every item has landed")]
+        [Test(Description = "D-047-AC-04: a lost mission opens the War Chest once a session while it is on sale, never during the ask-free start or over another War Chest offer; its showing is recorded and it is equipped before the order is confirmed")]
         public void OfferedAfterALossOnceASession()
         {
-            var results = Script("ManagerScore/ManagerScore.cs");
-            StringAssert.Contains("if (FailureObj != null && FailureObj.activeSelf)\n            TreadShredWarChestOffer.ShowAfterLoss(", results);
+            // Over a real lost mission, once a session and NOT NOW and Back waiting: PlayMode WarChestTests.
+            Assert.IsTrue(WarChest.OpensAfterLoss(askFree: false, offeredThisSession: false, onSale: true, alreadyOpen: false));
+            Assert.IsFalse(WarChest.OpensAfterLoss(askFree: true, offeredThisSession: false, onSale: true, alreadyOpen: false), "never in the ask-free start (D-050)");
+            Assert.IsFalse(WarChest.OpensAfterLoss(askFree: false, offeredThisSession: true, onSale: true, alreadyOpen: false), "once a session");
+            Assert.IsFalse(WarChest.OpensAfterLoss(askFree: false, offeredThisSession: false, onSale: false, alreadyOpen: false), "only while on sale");
+            Assert.IsFalse(WarChest.OpensAfterLoss(askFree: false, offeredThisSession: false, onSale: true, alreadyOpen: true), "never over another War Chest offer");
             var offer = Script("Game/TreadShredWarChestOffer.cs");
-            StringAssert.Contains("if (ShownThisSession || !TreadShredStore.Ensure().WarChestOnSale", offer);
-            StringAssert.Contains("ShownThisSession = true;", offer);
-            Assert.Less(offer.IndexOf("notNow.SetActive(true);", StringComparison.Ordinal), offer.IndexOf("Revealed = true;", StringComparison.Ordinal));
-            StringAssert.Contains("if (Revealed)\n            Close();", offer);
             StringAssert.Contains("GameEvents.OfferShown(\"war_chest\", store.Wallet.Balance)", offer);
             var store = Script("Store/TreadShredStore.cs");
             Assert.Less(store.IndexOf("Progression.EquipWarChest();", StringComparison.Ordinal),

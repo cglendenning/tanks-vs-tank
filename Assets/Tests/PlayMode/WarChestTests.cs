@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
 using TreadShred.Progression;
@@ -18,21 +17,12 @@ namespace TreadShred.Screens.Tests
     public sealed class WarChestTests
     {
         private const string WalletKey = "TreadShredGemWallet";
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Store() => GameType("TreadShredStore").GetMethod("Ensure").Invoke(null, null);
-
-        private static GemWallet Wallet => (GemWallet)Store().GetType().GetProperty("Wallet").GetValue(Store());
-
-        private static object Manager() => UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
+        private static GemWallet Wallet => TreadShredStore.Ensure().Wallet;
 
         private static GameObject Interstitial() => GameObject.Find("TreadShredWarChestOffer");
 
-        private static bool Revealed() =>
-            (bool)GameType("TreadShredWarChestOffer").GetProperty("Revealed").GetValue(Interstitial().GetComponent(GameType("TreadShredWarChestOffer")));
+        private static bool Revealed() => Interstitial().GetComponent<TreadShredWarChestOffer>().Revealed;
 
         private static List<string> Texts() =>
             UnityEngine.Object.FindObjectsByType<Text>(FindObjectsSortMode.None).Where(t => t.gameObject.activeInHierarchy).Select(t => t.text).ToList();
@@ -58,7 +48,7 @@ namespace TreadShred.Screens.Tests
             yield return new WaitForSecondsRealtime(2f);
             for (var waited = 0f; Time.timeScale == 0f && waited < 10f; waited += 0.25f)
                 yield return new WaitForSecondsRealtime(0.25f);
-            Manager().GetType().GetMethod("Failure", Members).Invoke(Manager(), null);
+            UnityEngine.Object.FindFirstObjectByType<ManagerScore>().Failure();
             yield return new WaitForSecondsRealtime(2.6f);
         }
 
@@ -77,14 +67,13 @@ namespace TreadShred.Screens.Tests
                     starterPackWindowStartTicks = DateTime.UtcNow.AddHours(-1).Ticks
                 });
                 WarChestSessionSetup.Offered(false);
-                Assert.IsTrue((bool)Store().GetType().GetProperty("WarChestOnSale").GetValue(Store()),
-                    "the editor's test store offers the War Chest's product");
+                Assert.IsTrue(TreadShredStore.Ensure().WarChestOnSale, "the editor's test store offers the War Chest's product");
 
                 yield return LoseMission();
                 Assert.IsNotNull(Interstitial(), "the War Chest opens over the failure screen");
                 Assert.IsFalse(Revealed(), "still landing its items");
                 Assert.IsNull(ButtonLabelled("NOT NOW"), "NOT NOW waits for the last item");
-                GameType("TreadShredBack").GetMethod("Press").Invoke(null, null);
+                TreadShredBack.Press();
                 yield return null;
                 Assert.IsNotNull(Interstitial(), "Back waits for the last item too");
 

@@ -72,16 +72,15 @@ namespace TreadShred.Progression.Tests
             Assert.IsTrue(restored.WarChestSeen, "restored from a cloud save (D-025)");
         }
 
-        [Test(Description = "D-047-AC-08: every reveal marks the War Chest seen, and every result screen then offers it, outside the ask-free start")]
+        [Test(Description = "D-047-AC-08: a result screen offers the War Chest only once the player has seen it, while it is on sale and outside the ask-free start")]
         public void EveryResultScreenOffersItOnceSeen()
         {
-            var offer = Read("Script/Game/TreadShredWarChestOffer.cs");
-            StringAssert.Contains("store.Wallet.MarkWarChestSeen();", offer, "Shown runs for every reveal");
-            StringAssert.Contains("if (TreadShredAskFreeStart.MissionAskFree || !store.WarChestOnSale || !store.Wallet.WarChestSeen)", offer);
-            StringAssert.Contains("() => ShowToBuy(font)", offer, "the reveal with the purchase alone");
-            var manager = Read("Script/ManagerScore/ManagerScore.cs");
-            StringAssert.Contains("TreadShredWarChestOffer.ResultScreen((RectTransform)VictoryofFail.transform", manager,
-                "built with every result screen, victory or failure");
+            // On real result screens, opened by a reveal the player saw: PlayMode WarChestResultButtonTests.
+            foreach (var askFree in new[] { false, true })
+                foreach (var onSale in new[] { false, true })
+                    foreach (var seen in new[] { false, true })
+                        Assert.AreEqual(!askFree && onSale && seen, WarChest.ShowsOnResultScreen(askFree, onSale, seen),
+                            $"ask-free {askFree}, on sale {onSale}, seen {seen}");
         }
     }
 }

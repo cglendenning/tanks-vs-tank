@@ -4,6 +4,7 @@
     "references": [
         "TreadShred.Economy",
         "TreadShred.Progression",
+        "TreadShred.Game",
         "UnityEngine.UI",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

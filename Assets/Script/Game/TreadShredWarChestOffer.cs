@@ -228,10 +228,8 @@ public sealed class TreadShredWarChestOffer : TreadShredStackOffer
     /// <summary>Opens the interstitial after a lost mission when the War Chest is on sale and it has not been offered this session.</summary>
     public static bool ShowAfterLoss(Font font)
     {
-        // D-050-AC-01: no War Chest during the ask-free start.
-        if (TreadShredAskFreeStart.MissionAskFree)
-            return false;
-        if (ShownThisSession || !TreadShredStore.Ensure().WarChestOnSale || FindFirstObjectByType<TreadShredWarChestOffer>() != null)
+        if (!WarChest.OpensAfterLoss(TreadShredAskFreeStart.MissionAskFree, ShownThisSession, TreadShredStore.Ensure().WarChestOnSale,
+                FindFirstObjectByType<TreadShredWarChestOffer>() != null))
             return false;
         ShownThisSession = true;
         var root = TreadShredUi.CreateOverlay("TreadShredWarChestOffer", 110);
@@ -268,8 +266,7 @@ public sealed class TreadShredWarChestOffer : TreadShredStackOffer
     public static void ResultScreen(RectTransform screen, Font font)
     {
         var store = TreadShredStore.Ensure();
-        // D-050-AC-01: nothing is offered during the ask-free start.
-        if (TreadShredAskFreeStart.MissionAskFree || !store.WarChestOnSale || !store.Wallet.WarChestSeen)
+        if (!WarChest.ShowsOnResultScreen(TreadShredAskFreeStart.MissionAskFree, store.WarChestOnSale, store.Wallet.WarChestSeen))
             return;
         var button = TreadShredUi.CreateButton(WarChest.StoreButton(store.PriceFor(GemCatalog.WarChest)), screen,
             new Vector2(530f, -92f), new Vector2(280f, 64f), 22, font, () => ShowToBuy(font));

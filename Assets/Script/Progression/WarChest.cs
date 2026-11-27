@@ -92,5 +92,14 @@ namespace TreadShred.Progression
         public static string YoursFor(string price) => SupplyStack.YoursFor(price);
 
         public static string BuyButton(string price) => Stack.BuyButton(price);
+
+        /// <summary>D-047-AC-04, D-050-AC-01: a lost mission opens the War Chest once a launch while it is on sale, never
+        /// during the ask-free start and never over another War Chest offer.</summary>
+        public static bool OpensAfterLoss(bool askFree, bool offeredThisSession, bool onSale, bool alreadyOpen) =>
+            !askFree && !offeredThisSession && onSale && !alreadyOpen;
+
+        /// <summary>D-047-AC-08, D-050-AC-01: once the player has seen it, every result screen offers it while it is on
+        /// sale, outside the ask-free start.</summary>
+        public static bool ShowsOnResultScreen(bool askFree, bool onSale, bool seen) => !askFree && onSale && seen;
     }
 }
