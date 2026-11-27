@@ -368,6 +368,8 @@ public class ManagerScore : MonoBehaviour
             TreadShredWarChestOffer.ShowAfterLoss(TreadShredUi.FindFont(VictoryofFail));
         // D-047-AC-07: and on its variable schedule the free War Chest arrives on this screen.
         TreadShredFreeWarChest.ResultScreen((RectTransform)VictoryofFail.transform, TreadShredUi.FindFont(VictoryofFail));
+        // D-047-AC-08: and once seen, the War Chest stays one tap away on every result screen.
+        TreadShredWarChestOffer.ResultScreen((RectTransform)VictoryofFail.transform, TreadShredUi.FindFont(VictoryofFail));
     }
     public void Failure()
     {

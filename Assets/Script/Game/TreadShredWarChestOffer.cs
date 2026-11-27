@@ -165,7 +165,8 @@ public abstract class TreadShredStackOffer : MonoBehaviour
 
     protected void Update()
     {
-        // Bought (here or anywhere else), or its sale ended: the pack is no longer on sale.
+        // Its sale ended (the Starter Pack once bought or its window over). Buying closes it through BuyPack's callback,
+        // which is how the War Chest closes: it stays on sale (D-047-AC-02).
         if (!OnSale)
         {
             Close();
@@ -252,7 +253,8 @@ public sealed class TreadShredWarChestOffer : TreadShredStackOffer
         offer.Build(root, font, WarChest.AfterDriveSubtitle, false);
     }
 
-    /// <summary>D-047-AC-06: the reveal from the upgrades screen's button: the purchase alone, then back to the upgrades.</summary>
+    /// <summary>D-047-AC-06, D-047-AC-08: the reveal from the upgrades or result screen's button: the purchase alone, then
+    /// back to that screen.</summary>
     public static void ShowToBuy(Font font)
     {
         if (!TreadShredStore.Ensure().WarChestOnSale || FindFirstObjectByType<TreadShredWarChestOffer>() != null)
@@ -261,12 +263,32 @@ public sealed class TreadShredWarChestOffer : TreadShredStackOffer
         root.gameObject.AddComponent<TreadShredWarChestOffer>().Build(root, font, WarChest.Subtitle, false);
     }
 
+    /// <summary>D-047-AC-08: once the player has seen the War Chest, every result screen keeps WAR CHEST: price one tap
+    /// away, under LEADERBOARD (the free War Chest and the Starter Pack callout share the slot under UPGRADES).</summary>
+    public static void ResultScreen(RectTransform screen, Font font)
+    {
+        var store = TreadShredStore.Ensure();
+        // D-050-AC-01: nothing is offered during the ask-free start.
+        if (TreadShredAskFreeStart.MissionAskFree || !store.WarChestOnSale || !store.Wallet.WarChestSeen)
+            return;
+        var button = TreadShredUi.CreateButton(WarChest.StoreButton(store.PriceFor(GemCatalog.WarChest)), screen,
+            new Vector2(530f, -92f), new Vector2(280f, 64f), 22, font, () => ShowToBuy(font));
+        button.name = ResultButtonName;
+        TreadShredUi.StylePrimary(button);
+        TreadShredUi.ShrinkToFit(button.GetComponentInChildren<Text>(), 16);
+    }
+
+    public const string ResultButtonName = "TreadShredWarChestResultButton";
+
     protected override SupplyStack Stack => WarChest.Stack;
 
     protected override bool OnSale => TreadShredStore.Ensure().WarChestOnSale;
 
-    protected override void Shown(TreadShredStore store) =>
+    protected override void Shown(TreadShredStore store)
+    {
+        store.Wallet.MarkWarChestSeen();
         TreadShredAnalytics.Log(GameEvents.OfferShown("war_chest", store.Wallet.Balance));
+    }
 
     protected override void TestDrive(Font driveFont) => TreadShredTestDrive.Begin(driveFont);
 }

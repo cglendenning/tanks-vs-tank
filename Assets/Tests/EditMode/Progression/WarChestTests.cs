@@ -51,7 +51,7 @@ namespace TreadShred.Progression.Tests
             StringAssert.Contains(".Append(GemCatalog.WarChest)", Script("Store/TreadShredStore.cs"));
         }
 
-        [Test(Description = "D-047-AC-02: buying the War Chest ends its offer, survives a reload and a cloud restore, and a second paid order still credits")]
+        [Test(Description = "D-047-AC-02: buying the War Chest is recorded, survives a reload and a cloud restore, and a second paid order still credits")]
         public void BuyingItEndsTheOfferAndPersists()
         {
             var store = new JsonWalletStore();
@@ -66,7 +66,7 @@ namespace TreadShred.Progression.Tests
             Assert.IsTrue(restored.WarChestBought, "restored from a cloud save (D-025)");
         }
 
-        [Test(Description = "D-047-AC-02: the War Chest is on sale only until bought, only while the store offers its product, and never during the Starter Pack's window")]
+        [Test(Description = "D-047-AC-02: the War Chest is on sale only while the store offers its product and never during the Starter Pack's window, and buying it never takes it off sale")]
         public void OnSaleOnlyAfterTheStarterPackWindow()
         {
             var clock = Launch;
@@ -80,7 +80,7 @@ namespace TreadShred.Progression.Tests
             Assert.IsFalse(new PurchaseFlow(wallet, new FakeGateway(), () => true, () => clock).WarChestOnSale,
                 "never while the store lacks its product");
             wallet.CreditPurchase(Chest.ProductId, "order-1");
-            Assert.IsFalse(flow.WarChestOnSale, "never once bought");
+            Assert.IsTrue(flow.WarChestOnSale, "still on sale once bought");
         }
 
         [Test(Description = "D-047-AC-03: delivering the War Chest turns its gems into supply on every track and unlocks its special weapons in the drawer, keeping the gems the player already had")]

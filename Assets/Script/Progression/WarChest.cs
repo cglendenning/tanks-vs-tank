@@ -19,14 +19,15 @@ namespace TreadShred.Progression
     }
 
     /// <summary>
-    /// D-047 (R-WAR-CHEST): the one-time War Chest, sold at the player's lowest moment, a lost mission: every kind of
+    /// D-047 (R-WAR-CHEST): the War Chest, offered at the player's lowest moment, a lost mission, and bought as often as
+    /// they want: every kind of
     /// supply at once (D-045), worth three times its price at the smallest pack's rate, revealed one item at a time.
     /// Every number comes from the supply rules.
     /// </summary>
     public static class WarChest
     {
         public const string Title = "WAR CHEST";
-        public const string Subtitle = "ONE TIME ONLY. ALL OF THIS, ALL AT ONCE";
+        public const string Subtitle = "ALL OF THIS, ALL AT ONCE";
 
         /// <summary>How long each item takes to land; the close button waits for the last.</summary>
         public const float RevealSeconds = 0.45f;

@@ -105,7 +105,7 @@ public sealed class TreadShredUpgradePanel : MonoBehaviour
         undoButton = TreadShredUi.CreateButton(ProgressionLabels.Undo, backdrop, new Vector2(-470f, -390f),
             new Vector2(300f, 100f), 30, font, Undo);
         TreadShredUi.ShrinkToFit(undoButton.GetComponentInChildren<Text>(), 18);
-        // D-047-AC-06: the War Chest stays for sale here, beside DONE, until it is bought.
+        // D-047-AC-06: the War Chest stays for sale here, beside DONE, whenever it is on sale (bought or not).
         warChestButton = TreadShredUi.CreateButton(WarChest.StoreButton(TreadShredStore.Ensure().PriceFor(GemCatalog.WarChest)), backdrop,
             new Vector2(470f, -390f), new Vector2(330f, 100f), 30, font, () => TreadShredWarChestOffer.ShowToBuy(font));
         TreadShredUi.StylePrimary(warChestButton);

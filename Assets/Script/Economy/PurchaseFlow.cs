@@ -77,8 +77,9 @@ namespace TreadShred.Economy
         /// <summary>D-037-AC-02: on sale until bought, inside its window, and only while the store offers its product.</summary>
         public bool StarterPackOnSale => StarterPackTimeLeft > TimeSpan.Zero;
 
-        /// <summary>D-047-AC-02: not bought yet, offered by the store, and the Starter Pack's window is over.</summary>
-        public bool WarChestOnSale => !wallet.WarChestBought && warChestAvailable() && !StarterPackOnSale;
+        /// <summary>D-047-AC-02: offered by the store and the Starter Pack's window is over. Buying it never takes it off
+        /// sale: a player can buy it again any time (owner direction 2026-11-27).</summary>
+        public bool WarChestOnSale => warChestAvailable() && !StarterPackOnSale;
 
         /// <summary>D-037-AC-07: the countdown every Starter Pack offer shows; zero when it is not on sale.</summary>
         public TimeSpan StarterPackTimeLeft => starterPackAvailable() ? wallet.StarterPackTimeLeft(utcNow()) : TimeSpan.Zero;

@@ -463,12 +463,14 @@ STARTER_PACK = {"product_id": "treadshred.starter300", "usd": "0.99", "name": "S
                                "Seeker shell) equipped at once. It is offered for 15 minutes once a new player has cleared "
                                "mission 5: over each result screen (with a free 30-second test drive), on the revive panel "
                                "(with the revive included) and in Settings (in place of the 100-gem pack)."}
-# D-047: the one-time War Chest, $4.99, 15 units of supply (the 1,500 gems they cost) equipped at once.
+# D-047: the War Chest, $4.99, bought as often as a player wants, 15 units of supply (the 1,500 gems they cost) equipped at once.
 WAR_CHEST = {"product_id": "treadshred.warchest", "usd": "4.99", "name": "War Chest",
-             "description": "One time: armor, firepower, speed and every weapon",
-             "review_note": "One-time bundle for $4.99: 15 units of supply (armor, firepower, speed, Overdrive, Arc Shot, "
-                            "Triple Shot and Seeker) equipped at once. It is offered over the failure screen when a mission "
-                            "is lost, at most once per launch, after the Starter Pack's first 15 minutes."}
+             "description": "Armor, firepower, speed and every special weapon",
+             "review_note": "Bundle for $4.99, buyable again any time: 15 units of supply (armor, firepower, speed, "
+                            "Overdrive, Arc Shot, Triple Shot and Seeker) equipped at once. It is offered over the failure "
+                            "screen when a mission is lost (at most once per launch, after the Starter Pack's first 15 "
+                            "minutes), and from then on from a WAR CHEST button on every result screen and the upgrades "
+                            "screen."}
 
 
 def missing(api, path):

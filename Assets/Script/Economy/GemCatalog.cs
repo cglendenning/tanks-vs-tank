@@ -59,7 +59,7 @@ namespace TreadShred.Economy
         // (StarterPackPitch.Stack), so it is never a pack for a shortfall. Kept out of Packs; the ID predates the stack.
         public static readonly GemPack StarterPack = new GemPack("treadshred.starter300", 600, 99);
 
-        // D-047: the one-time War Chest (R-WAR-CHEST): its gems are the 15 supply units it equips at once, so it is never
+        // D-047: the War Chest (R-WAR-CHEST): its gems are the 15 supply units it equips at once, so it is never
         // a pack a one-tap purchase chooses.
         public static readonly GemPack WarChest = new GemPack("treadshred.warchest", 1500, 499);
 

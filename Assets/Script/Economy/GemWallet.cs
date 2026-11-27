@@ -18,8 +18,10 @@ namespace TreadShred.Economy
         public bool starterPackShown;
         // D-037-AC-08: the free test drives of it the player has taken.
         public int starterPackTestDrives;
-        // D-047: the War Chest was bought; it is never offered again.
+        // D-047: the War Chest was bought at least once; it stays on sale (D-047-AC-02).
         public bool warChestBought;
+        // D-047-AC-08: the player has seen the War Chest, so every result screen keeps it one tap away.
+        public bool warChestSeen;
     }
 
     public interface IWalletStore
@@ -78,6 +80,16 @@ namespace TreadShred.Economy
             store.Save(state);
         }
         public bool WarChestBought => state.warChestBought;
+        public bool WarChestSeen => state.warChestSeen;
+
+        /// <summary>D-047-AC-08: the War Chest has been revealed to the player; saved once.</summary>
+        public void MarkWarChestSeen()
+        {
+            if (state.warChestSeen)
+                return;
+            state.warChestSeen = true;
+            store.Save(state);
+        }
 
         /// <summary>D-037-AC-02: opens the Starter Pack's window at the player's first launch that sells it; never reopens it.</summary>
         public void OpenStarterPackWindow(DateTime utcNow)
@@ -179,6 +191,7 @@ namespace TreadShred.Economy
             state.starterPackShown = restored.starterPackShown;
             state.starterPackTestDrives = restored.starterPackTestDrives;
             state.warChestBought = restored.warChestBought;
+            state.warChestSeen = restored.warChestSeen;
             // A save from before the Starter Pack has no window: the one this install opened stands, so a reinstall that
             // restores a newer save adopts its original window and never reopens it (D-037-AC-02).
             if (restored.starterPackWindowStartTicks != 0)

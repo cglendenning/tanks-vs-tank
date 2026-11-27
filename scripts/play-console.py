@@ -41,7 +41,7 @@ LEADERBOARD = {
 PACKS = [("treadshred.gems100", 100, "0.99"), ("treadshred.gems550", 550, "4.99"), ("treadshred.gems1200", 1200, "9.99")]
 # D-037 R-STARTER-PACK: the one-time Starter Pack, 6 units of supply (600 gems) equipped at once (GemCatalog.StarterPack).
 STARTER_PACK = ("treadshred.starter300", 600, "0.99")
-# D-047 R-WAR-CHEST: the one-time War Chest, 15 units of supply (1,500 gems) equipped at once (GemCatalog.WarChest).
+# D-047 R-WAR-CHEST: the War Chest, bought as often as a player wants, 15 units of supply (1,500 gems) equipped at once (GemCatalog.WarChest).
 WAR_CHEST = ("treadshred.warchest", 1500, "4.99")
 PURCHASE_OPTION = "buy"
 
@@ -79,7 +79,7 @@ def product_listing(product_id, gems):
     """A one-time product's English store title and description: the one-time packs by what they hold, gem packs by gems."""
     if product_id == WAR_CHEST[0]:
         return {"languageCode": "en-US", "title": "WAR CHEST",
-                "description": "ONE TIME ONLY. ARMOR, FIREPOWER, SPEED, OVERDRIVE AND EVERY SPECIAL WEAPON."}
+                "description": "ARMOR, FIREPOWER, SPEED, OVERDRIVE AND EVERY SPECIAL WEAPON, ALL AT ONCE."}
     if product_id == STARTER_PACK[0]:
         return {"languageCode": "en-US", "title": "STARTER PACK",
                 "description": "ONE TIME ONLY. ARMOR, FIREPOWER, SPEED, OVERDRIVE AND SEEKER, ALL AT ONCE."}
