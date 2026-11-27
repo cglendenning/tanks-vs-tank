@@ -111,12 +111,7 @@ public sealed class TreadShredSettingsPanel : MonoBehaviour
             });
     }
 
-    // D-037-AC-04: while the Starter Pack is on sale it takes the smallest pack's slot (the same price for a third of
-    // the gems); the smallest pack returns once it is bought.
-    private static GemPack SlotPack(int slot)
-    {
-        return slot == 0 && TreadShredStore.Ensure().StarterPackOnSale ? GemCatalog.StarterPack : GemCatalog.Packs[slot];
-    }
+    private static GemPack SlotPack(int slot) => GemCatalog.StorePack(slot, TreadShredStore.Ensure().StarterPackOnSale);
 
     private void BuyPack(GemPack pack)
     {

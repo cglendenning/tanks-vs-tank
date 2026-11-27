@@ -34,14 +34,14 @@ namespace TreadShred.Progression.Tests
             wallet.Replace(new WalletState());
             Assert.IsFalse(wallet.StarterPackShown, "a reset (D-044) brings it back");
 
-            var offer = Script("Game/TreadShredStarterOffer.cs");
-            StringAssert.Contains("public static bool ShowOverResult(Font font, bool won) => !TreadShredStore.Ensure().Wallet.StarterPackShown && Show(font, true, won);", offer);
-            StringAssert.Contains("public static bool ShowIfOnSale(Font font) => !TreadShredStore.Ensure().Wallet.StarterPackShown && Show(font, false, false);", offer);
-            StringAssert.Contains("public static bool OpenFromCallout(Font font, bool won) => Show(font, true, won);", offer);
-            StringAssert.Contains("TreadShredStore.Ensure().Wallet.MarkStarterPackShown();", offer);
-            StringAssert.Contains("TreadShredStarterCallout.ResultScreen((RectTransform)VictoryofFail.transform, TreadShredUi.FindFont(VictoryofFail), won);",
-                Script("ManagerScore/ManagerScore.cs"));
-            StringAssert.Contains("() => TreadShredStarterOffer.OpenFromCallout(font, won));", Script("Game/TreadShredStarterCallout.cs"));
+            // Once by itself, then the callout and a tap opening it, on real screens: PlayMode StarterPackCalloutScreenTests.
+            Assert.IsTrue(StarterPackPitch.OpensByItself(shownBefore: false, onSale: true, alreadyOpen: false));
+            Assert.IsFalse(StarterPackPitch.OpensByItself(shownBefore: true, onSale: true, alreadyOpen: false), "by itself only once");
+            Assert.IsFalse(StarterPackPitch.OpensByItself(shownBefore: false, onSale: false, alreadyOpen: false), "only while on sale");
+            Assert.IsFalse(StarterPackPitch.OpensByItself(shownBefore: false, onSale: true, alreadyOpen: true), "never twice at once");
+            Assert.IsTrue(StarterPackPitch.Opens(onSale: true, alreadyOpen: false), "the callout opens it however often it was shown");
+            Assert.IsFalse(StarterPackPitch.Opens(onSale: false, alreadyOpen: false), "only while on sale");
+            Assert.IsFalse(StarterPackPitch.Opens(onSale: true, alreadyOpen: true), "never twice at once");
         }
 
         [Test(Description = "D-037-AC-04: the result screen's callout reads STARTER PACK and ENDS IN <m:ss>, and pulses faster and further every minute the window runs down")]

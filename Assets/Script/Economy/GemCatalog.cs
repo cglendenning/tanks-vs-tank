@@ -121,6 +121,10 @@ namespace TreadShred.Economy
         /// so every offer has something to buy: the Starter Pack while it is on sale, else the smallest pack. Null when
         /// the offer's own button already buys a pack.
         /// </summary>
+        /// <summary>D-037-AC-04: the gem store's pack in a slot: while the Starter Pack is on sale it takes the smallest
+        /// pack's slot (the same price for a third of the gems); the smallest pack returns once it is bought.</summary>
+        public static GemPack StorePack(int slot, bool starterOnSale) => slot == 0 && starterOnSale ? StarterPack : Packs[slot];
+
         public static GemPack PackAlongside(bool coveredByHeldCurrency, bool starterOnSale)
         {
             if (!coveredByHeldCurrency)

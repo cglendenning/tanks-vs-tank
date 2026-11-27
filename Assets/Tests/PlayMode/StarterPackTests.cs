@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
 using TreadShred.Progression;
@@ -18,19 +17,12 @@ namespace TreadShred.Screens.Tests
     {
         private const string WalletKey = "TreadShredGemWallet";
         private const string ProgressionKey = "TreadShredProgression";
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+        private static TreadShredStore Store() => TreadShredStore.Ensure();
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Store() => GameType("TreadShredStore").GetMethod("Ensure").Invoke(null, null);
-
-        private static T Get<T>(object target, string property) => (T)target.GetType().GetProperty(property).GetValue(target);
-
-        private static GemWallet Wallet => Get<GemWallet>(Store(), "Wallet");
+        private static GemWallet Wallet => Store().Wallet;
 
         private static PlayerProgression Progression =>
-            Get<PlayerProgression>(GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null), "Progression");
+            TreadShredProgress.Ensure().Progression;
 
         // The wallet as a player in the window has it: gems as given, the window opened `minutesAgo` minutes ago.
         private static void Seed(int gems, double minutesAgo) => Wallet.Replace(new WalletState
@@ -65,8 +57,8 @@ namespace TreadShred.Screens.Tests
         {
             for (var waited = 0f; waited < 10f; waited += 0.25f)
             {
-                var offer = UnityEngine.Object.FindFirstObjectByType(GameType("TreadShredStarterOffer"));
-                if (offer != null && Get<bool>(offer, "Revealed"))
+                var offer = UnityEngine.Object.FindFirstObjectByType<TreadShredStarterOffer>();
+                if (offer != null && offer.Revealed)
                     yield break;
                 yield return new WaitForSecondsRealtime(0.25f);
             }
@@ -86,15 +78,15 @@ namespace TreadShred.Screens.Tests
         // As the store delivers it: credited, then its gems become its supply before the order is confirmed (D-037-AC-01).
         private static void Deliver(string orderId)
         {
-            Get<PurchaseFlow>(Store(), "Purchases").OrderDelivered(GemCatalog.StarterPack.ProductId, orderId, out _);
+            Store().Purchases.OrderDelivered(GemCatalog.StarterPack.ProductId, orderId, out _);
             Progression.EquipStarterPack();
         }
 
         private static void OfferRevive()
         {
-            var player = UnityEngine.Object.FindFirstObjectByType(GameType("PlayerMoverment"));
+            var player = UnityEngine.Object.FindFirstObjectByType<PlayerMoverment>();
             Assert.IsNotNull(player, "the mission has the player's tank");
-            Assert.IsTrue((bool)GameType("TreadShredRevivePanel").GetMethod("TryOffer").Invoke(null, new object[] { player }));
+            Assert.IsTrue(TreadShredRevivePanel.TryOffer(player));
         }
 
         private static IEnumerator CloseRevive()
@@ -106,10 +98,10 @@ namespace TreadShred.Screens.Tests
 
         private static IEnumerator Win()
         {
-            var manager = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
+            var manager = UnityEngine.Object.FindFirstObjectByType<ManagerScore>();
             Assert.IsNotNull(manager, "the mission has its score manager");
-            manager.GetType().GetField("CountEmnemy", Members).SetValue(manager, 1);
-            manager.GetType().GetMethod("Victory", Members).Invoke(manager, null);
+            manager.CountEmnemy = 1;
+            manager.Victory();
             yield return new WaitForSecondsRealtime(3.5f);
         }
 
@@ -148,10 +140,9 @@ namespace TreadShred.Screens.Tests
             {
                 Seed(0, 0.1);
                 yield return Load("Lv1");
-                Assert.IsTrue(Get<bool>(Store(), "StarterPackOnSale"), "the editor's test store offers the Starter Pack's product");
+                Assert.IsTrue(Store().StarterPackOnSale, "the editor's test store offers the Starter Pack's product");
                 // A fresh run (SCORE 0), so the plain revive reads as at the start of a run whatever earlier tests banked (D-020-AC-05).
-                var run = GameType("TreadShredScores").GetProperty("Run").GetValue(null);
-                run.GetType().GetMethod("Start").Invoke(run, null);
+                TreadShredScores.Run.Start();
 
                 OfferRevive();
                 yield return null;
@@ -254,9 +245,9 @@ namespace TreadShred.Screens.Tests
                 ButtonStarting("NOT NOW").onClick.Invoke();
                 yield return null;
 
-                var font = (Font)GameType("TreadShredUi").GetMethod("FindFont").Invoke(null, new object[] { GameObject.Find("Canvas") });
-                var menu = UnityEngine.Object.FindFirstObjectByType(GameType("LoadLv"));
-                GameType("TreadShredSettingsPanel").GetMethod("Show").Invoke(null, new object[] { menu, font });
+                var font = TreadShredUi.FindFont(GameObject.Find("Canvas"));
+                var menu = UnityEngine.Object.FindFirstObjectByType<LoadLv>();
+                TreadShredSettingsPanel.Show(menu, font);
                 yield return null;
                 Assert.IsNotNull(ButtonStarting(OfferLabels.StarterPackTitle + ": "), "in the smallest pack's slot, sold by what it does");
                 Assert.IsNull(ButtonStarting("BUY 100 GEMS"), "the smallest pack waits while the Starter Pack is on sale");
@@ -285,8 +276,8 @@ namespace TreadShred.Screens.Tests
                 Assert.AreEqual("Lv2", SceneManager.GetActiveScene().name, "after a victory, on to the next mission");
 
                 yield return Load("Lv1");
-                var manager = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
-                manager.GetType().GetMethod("Failure", Members).Invoke(manager, null);
+                var manager = UnityEngine.Object.FindFirstObjectByType<ManagerScore>();
+                manager.Failure();
                 yield return new WaitForSecondsRealtime(3.5f);
                 Assert.IsFalse(InterstitialOpen(), "once shown, only the callout opens it");
                 Callout().onClick.Invoke();
@@ -295,7 +286,7 @@ namespace TreadShred.Screens.Tests
                 ButtonStarting("NOT NOW").onClick.Invoke();
                 yield return new WaitForSecondsRealtime(2f);
                 Assert.AreEqual("Lv1", SceneManager.GetActiveScene().name, "after a loss, the mission again");
-                Assert.IsTrue(Get<bool>(Store(), "StarterPackOnSale"), "a drive buys nothing");
+                Assert.IsTrue(Store().StarterPackOnSale, "a drive buys nothing");
             }
 
             // From the result screen's interstitial: the drive, its end, and the reveal that follows.
@@ -307,12 +298,11 @@ namespace TreadShred.Screens.Tests
                 var seeker = Progression.Supply(SupplyTrack.Seeker);
                 ButtonStarting(WarChest.TestDriveButton).onClick.Invoke();
                 yield return new WaitForSecondsRealtime(2f);
-                var drive = GameType("TreadShredTestDrive");
-                Assert.IsTrue((bool)drive.GetProperty("Active").GetValue(null), "driving");
+                Assert.IsTrue(TreadShredTestDrive.Active, "driving");
                 Assert.AreEqual(mission, SceneManager.GetActiveScene().name, "the mission just played");
                 Assert.Contains(StarterPackPitch.TestDriveNote, Texts());
                 Assert.AreEqual((armor + 2, seeker + 1), (Progression.Supply(SupplyTrack.Armor), Progression.Supply(SupplyTrack.Seeker)), "the whole pack on");
-                drive.GetMethod("Finish").Invoke(null, null);
+                TreadShredTestDrive.Finish();
                 yield return null;
                 Assert.AreEqual((armor, seeker), (Progression.Supply(SupplyTrack.Armor), Progression.Supply(SupplyTrack.Seeker)), "the gear goes with the drive");
                 Assert.IsTrue(InterstitialOpen(), "the reveal returns");
@@ -335,7 +325,7 @@ namespace TreadShred.Screens.Tests
                 Assert.IsTrue(InterstitialOpen(), "a few seconds left");
                 yield return new WaitForSecondsRealtime(7f);
                 Assert.IsFalse(InterstitialOpen(), "closed when the countdown ended");
-                Assert.IsFalse(Get<bool>(Store(), "StarterPackOnSale"));
+                Assert.IsFalse(Store().StarterPackOnSale);
 
                 yield return Load("Lv1");
                 Seed(0, 15 - 2.0 / 60);

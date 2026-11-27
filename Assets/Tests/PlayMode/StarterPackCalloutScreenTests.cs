@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using TreadShred.Economy;
 using TreadShred.Progression;
@@ -20,19 +19,12 @@ namespace TreadShred.Screens.Tests
     {
         private const string WalletKey = "TreadShredGemWallet";
         private const string ProgressionKey = "TreadShredProgression";
-        private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+        private static TreadShredStore Store() => TreadShredStore.Ensure();
 
-        private static Type GameType(string name) =>
-            AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null);
-
-        private static object Store() => GameType("TreadShredStore").GetMethod("Ensure").Invoke(null, null);
-
-        private static T Get<T>(object target, string property) => (T)target.GetType().GetProperty(property).GetValue(target);
-
-        private static GemWallet Wallet => Get<GemWallet>(Store(), "Wallet");
+        private static GemWallet Wallet => Store().Wallet;
 
         private static PlayerProgression Progression =>
-            Get<PlayerProgression>(GameType("TreadShredProgress").GetMethod("Ensure").Invoke(null, null), "Progression");
+            TreadShredProgress.Ensure().Progression;
 
         // A player in the window whose interstitial has already opened by itself, the window opened `minutesAgo` minutes ago.
         private static void SeedShown(double minutesAgo)
@@ -62,10 +54,10 @@ namespace TreadShred.Screens.Tests
             yield return new WaitForSecondsRealtime(2f);
             for (var waited = 0f; Time.timeScale == 0f && waited < 10f; waited += 0.25f)
                 yield return new WaitForSecondsRealtime(0.25f);
-            var manager = UnityEngine.Object.FindFirstObjectByType(GameType("ManagerScore"));
+            var manager = UnityEngine.Object.FindFirstObjectByType<ManagerScore>();
             Assert.IsNotNull(manager, "the mission has its score manager");
-            manager.GetType().GetField("CountEmnemy", Members).SetValue(manager, 1);
-            manager.GetType().GetMethod("Victory", Members).Invoke(manager, null);
+            manager.CountEmnemy = 1;
+            manager.Victory();
             yield return new WaitForSecondsRealtime(3.5f);
         }
 
@@ -88,8 +80,7 @@ namespace TreadShred.Screens.Tests
                     UnityEngine.Object.Destroy(open);
                 Wallet.Replace(JsonUtility.FromJson<WalletState>(wallet));
                 Progression.Replace(string.IsNullOrEmpty(progress) ? new ProgressionState() : JsonUtility.FromJson<ProgressionState>(progress));
-                var run = GameType("TreadShredScores").GetProperty("Run").GetValue(null);
-                run.GetType().GetMethod("Start").Invoke(run, null);
+                TreadShredScores.Run.Start();
             }
         }
 

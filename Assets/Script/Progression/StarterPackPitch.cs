@@ -20,6 +20,16 @@ namespace TreadShred.Progression
 
         public static bool CanTestDrive(int drivesTaken) => drivesTaken < TestDrives;
 
+        /// <summary>D-037-AC-04: the interstitial opens while the pack is on sale and nothing else has it open.</summary>
+        public static bool Opens(bool onSale, bool alreadyOpen) => onSale && !alreadyOpen;
+
+        /// <summary>D-037-AC-04: by itself (over a result or the start screen) it opens only the first time; after that only
+        /// the result screen's callout opens it.</summary>
+        public static bool OpensByItself(bool shownBefore, bool onSale, bool alreadyOpen) => !shownBefore && Opens(onSale, alreadyOpen);
+
+        /// <summary>D-037-AC-08: the free test drive leads only over a mission, while the player has drives left.</summary>
+        public static bool OffersTestDrive(bool overMission, int drivesTaken) => overMission && CanTestDrive(drivesTaken);
+
         public static readonly SupplyStack Stack = new SupplyStack(OfferLabels.StarterPackTitle, GemCatalog.StarterPack, "starter_pack",
             TestDriveNote, AfterDriveSubtitle, new[]
             {

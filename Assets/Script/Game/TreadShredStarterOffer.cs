@@ -18,25 +18,27 @@ public sealed class TreadShredStarterOffer : TreadShredStackOffer
     private bool won;
 
     /// <summary>The start screen's interstitial, the purchase alone, unless it has opened by itself before. Returns whether it opened.</summary>
-    public static bool ShowIfOnSale(Font font) => !TreadShredStore.Ensure().Wallet.StarterPackShown && Show(font, false, false);
+    public static bool ShowIfOnSale(Font font) => Show(font, false, false, byItself: true);
 
     /// <summary>A result screen's interstitial, led by the free test drive of the mission just played, unless it has opened by itself before.</summary>
-    public static bool ShowOverResult(Font font, bool won) => !TreadShredStore.Ensure().Wallet.StarterPackShown && Show(font, true, won);
+    public static bool ShowOverResult(Font font, bool won) => Show(font, true, won, byItself: true);
 
     /// <summary>D-037-AC-04: the result screen's callout, tapped: the interstitial with the free test drive, every time.</summary>
-    public static bool OpenFromCallout(Font font, bool won) => Show(font, true, won);
+    public static bool OpenFromCallout(Font font, bool won) => Show(font, true, won, byItself: false);
 
-    private static bool Show(Font font, bool overMission, bool won)
+    private static bool Show(Font font, bool overMission, bool won, bool byItself)
     {
-        if (!TreadShredStore.Ensure().StarterPackOnSale || FindFirstObjectByType<TreadShredStarterOffer>() != null)
+        var store = TreadShredStore.Ensure();
+        var alreadyOpen = FindFirstObjectByType<TreadShredStarterOffer>() != null;
+        if (byItself ? !StarterPackPitch.OpensByItself(store.Wallet.StarterPackShown, store.StarterPackOnSale, alreadyOpen)
+                     : !StarterPackPitch.Opens(store.StarterPackOnSale, alreadyOpen))
             return false;
-        TreadShredStore.Ensure().Wallet.MarkStarterPackShown();
+        store.Wallet.MarkStarterPackShown();
         var root = TreadShredUi.CreateOverlay("TreadShredStarterOffer", 110);
         var offer = root.gameObject.AddComponent<TreadShredStarterOffer>();
         offer.limit = StarterPackPitch.Limit;
         offer.won = won;
-        var canDrive = StarterPackPitch.CanTestDrive(TreadShredStore.Ensure().Wallet.StarterPackTestDrives);
-        offer.Build(root, font, offer.limit, overMission && canDrive);
+        offer.Build(root, font, offer.limit, StarterPackPitch.OffersTestDrive(overMission, store.Wallet.StarterPackTestDrives));
         return true;
     }
 

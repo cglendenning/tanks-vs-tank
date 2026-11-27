@@ -38,11 +38,11 @@ namespace TreadShred.Progression.Tests
             wallet.Replace(new WalletState());
             Assert.AreEqual(0, wallet.StarterPackTestDrives, "a reset (D-044) gives them back");
 
-            var offer = Script("Game/TreadShredStarterOffer.cs");
-            StringAssert.Contains("var canDrive = StarterPackPitch.CanTestDrive(TreadShredStore.Ensure().Wallet.StarterPackTestDrives);", offer);
-            StringAssert.Contains("offer.Build(root, font, offer.limit, overMission && canDrive);", offer);
-            Assert.Less(offer.IndexOf("TreadShredStore.Ensure().Wallet.CountStarterPackTestDrive();", System.StringComparison.Ordinal),
-                offer.IndexOf("TreadShredTestDrive.Begin(driveFont, StarterPackPitch.Stack", System.StringComparison.Ordinal), "counted as the drive starts");
+            // Counted as each drive starts, on real screens: PlayMode StarterPackTestDriveLimitScreenTests.
+            Assert.IsTrue(StarterPackPitch.OffersTestDrive(overMission: true, drivesTaken: 0));
+            Assert.IsTrue(StarterPackPitch.OffersTestDrive(overMission: true, drivesTaken: 1), "one more after the first");
+            Assert.IsFalse(StarterPackPitch.OffersTestDrive(overMission: true, drivesTaken: 2), "then the purchase stands alone");
+            Assert.IsFalse(StarterPackPitch.OffersTestDrive(overMission: false, drivesTaken: 0), "only over a mission");
         }
     }
 }

@@ -17,9 +17,7 @@ namespace TreadShred.Screens.Tests
         [OneTimeSetUp]
         public void EndTheWindow()
         {
-            var storeType = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("TreadShredStore")).First(t => t != null);
-            var store = storeType.GetMethod("Ensure").Invoke(null, null);
-            var wallet = (GemWallet)storeType.GetProperty("Wallet").GetValue(store);
+            var wallet = TreadShredStore.Ensure().Wallet;
             var state = JsonUtility.FromJson<WalletState>(PlayerPrefs.GetString("TreadShredGemWallet", "{}")) ?? new WalletState();
             state.starterPackWindowStartTicks = DateTime.UtcNow.AddHours(-1).Ticks;
             wallet.Replace(state);

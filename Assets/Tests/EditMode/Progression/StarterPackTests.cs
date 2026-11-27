@@ -211,7 +211,9 @@ namespace TreadShred.Progression.Tests
             Assert.AreEqual(("STARTER PACK EQUIPPED", "+100 GEMS ADDED"), (OfferLabels.GemsAdded(Starter), OfferLabels.GemsAdded(GemCatalog.Packs[0])));
 
             var settings = Script("TreadShredSettingsPanel.cs");
-            StringAssert.Contains("slot == 0 && TreadShredStore.Ensure().StarterPackOnSale ? GemCatalog.StarterPack : GemCatalog.Packs[slot]", settings);
+            Assert.AreSame(GemCatalog.StarterPack, GemCatalog.StorePack(0, starterOnSale: true), "the Starter Pack takes the smallest pack's slot");
+            Assert.AreSame(GemCatalog.Packs[0], GemCatalog.StorePack(0, starterOnSale: false), "the smallest pack returns once it is off sale");
+            Assert.AreSame(GemCatalog.Packs[1], GemCatalog.StorePack(1, starterOnSale: true), "the other slots keep their packs");
             StringAssert.Contains("StarterPackPitch.StoreButton(TreadShredProgress.Ensure().ArmorHits, price)", settings);
             StringAssert.Contains("() => statusText.text = OfferLabels.GemsAdded(pack),", settings);
             StringAssert.DoesNotContain("StarterPackOnSale", Script("Game/TreadShredUpgradePanel.cs"));
@@ -255,7 +257,6 @@ namespace TreadShred.Progression.Tests
 
             var offer = Script("Game/TreadShredStarterOffer.cs");
             StringAssert.Contains("public sealed class TreadShredStarterOffer : TreadShredStackOffer", offer);
-            StringAssert.Contains("if (!TreadShredStore.Ensure().StarterPackOnSale || FindFirstObjectByType<TreadShredStarterOffer>() != null)", offer);
             StringAssert.Contains("SubtitleText.text = limit + \"  |  \" + OfferLabels.StarterPackCountdown(TreadShredStore.Ensure().StarterPackTimeLeft);", offer);
             StringAssert.Contains("protected override SupplyStack Stack => StarterPackPitch.Stack;", offer);
             // The reveal the War Chest and the Starter Pack share.
