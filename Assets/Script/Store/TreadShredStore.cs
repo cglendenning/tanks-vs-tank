@@ -52,7 +52,8 @@ public sealed class TreadShredStore : MonoBehaviour, IPurchaseGateway
         Wallet.GrantStarterIfNeeded();
         OpenStarterPackWindowAfterAskFreeStart();
         purchases = new PurchaseFlow(Wallet, this, () => IsAvailable(GemCatalog.StarterPack.ProductId),
-            warChestAvailable: () => IsAvailable(GemCatalog.WarChest.ProductId));
+            // D-047-AC-02: never while a War Chest the player bought is still running.
+            warChestAvailable: () => IsAvailable(GemCatalog.WarChest.ProductId) && !TreadShredProgress.Ensure().Progression.WarChestRunning);
         SceneManager.sceneLoaded += OnSceneLoaded;
         ConnectStore();
     }

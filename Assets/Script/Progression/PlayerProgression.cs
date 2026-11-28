@@ -22,6 +22,11 @@ namespace TreadShred.Progression
         // D-045: supply units held per SupplyTrack, and each track's missions won toward its next use.
         public int[] supply = new int[SupplyRules.TrackCount];
         public int[] supplyTrackWins = new int[SupplyRules.TrackCount];
+
+        // D-047-AC-02: a War Chest the player bought is running until every supply track it filled has run out; it is not
+        // on sale meanwhile. warChestChecked marks that a save from before this flag (2.0.0) has been looked at once.
+        public bool warChestRunning;
+        public bool warChestChecked;
     }
 
     public interface IProgressionStore
@@ -109,6 +114,21 @@ namespace TreadShred.Progression
             if (state.claimedMilestones == null)
                 state.claimedMilestones = new List<string>();
             AdoptRentals(state);
+            AdoptWarChest();
+        }
+
+        /// <summary>D-047-AC-02: a War Chest the player bought is still running; it is not on sale until it runs out.</summary>
+        public bool WarChestRunning => state.warChestRunning;
+
+        // A War Chest bought before the running flag existed (2.0.0) counts as running while its tracks still hold supply.
+        // Looked at once, so supply bought later never restarts it.
+        private void AdoptWarChest()
+        {
+            if (state.warChestChecked)
+                return;
+            state.warChestChecked = true;
+            if (wallet.WarChestBought && !WarChest.HasRunOut(SupplyUnits))
+                state.warChestRunning = true;
         }
 
         // D-045: a 1.9.5 save's running rentals (missions left) become weapon supply, one unit per 5 missions begun.
@@ -150,6 +170,10 @@ namespace TreadShred.Progression
             state.supplyTrackWins = restored.supplyTrackWins != null && restored.supplyTrackWins.Length == SupplyRules.TrackCount
                 ? (int[])restored.supplyTrackWins.Clone() : new int[SupplyRules.TrackCount];
             AdoptRentals(state);
+            // D-047-AC-02: a running War Chest comes back with the save too.
+            state.warChestRunning = restored.warChestRunning;
+            state.warChestChecked = restored.warChestChecked;
+            AdoptWarChest();
             Commit();
         }
 
@@ -353,7 +377,11 @@ namespace TreadShred.Progression
         /// D-047-AC-03: the War Chest's gems, just credited, become its supply on every track at once, and its special
         /// weapons join the drawer so they can be used on any mission now. A unit the gems no longer cover stays as gems.
         /// </summary>
-        public void EquipWarChest() => Equip(WarChest.Stack);
+        public void EquipWarChest()
+        {
+            state.warChestRunning = true;
+            Equip(WarChest.Stack);
+        }
 
         /// <summary>D-037-AC-01: the Starter Pack's gems, just credited, become its supply, as the War Chest's do.</summary>
         public void EquipStarterPack() => Equip(StarterPackPitch.Stack);
@@ -384,6 +412,8 @@ namespace TreadShred.Progression
             if (TestDriving)
                 return;
             SupplyRules.MissionWon(SupplyUnits, SupplyWins);
+            if (state.warChestRunning && WarChest.HasRunOut(SupplyUnits))
+                state.warChestRunning = false;
             Commit();
         }
 

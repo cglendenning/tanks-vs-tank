@@ -12,10 +12,10 @@ against the build before every submission. Lines marked (iOS) appear only on the
 - **App Store promotional text (170):** Become unstoppable. Install and you're in battle within seconds, with your first win under a minute away. No ads, no sign-up. Every win upgrades your tank for good.
 - **App Store keywords (100):** offline,games,wifi,tanks,shooter,army,war,military,combat,arcade,action,armor,blast,battles,tactical
 
-## What's new (2.0.0)
+## What's new (2.0.1)
 
-- **App Store What's New:** Tread Shred 2.0: the War Chest is back whenever you want it. Once you have seen it, it waits on every result screen and in Upgrades, so you can arm up again the moment your gear runs out. Destroyed tanks now blow apart into white-hot, smoldering wreckage with the turret torn off a different way every time. Every tank stands out on every battlefield, and mission 1 is a real fight from the first shot.
-- **Google Play release notes:** The War Chest is back whenever you want it: it waits on every result screen and in Upgrades. Destroyed tanks now blow apart into white-hot, smoldering wreckage, the turret torn off a different way every time. Every tank stands out on every battlefield, and mission 1 is a real fight from the first shot.
+- **App Store What's New:** Tread Shred 2.0: the War Chest is back whenever you want it. Once your War Chest's gear runs out, it waits on every result screen and in Upgrades, so you can arm up again. Destroyed tanks now blow apart into white-hot, smoldering wreckage with the turret torn off a different way every time. Every tank stands out on every battlefield, and mission 1 is a real fight from the first shot.
+- **Google Play release notes:** The War Chest now stays out of your way while yours is running, and comes back the moment its gear runs out.
 
 ## Description
 

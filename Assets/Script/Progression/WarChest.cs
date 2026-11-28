@@ -101,5 +101,16 @@ namespace TreadShred.Progression
         /// <summary>D-047-AC-08, D-050-AC-01: once the player has seen it, every result screen offers it while it is on
         /// sale, outside the ask-free start.</summary>
         public static bool ShowsOnResultScreen(bool askFree, bool onSale, bool seen) => !askFree && onSale && seen;
+
+        /// <summary>D-047-AC-02: a bought War Chest has run out once every supply track it fills is empty.</summary>
+        public static bool HasRunOut(IReadOnlyList<int> supply)
+        {
+            foreach (var item in Items)
+            {
+                if (supply[(int)item.Track] > 0)
+                    return false;
+            }
+            return true;
+        }
     }
 }
